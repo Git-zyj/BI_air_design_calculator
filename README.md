@@ -72,7 +72,11 @@ build_exe_debug.bat  → dist\飞机设计计算器_黑冰正式版v12.1.0_调�
 - `build/` `dist/` `*.spec` `output/` **不进版本库**（都是可复现的中间产物）；
 - **发行版 exe 作为 GitHub Release 附件发布**，不提交进 git
   （二进制一进库，之后每个版本都会跟着膨胀，而且已经没有"看历史 diff"的意义）；
-- 发布时附上 `开始使用前先看.txt`，release notes 直接摘 `CHANGELOG.md` 顶部几条。
+- 发布时附上 `开始使用前先看.txt`，release notes 直接摘 `CHANGELOG.md` 顶部几条；
+- ⚠️ **附件名只能用 ASCII**：GitHub 会把附件名里的中文清洗成 `_`
+  （`飞机设计计算器_黑冰正式版v12.1.0.exe` → `_.v12.1.0.exe`）。
+  所以约定：上传 `BI_air_design_calculator_v<版本>.zip`（里面是中文原名的 exe + 说明 txt）
+  + 一个 ASCII 名的 `BI_air_design_calculator_v<版本>.exe`；详见 `PLAN.md` §21.2。
 
 ## 说明
 

@@ -1352,9 +1352,46 @@ TCheckbutton 对海（舰载）  x=474 w=111  ← 被 TCombobox 900      x=474 w
 3. 先 `build_exe_debug.bat` 自测（能开窗、能算、能导出），并跑 `python run.py --anchor` 确认口径没变；
    确认后再 `build_exe.bat` 出发行版；
 4. 建 GitHub Release：tag 用模组版本（如 `v12.1.0`；同一模组版本下工具修了 bug 就再加一位，如 `v12.1.0.1`），
-   附件放 `dist\飞机设计计算器_黑冰正式版v<模组版本>.exe` + `开始使用前先看.txt`，
-   正文直接摘 `CHANGELOG.md` 顶部几条；
-5. 建议在 Release 里附上 exe 的 SHA256（`certutil -hashfile <exe> SHA256`），方便别人校验下载完整。
+   正文摘 `CHANGELOG.md` 顶部几条 + 对应模组版本 + exe 的 SHA256（`certutil -hashfile <exe> SHA256`）；
+5. 附件名见下面的"**只能用 ASCII**"说明：打一个 zip + 一个 ASCII 名的 exe 上传。
 
-仓库目前**还没有远端**；建好 GitHub 仓库后，用
-`gh release create v12.1.0 "dist\....exe" "开始使用前先看.txt" --notes-file <说明.md>` 一条命令即可。
+#### 附件名只能用 ASCII（踩过的坑）
+
+GitHub 会把 Release 附件名里的**非 ASCII 字符清洗成 `_`**，实测：
+
+| 想要的名字 | 上传后实际变成 |
+| --- | --- |
+| `飞机设计计算器_黑冰正式版v12.1.0.exe` | `_.v12.1.0.exe` |
+| `开始使用前先看.txt` | `default.txt` |
+
+连"改名 API"（`PATCH /releases/assets/<id>`）也一样会被清洗（用 JSON 文件传名字也一样）。
+所以约定：
+
+- 附件用 **ASCII 名**：`BI_air_design_calculator_v<模组版本>.zip` / `.exe`；
+- **中文原名放进 zip 里**（zip 条目名支持 UTF-8，Python `zipfile` 会自动带 UTF-8 标志位）；
+- Release 正文里说明一句"附件名是英文，exe 的正式文件名在 zip 里"。
+
+> 另一个坑：**PowerShell 5.1 把非 ASCII 参数传给原生 exe（gh）时会按 ANSI 编码**，
+> 中文会直接丢字符，所以任何"带中文文件名的 gh 调用"都会传坏。
+> 绕法：走 ASCII 名，或用 `gh api --input <utf8.json>` 传 JSON 文件
+> （实测：`--input` 传中文**正常**，`gh repo edit --description 中文` 也正常；
+> 只有"原生参数里的中文"会坏）。
+
+### 21.3 首次发布记录（2026-10-10）
+
+| 项 | 值 |
+| --- | --- |
+| 仓库 | `https://github.com/Git-zyj/BI_air_design_calculator`（**private**，与 BIX 一致）|
+| 账号 | `Git-zyj`（BIX 用的同一个 GitHub 账号）|
+| Release | `https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.1.0` |
+| 附件 | `BI_air_design_calculator_v12.1.0.zip`（17.0 MB）、`BI_air_design_calculator_v12.1.0.exe`（16.92 MB）|
+| exe SHA256 | `dc5d3473319493cf13093e0b2045a47567af3c06a0a0580b625f6b5a44510646` |
+| 源码状态 | 提交 `5affbd8`（含 ⑦ 工具栏两行、① 用途行重叠修复）；exe 构建于 2026-10-09 23:58 |
+| 仓库体积 | 421 KiB（重写历史剔除二进制后）|
+
+⚠️ **Release 挂在 private 仓库上，别人下载不了**。要让使用者直接下载，需要把仓库转公开：
+`gh repo edit Git-zyj/BI_air_design_calculator --visibility public`（这条命令随时可执行）。
+
+**历史重写**：`git filter-branch --index-filter "git rm -r --cached --ignore-unmatch build dist '*.spec'"`
+把之前误提交的两个 17 MB exe 与打包中间文件从**所有提交**里剔除，`.git` 从 ~109 MB 降到 421 KB；
+提交信息与顺序都没变，且重写发生在推送之前（远端本来就还没有）。
