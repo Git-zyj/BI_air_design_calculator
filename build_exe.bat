@@ -1,20 +1,24 @@
 @echo off
 chcp 65001 >nul
-rem Build a single-file exe (data bundled). Output: dist\BI_air_design_calculator.exe
-rem NOTE: keep this file UTF-8 (no BOM) + CRLF, and keep "chcp 65001" on line 2.
+rem Build a single-file exe (data bundled).
+rem Keep this file UTF-8 (no BOM) + CRLF; keep "chcp 65001" on line 2.
 cd /d "%~dp0"
 
-where pyinstaller >nul 2>nul
+rem Use "python -m PyInstaller" instead of the pyinstaller.exe on PATH:
+rem pip installs it into <Python>\Scripts, which is often NOT on PATH.
+python -c "import PyInstaller" >nul 2>nul
 if errorlevel 1 (
-  echo [ERROR] pyinstaller not found. Run:  python -m pip install pyinstaller
+  echo [ERROR] PyInstaller not importable by this "python".
+  echo         Run:  python -m pip install pyinstaller
+  echo         then check:  python -c "import PyInstaller; print(PyInstaller.__version__)"
   pause
   exit /b 1
 )
 
-set EXE_NAME=飞机设计计算器_黑冰正式版v1.19.2.0
+set EXE_NAME=飞机设计计算器_黑冰正式版v12.1.0
 
 echo Building "%EXE_NAME%" ...
-pyinstaller --noconfirm --onefile --windowed ^
+python -m PyInstaller --noconfirm --onefile --windowed ^
   --name "%EXE_NAME%" ^
   --add-data "data;data" ^
   --add-data "BI_SOV.xlsx;." ^
@@ -25,7 +29,7 @@ pyinstaller --noconfirm --onefile --windowed ^
 echo.
 if exist "dist\%EXE_NAME%.exe" (
   echo [OK] dist\%EXE_NAME%.exe
-  echo Ship that exe together with "开始使用前先看.txt".
+  echo Ship that exe together with the readme txt.
 ) else (
   echo [FAILED] send the log above to the maintainer.
 )
