@@ -21,7 +21,16 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(HERE, "data")
+
+
+def res_dir():
+    """资源目录：打包成 exe 后在 _MEIPASS，开发时就是脚本目录。"""
+    if getattr(sys, "frozen", False):
+        return getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+    return HERE
+
+
+DATA_DIR = os.path.join(res_dir(), "data")
 
 # 手工表「飞机改装」14 项改装（按表内行顺序），与游戏 token 的对应已核对
 SHEET_UPGRADES = [
@@ -770,7 +779,7 @@ def golden():
     print("      当前验收口径请用：python run.py --anchor（对空 + 距离 900）")
     print()
 
-    sheet_path = os.path.join(HERE, "BI_SOV.xlsx")
+    sheet_path = os.path.join(res_dir(), "BI_SOV.xlsx")
     wb = openpyxl.load_workbook(sheet_path, data_only=True)
     ws = wb["飞机改装"]
 

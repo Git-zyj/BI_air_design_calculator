@@ -24,8 +24,20 @@ import engine  # noqa: E402
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_OUT = os.path.abspath(os.path.join(HERE, "output", "BI_SOV_选型输出.xlsx"))
-INPUTS = os.path.join(HERE, "inputs.json")
+
+
+def app_dir():
+    """程序目录：打包成 exe 后是 exe 所在目录，开发时是脚本目录。
+
+    输出表与 inputs.json 都放这里——用户要能找到导出的文件。
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return HERE
+
+
+DEFAULT_OUT = os.path.abspath(os.path.join(app_dir(), "output", "BI_SOV_选型输出.xlsx"))
+INPUTS = os.path.join(app_dir(), "inputs.json")
 
 # 改装 token → 表内短名（与 BI_SOV.xlsx 的 14 行一一对应）
 UPGRADE_NAMES = {
