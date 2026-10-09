@@ -164,6 +164,16 @@ def _say(text):
     sys.stdout.flush()
 
 
+DEBUG = bool(getattr(sys, "stdout", None)) or ("-v" in sys.argv)
+
+
+def _dbg(text):
+    """调试信息：只有带控制台（调试版 exe / 命令行）时才打印，发行版静默。"""
+    if DEBUG and getattr(sys, "stdout", None) is not None:
+        print("[DEBUG] %s" % text)
+        sys.stdout.flush()
+
+
 class App(tk.Tk):
     def __init__(self):
         global _ZH_LOC
@@ -867,6 +877,9 @@ class App(tk.Tk):
             return cache[org["organization"]]
         plan = None
         ctx = self._plan_context(inputs)
+        _dbg("MIO 路线：%s（方针候选 %d 个，缓存%s）"
+             % (org["organization"], len(self._policies_for_org(org, set(inputs.get("unlocked_techs") or []))),
+                "命中" if org["organization"] in cache else "未命中"))
         if ctx:
             ref, upgrade_map, enemy_values, acc, score_key, tokens = ctx
             techs = set(inputs.get("unlocked_techs") or [])
@@ -1336,10 +1349,34 @@ class App(tk.Tk):
         """只计算并在界面里展示（不写文件）。"""
         try:
             inputs = self.collect()
+            _dbg("计算：年份 %s/%s｜国家 %s｜用途 %s｜距离 %s｜来源 %s"
+                 % (inputs["current_year"], inputs["tech_year"], inputs["country"],
+                    ",".join(inputs["roles"]), inputs["range_cap"],
+                    inputs.get("modifier_source")))
+            _dbg("  解锁科技 %d 项｜国家标识 %d 项｜国家精神 %s"
+                 % (len(inputs.get("unlocked_techs") or []),
+                    len(inputs.get("unlocked_flags") or []),
+                    ",".join(inputs.get("national_spirits") or []) or "（无）"))
+            _dbg("  MIO=%s 等级=%s 方针=%s 候选池=%d"
+                 % ((inputs.get("mio") or {}).get("organization"),
+                    (inputs.get("mio") or {}).get("level"),
+                    (inputs.get("mio") or {}).get("policy"),
+                    len(run.candidate_pool(inputs, self.data))))
+            import time as _t
+            _t0 = _t.time()
             rows, player_mods, enemy, enemy_values, mfr_info = run.build_rows(inputs, self.data)
         except (Exception, SystemExit) as exc:  # noqa: BLE001
             messagebox.showerror("计算出错", str(exc))
             return
+        _dbg("  计算完成：%d 行，用时 %.2fs" % (len(rows), _t.time() - _t0))
+        _dbg("  对手=%s（机动 %.2f 速度 %.2f）｜制造商来源=%s"
+             % ((enemy or {}).get("name"), (enemy_values or {}).get("agility", 0),
+                (enemy_values or {}).get("speed", 0),
+                json.dumps(mfr_info, ensure_ascii=False)[:160]))
+        for r in rows[:3]:
+            _dbg("  第%d名 %s  总分数 %.4f  性能分数 %.1f  造价 %.2f  %s"
+                 % (r["rank"], r["airframe"]["name"], r["score"],
+                    r["score"] * r["effective_cost"], r["effective_cost"], r["design"]))
         self._last = (inputs, rows, player_mods, enemy, enemy_values, mfr_info)
         self.rows = rows
         self._refresh_totals()
@@ -1360,6 +1397,7 @@ class App(tk.Tk):
         except (Exception, SystemExit) as exc:  # noqa: BLE001
             messagebox.showerror("导出出错", str(exc))
             return
+        _dbg("导出：%s（%d 行）" % (run.DEFAULT_OUT, len(rows)))
         self.lbl_hint.configure(text="已导出 → %s" % os.path.basename(run.DEFAULT_OUT))
 
     def _axis_key(self, label):
@@ -1388,6 +1426,7 @@ class App(tk.Tk):
             self._sort_desc = not getattr(self, "_sort_desc", True)
         else:
             self._sort_key, self._sort_desc = cid, True
+        _dbg("排序：按 %s %s" % (cid, "降序" if self._sort_desc else "升序"))
         self._render_rows()
 
     def _show_design(self):

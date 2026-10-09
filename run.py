@@ -98,6 +98,8 @@ DEFAULT_INPUTS = {
               "modifiers": {"air_agility": 0.04, "maximum_speed": 0.015},
               "experience": {"air_agility": 0.20, "maximum_speed": 0.05}},
     "range_cap": 900.0,                     # 距离目标（航程上限）默认 900；600 起每 300 一档
+    "mio": {"organization": "", "level": 14, "manual_traits": None},   # 军工组织默认满级
+    "modifier_source": "mio",               # 修正来源：mio = 军工组织+国家精神；manual = 手填
     "pareto_x": "cost",                     # 帕累托图默认 X = 造价
     "pareto_y": "effect",                   # 默认 Y = 性能分数
     "overwrite": False,
