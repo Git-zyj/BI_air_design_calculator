@@ -87,6 +87,13 @@ def needed_keys():
     for mod_key in modifier_keys():                                # 修正名（含 MODIFIER_ 形式）
         keys.add(mod_key)
         keys.add("MODIFIER_" + mod_key.upper())
+    # 国家名（机型里出现的 tag），用于界面把 tag 显示成中文
+    for name in ("airframes", "airframes_all"):
+        path = os.path.join(DATA, name + ".json")
+        if os.path.exists(path):
+            for item in json.load(open(path, encoding="utf-8")):
+                if item.get("country"):
+                    keys.add(item["country"])
     return keys
 
 
@@ -114,7 +121,9 @@ def scan(dirs, keys):
                     if key.endswith("_desc"):
                         continue
                     if key in keys and key not in found:
-                        found[key] = value.replace("\\n", " ").strip()
+                        cleaned = value.replace("\\n", " ").strip()
+                        if cleaned:          # 空的条目（MOD 里把 SOV: "" 留空）不算命中
+                            found[key] = cleaned
     return found
 
 

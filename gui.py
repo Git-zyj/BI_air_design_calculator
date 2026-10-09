@@ -74,6 +74,9 @@ ROLE_CHOICES = [("air_far", "对空"), ("ground_far", "对地"),
                 ("naval_far", "对海"), ("recon", "侦察/运输"),
                 ("air_cv", "对空（舰载）"), ("naval_cv", "对海（舰载）")]
 ROLE_SHORT = dict(ROLE_CHOICES)
+# 界面上的国家显示名：优先用这个覆盖，其次查汉化，最后退回 tag。
+# （原版简中把 SOV 写成"俄罗斯"，BIX 里是苏联；ENG/CHI 汉化里没有条目）
+COUNTRY_ZH_OVERRIDE = {"SOV": "苏联", "ENG": "英国", "CHI": "中国", "Commonwealth": "英联邦"}
 _UNSET = object()          # collect(policy=...) 的"未指定"哨兵（None 表示明确不选方针）
 # 帕累托图可选轴：界面用中文，内部映射到 run.AXIS_DEFS
 AXIS_CHOICES = [("effect", "性能分数"), ("score", "总分数（性能/造价）"),
@@ -179,6 +182,8 @@ class App(tk.Tk):
             with open(run.INPUTS, encoding="utf-8") as fh:
                 self.inputs.update(json.load(fh))
         self.tags = sorted({a.get("country") for a in self.data["airframes_all"] if a.get("country")})
+        self._tag_labels = {t: self._country_label(t) for t in self.tags}
+        self._label_to_tag = {v: k for k, v in self._tag_labels.items()}
         self.chosen_traits = set()
         self.rows = []
         self._sort_key, self._sort_desc = "pure", True      # 默认按总分数从高到低
@@ -339,17 +344,21 @@ class App(tk.Tk):
         ttk.Label(box, text="所选国家 tag").grid(row=1, column=0, sticky="e",
                                                padx=(PADX, 4), pady=PADY)
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
-        cb = ttk.Combobox(box, textvariable=self.var_tag, values=self.tags, width=8,
+        cb = ttk.Combobox(box, textvariable=self.var_tag, width=10,
                           state="readonly")
         cb.grid(row=1, column=1, sticky="w")
         cb.bind("<<ComboboxSelected>>", lambda e: self._refresh_country())
+        cb.configure(values=[self._tag_labels[t] for t in self.tags])
+        self.var_tag.set(self._tag_labels.get(self.inputs.get("country") or "SOV", "苏联"))
         ttk.Label(box, text="对手国别").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
         enemy = self.inputs.get("enemy") or {}
         self.var_enemy_tag = tk.StringVar(value=enemy.get("country", "GER"))
-        eb = ttk.Combobox(box, textvariable=self.var_enemy_tag, values=self.tags, width=7,
+        eb = ttk.Combobox(box, textvariable=self.var_enemy_tag, width=10,
                           state="readonly")
         eb.grid(row=1, column=3, sticky="w")
         eb.bind("<<ComboboxSelected>>", lambda e: self._refresh_enemy())
+        eb.configure(values=[self._tag_labels[t] for t in self.tags])
+        self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
         ttk.Label(box, text="选取规则").grid(row=1, column=4, sticky="e", padx=(PADX, 4))
         cur_rule = dict(RULE_LABELS).get(enemy.get("rule", "previous_year"), "当前年份−1")
         self.var_rule = tk.StringVar(value=cur_rule)
@@ -373,7 +382,7 @@ class App(tk.Tk):
         row += 1
 
         # ③ 改装/方针的前置条件（不看"有什么科技"，只看"条件满没满足"）
-        box = self._card(row, "③ 改装与方针的前置（勾选 = 条件已满足）")
+        box = self._card(row, "③ 改装 / 方针 / 特质的前置（勾选 = 条件已满足）")
         self.frm_tech = ttk.Frame(box)
         self.frm_tech.grid(row=0, column=0, sticky="w", padx=PADX, pady=(PADY, 2))
         self.tech_vars = {}
@@ -579,6 +588,17 @@ class App(tk.Tk):
         card.columnconfigure(0, weight=1)
 
     # ---------- 联动 ----------
+    def _country_label(self, tag):
+        """tag → 界面上的中文国名（覆盖表 → 汉化 → tag）。"""
+        return COUNTRY_ZH_OVERRIDE.get(tag) or zh(self.loc, tag) or tag
+
+    def _tag(self):
+        """当前国家下拉的中文名 → tag。"""
+        return self._label_to_tag.get(self.var_tag.get(), self.var_tag.get())
+
+    def _enemy_tag(self):
+        return self._label_to_tag.get(self.var_enemy_tag.get(), self.var_enemy_tag.get())
+
     def _relevant_techs(self):
         """**当前国家**用得到的前置科技：候选机身的改装前置 + 该国军工组织的方针/特质前置。
 
@@ -612,7 +632,7 @@ class App(tk.Tk):
         """当前国家 + 当前用途 + 科技年份下的候选机身 archetype 集合。"""
         roles = [k for k, v in self.role_vars.items() if v.get()] or ["air_far"]
         want = set(engine.role_archetypes(roles))
-        tag = self.var_tag.get()
+        tag = self._tag()
         year = int(self.var_tech.get())
         return {a.get("archetype") for a in self.data.get("airframes_all") or []
                 if a.get("country") == tag and (a.get("year") or 0) <= year
@@ -912,7 +932,7 @@ class App(tk.Tk):
 
     def _air_orgs(self):
         """能用于战斗机的军工组织：优先本国独特 MIO；本国没有才回退默认 MIO。"""
-        tag = self.var_tag.get()
+        tag = self._tag()
         own = [o for o in self.data["mio"]
                if os.path.basename(o.get("file", "")).upper().startswith(tag + "_")
                and is_air_mio(o, self.by_name)]
@@ -1174,7 +1194,7 @@ class App(tk.Tk):
     def _enemy_cfg(self):
         rule = self._rule_value()
         cfg = dict(self.inputs.get("enemy") or {})
-        cfg.update({"country": self.var_enemy_tag.get(),
+        cfg.update({"country": self._enemy_tag(),
                     "rule": "previous_year" if rule == "manual" else rule,
                     "override_key": (self.var_override.get().strip() or None)
                                     if rule == "manual" else None})
@@ -1212,7 +1232,7 @@ class App(tk.Tk):
         source = self.var_source.get()
         inputs = dict(self.inputs)
         inputs.update({
-            "country": self.var_tag.get(),
+            "country": self._tag(),
             "current_year": int(self.var_year.get()),
             "tech_year": int(self.var_tech.get()),
             "roles": roles,
@@ -1233,7 +1253,7 @@ class App(tk.Tk):
                                       if self.var_alloc.get() == "pick" else None)},
         })
         enemy = dict(inputs.get("enemy") or {})
-        enemy.update({"country": self.var_enemy_tag.get(),
+        enemy.update({"country": self._enemy_tag(),
                       "rule": "previous_year" if rule == "manual" else rule,
                       "override_key": (self.var_override.get().strip() or None) if rule == "manual" else None})
         inputs["enemy"] = enemy
