@@ -18,7 +18,8 @@ import re
 import sys
 from datetime import datetime, timezone
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if getattr(sys, "stdout", None):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 DEFAULT_GAME_DIR = r"D:\Steam\steamapps\workshop\content\394360\1851181613"
 HERE = os.path.dirname(os.path.abspath(__file__))

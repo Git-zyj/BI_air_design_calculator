@@ -13,7 +13,8 @@ import argparse
 import datetime
 import sys
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if getattr(sys, "stdout", None):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 REFERENCE = {  # 两种口径下的年损失率（供对照）
     "口径A 不计 BALANCE": 1.314,

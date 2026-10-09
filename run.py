@@ -21,7 +21,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import engine  # noqa: E402
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if getattr(sys, "stdout", None):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
