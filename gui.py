@@ -150,13 +150,16 @@ def _maybe_reexec():
     if os.path.realpath(sys.executable) == os.path.realpath(BISOV_PY):
         return
     os.environ[REEXEC_ENV] = "1"
-    print("当前 Python 的 Tk 不支持 TrueType 中文（会退回仿宋位图），自动切换到：%s" % BISOV_PY)
-    sys.stdout.flush()
+    if getattr(sys, "stdout", None) is not None:
+        print("当前 Python 的 Tk 不支持 TrueType 中文（会退回仿宋位图），自动切换到：%s" % BISOV_PY)
+        sys.stdout.flush()
     os.execv(BISOV_PY, [BISOV_PY, os.path.abspath(__file__)] + sys.argv[1:])
 
 
 def _say(text):
     """启动阶段提示（打印到终端，方便"窗口没弹出来"时定位卡在哪一步）。"""
+    if getattr(sys, "stdout", None) is None:
+        return          # 打包成 --windowed 的 exe 时没有控制台
     print("[BI_SOV] %s" % text)
     sys.stdout.flush()
 
