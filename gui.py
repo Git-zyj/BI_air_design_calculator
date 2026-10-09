@@ -210,6 +210,7 @@ class App(tk.Tk):
         self._sync_rule()
         self._refresh_enemy()
         self._refresh_totals()
+        self._watch_inputs()          # 调试：输入项一变就打一行日志
         _say("准备就绪，正在显示窗口…")
         self.after(80, self._pop_to_front)
 
@@ -717,6 +718,9 @@ class App(tk.Tk):
     def _toggle_group(self, group_text):
         """勾/取消一个分组 = 把这组的前置科技（或特殊工程）一起置为同一状态。"""
         want = self.group_vars[group_text].get()
+        _dbg("操作：条件勾选「%s」→ %s（涉及 %s）"
+             % (group_text, "打开" if want else "关闭",
+                "、".join(k for _kd, k in self._group_items.get(group_text, []))))
         for kind, key in self._group_items.get(group_text, []):
             (self.tech_vars if kind == "tech" else self.flag_vars)[key].set(want)
         self._sync_group_vars()
@@ -1167,8 +1171,17 @@ class App(tk.Tk):
         """勾选/取消一个军工组织特质（点行或程序调用都走这里）。"""
         if token in self.chosen_traits:
             self.chosen_traits.discard(token)
+            self._trait_order = [x for x in getattr(self, "_trait_order", []) if x != token]
+            _dbg("操作：取消勾选特质「%s」，当前依次为 %s"
+                 % (zh(self.loc, token),
+                    "→".join(zh(self.loc, x) for x in getattr(self, "_trait_order", [])) or "无"))
         else:
             self.chosen_traits.add(token)
+            order = getattr(self, "_trait_order", [])
+            order.append(token)
+            self._trait_order = order
+            _dbg("操作：勾选特质「%s」，依次为 %s"
+                 % (zh(self.loc, token), "→".join(zh(self.loc, x) for x in order)))
         vals = list(self.tree_traits.item(token)["values"])
         vals[0] = "☑" if token in self.chosen_traits else "☐"
         self.tree_traits.item(token, values=vals)
@@ -1420,6 +1433,36 @@ class App(tk.Tk):
             "weighted": lambda r: r["weighted"], "design": lambda r: r["design"],
         }
         return getters.get(key, lambda r: r["rank"])(row)
+
+    def _watch_inputs(self):
+        """调试用：任何输入项变化都打一行日志，方便还原用户操作序列。"""
+        last = {}
+
+        def watch(var, label):
+            def on_change(*_a):
+                val = var.get()
+                if last.get(label) == val:
+                    return          # Tk 写入同值也会触发，这里去重
+                last[label] = val
+                _dbg("操作：%s → %s" % (label, val))
+
+            last[label] = var.get()
+            var.trace_add("write", on_change)
+
+        for var, label in ((self.var_year, "改当前年份"), (self.var_tech, "改飞机科技年份"),
+                           (self.var_tag, "改国家"), (self.var_enemy_tag, "改对手国别"),
+                           (self.var_rule, "改对手选取规则"), (self.var_distance, "改距离目标"),
+                           (self.var_level, "改 MIO 等级"), (self.var_org, "改军工组织"),
+                           (self.var_policy, "改方针"), (self.var_source, "改修正来源"),
+                           (self.var_alloc, "改配点方式"), (self.var_spirits, "改国家精神"),
+                           (self.var_override, "改手动机型")):
+            watch(var, label)
+        for key, rv in self.role_vars.items():
+            watch(rv, "勾选用途 %s" % ROLE_SHORT.get(key, key))
+        for var, label in ((self.var_filter, "改机型筛选"), (self.var_f_year, "改年份筛选"),
+                           (self.var_f_role, "改用途筛选"), (self.var_f_pareto, "改帕累托筛选"),
+                           (self.var_axis_x, "改 X 轴"), (self.var_axis_y, "改 Y 轴")):
+            watch(var, label)
 
     def _sort_by(self, cid):
         if getattr(self, "_sort_key", None) == cid:
