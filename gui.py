@@ -325,21 +325,25 @@ class App(tk.Tk):
         box = self._card(row, "① 用途")
         self.role_vars = {}
         cur_roles = self.inputs.get("roles") or ["air_far"]
-        for i, (key, label) in enumerate(ROLE_CHOICES):
+        ttk.Label(box, text="用途").grid(row=0, column=0, sticky="e", padx=(PADX, 4), pady=PADY)
+        # 六个勾选框放进自己的子框：以前直接排在 box 的第 1..6 列，正好和"距离目标"
+        # 那一列撞车 —— 对空（舰载）被标签压掉半截、对海（舰载）被下拉框整个盖住，
+        # 看上去就像"有两个对空、少了一个对海"。子框之后，它们不可能再互相覆盖。
+        roles_bar = ttk.Frame(box)
+        roles_bar.grid(row=0, column=1, sticky="w", pady=PADY)
+        for key, label in ROLE_CHOICES:
             v = tk.BooleanVar(value=key in cur_roles)
             self.role_vars[key] = v
-            ttk.Checkbutton(box, text=label, variable=v,
-                            command=self._on_roles_changed).grid(
-                row=0, column=1 + i, sticky="w", padx=(0, PADX), pady=PADY)
-        ttk.Label(box, text="用途").grid(row=0, column=0, sticky="e", padx=(PADX, 4), pady=PADY)
-        ttk.Label(box, text="距离目标").grid(row=0, column=5, sticky="e", padx=(PADX, 4))
+            ttk.Checkbutton(roles_bar, text=label, variable=v,
+                            command=self._on_roles_changed).pack(side="left", padx=(0, PADX))
+        ttk.Label(box, text="距离目标").grid(row=0, column=2, sticky="e", padx=(PADX * 2, 4))
         self.var_distance = tk.StringVar(
             value=str(int(self.inputs.get("range_cap") or DEFAULT_DISTANCE)))
         dbox = ttk.Combobox(box, textvariable=self.var_distance, width=8, state="readonly",
                             values=DISTANCES)
-        dbox.grid(row=0, column=6, sticky="w")
+        dbox.grid(row=0, column=3, sticky="w")
         dbox.bind("<<ComboboxSelected>>", lambda e: self._refresh_totals())
-        ttk.Label(box, text="（= 航程上限，600 起每 300 一档）").grid(row=0, column=7, sticky="w")
+        ttk.Label(box, text="（= 航程上限，600 起每 300 一档）").grid(row=0, column=4, sticky="w")
         row += 1
 
         # ② 年份 + 所选国家与主要对手（先定国家和年份，后面才谈前置科技）
