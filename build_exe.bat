@@ -1,17 +1,21 @@
 @echo off
-rem 打包成单文件 exe：dist\BI_air_design_calculator.exe
+chcp 65001 >nul
+rem Build a single-file exe (data bundled). Output: dist\BI_air_design_calculator.exe
+rem NOTE: keep this file UTF-8 (no BOM) + CRLF, and keep "chcp 65001" on line 2.
 cd /d "%~dp0"
 
 where pyinstaller >nul 2>nul
 if errorlevel 1 (
-  echo 找不到 pyinstaller，请先执行： python -m pip install pyinstaller
+  echo [ERROR] pyinstaller not found. Run:  python -m pip install pyinstaller
   pause
   exit /b 1
 )
 
-echo 正在打包（数据已内置，输出到 dist\）...
+set EXE_NAME=飞机设计计算器_黑冰正式版v1.19.2.0
+
+echo Building "%EXE_NAME%" ...
 pyinstaller --noconfirm --onefile --windowed ^
-  --name "BI_air_design_calculator" ^
+  --name "%EXE_NAME%" ^
   --add-data "data;data" ^
   --add-data "BI_SOV.xlsx;." ^
   --hidden-import openpyxl ^
@@ -19,10 +23,10 @@ pyinstaller --noconfirm --onefile --windowed ^
   gui.py
 
 echo.
-if exist "dist\BI_air_design_calculator.exe" (
-  echo 打包完成： dist\BI_air_design_calculator.exe
-  echo 分发时把这个 exe 和「开始使用前先看.txt」一起发给别人即可。
+if exist "dist\%EXE_NAME%.exe" (
+  echo [OK] dist\%EXE_NAME%.exe
+  echo Ship that exe together with "开始使用前先看.txt".
 ) else (
-  echo 打包失败，请把上面的报错发给维护者。
+  echo [FAILED] send the log above to the maintainer.
 )
 pause
