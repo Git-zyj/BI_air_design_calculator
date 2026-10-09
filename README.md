@@ -8,6 +8,11 @@
 黑冰更新后需重跑 `extract_game_data.py` / `extract_loc_zh.py` 并重新打包，
 打出来的 exe 名字里会带**模组版本**（如 `飞机设计计算器_黑冰正式版v12.1.0.exe`）。
 
+> **本分支 = `main`，适配正式版。** 黑冰**测试版**（`Blackice HOI IV TEST`，
+> workshop id 1851181613 / v12.3.0）在 **`beta` 分支**，配套 Release 是
+> [v12.3.0-test](https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.3.0-test)（Pre-release）。
+> **两个版本的数据不通用，别混用 exe。**
+
 ## 快速开始
 
 ```
