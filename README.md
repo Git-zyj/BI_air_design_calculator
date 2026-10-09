@@ -57,6 +57,23 @@ python run.py --anchor     # 对空 + 距离 900：Yak-9U@1944 = 15540.543552
 - Python 3.8+，`openpyxl`（导出 Excel 用）
 - 图形界面用 Tkinter；Windows 原生即可，字体不受限
 
+## 构建与发布（exe）
+
+给别人用不需要装 Python：打一个单文件 exe（数据已内置）。
+
+```
+build_exe.bat        → dist\飞机设计计算器_黑冰正式版v12.1.0.exe        （发行版，无控制台）
+build_exe_debug.bat  → dist\飞机设计计算器_黑冰正式版v12.1.0_调试版.exe  （带控制台，会打印 [DEBUG] 日志）
+```
+
+- 版本号在 `.bat` 里的 `set EXE_NAME=...`，写的是**黑冰模组版本**；
+  模组更新 → 改这一行 + 重跑抽取脚本，重新打包，文件名自然区分；
+- 先出**调试版**排错（有 traceback 可见），确认没问题再出**发行版**；
+- `build/` `dist/` `*.spec` `output/` **不进版本库**（都是可复现的中间产物）；
+- **发行版 exe 作为 GitHub Release 附件发布**，不提交进 git
+  （二进制一进库，之后每个版本都会跟着膨胀，而且已经没有"看历史 diff"的意义）；
+- 发布时附上 `开始使用前先看.txt`，release notes 直接摘 `CHANGELOG.md` 顶部几条。
+
 ## 说明
 
 这是一个**工具模组**，本身不包含游戏内容；`descriptor.mod` 里把 BIX 标为依赖只是为了记录它服务于哪个模组。

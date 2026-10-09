@@ -531,19 +531,28 @@ class App(tk.Tk):
         card = self._card(row, "⑦ 最终结果展示")
         bar = ttk.Frame(card)
         bar.grid(row=0, column=0, sticky="ew", padx=PADX, pady=(PADY, 2))
-        ttk.Button(bar, text="计算", command=self.on_calculate).pack(side="left")
-        ttk.Button(bar, text="导出 Excel", command=self.on_export).pack(side="left", padx=(6, 0))
-        ttk.Label(bar, text="输出：%s" % run.DEFAULT_OUT).pack(side="left", padx=PADX)
-        ttk.Label(bar, text="　帕累托图").pack(side="left", padx=(PADX, 4))
-        ttk.Label(bar, text="X 轴").pack(side="left")
+
+        # 第一行：动作 + 输出路径。路径很长，单独占一行，否则会把下面的轴选择挤出框、点不到
+        bar_btn = ttk.Frame(bar)
+        bar_btn.pack(fill="x")
+        ttk.Button(bar_btn, text="计算", command=self.on_calculate).pack(side="left")
+        ttk.Button(bar_btn, text="导出 Excel", command=self.on_export).pack(side="left",
+                                                                          padx=(6, 0))
+        ttk.Label(bar_btn, text="输出：%s" % run.DEFAULT_OUT).pack(side="left", padx=PADX)
+
+        # 第二行：帕累托图轴选择
+        bar_axis = ttk.Frame(bar)
+        bar_axis.pack(fill="x", pady=(3, 0))
+        ttk.Label(bar_axis, text="帕累托图").pack(side="left")
+        ttk.Label(bar_axis, text="X 轴").pack(side="left", padx=(PADX, 2))
         self.var_axis_x = tk.StringVar(value=AXIS_LABELS.get(self.inputs.get("pareto_x") or "cost",
                                                             AXIS_LABELS["cost"]))
-        ttk.Combobox(bar, textvariable=self.var_axis_x, width=18, state="readonly",
+        ttk.Combobox(bar_axis, textvariable=self.var_axis_x, width=18, state="readonly",
                      values=[label for _k, label in AXIS_CHOICES]).pack(side="left", padx=4)
-        ttk.Label(bar, text="Y 轴").pack(side="left", padx=(PADX, 0))
+        ttk.Label(bar_axis, text="Y 轴").pack(side="left", padx=(PADX, 0))
         self.var_axis_y = tk.StringVar(value=AXIS_LABELS.get(self.inputs.get("pareto_y") or "score",
                                                             AXIS_LABELS["score"]))
-        ttk.Combobox(bar, textvariable=self.var_axis_y, width=18, state="readonly",
+        ttk.Combobox(bar_axis, textvariable=self.var_axis_y, width=18, state="readonly",
                      values=[label for _k, label in AXIS_CHOICES]).pack(side="left", padx=4)
         for var in (self.var_axis_x, self.var_axis_y):
             var.trace_add("write", lambda *_: self._render_rows())
@@ -881,9 +890,6 @@ class App(tk.Tk):
             return cache[org["organization"]]
         plan = None
         ctx = self._plan_context(inputs)
-        _dbg("MIO 路线：%s（方针候选 %d 个，缓存%s）"
-             % (org["organization"], len(self._policies_for_org(org, set(inputs.get("unlocked_techs") or []))),
-                "命中" if org["organization"] in cache else "未命中"))
         if ctx:
             ref, upgrade_map, enemy_values, acc, score_key, tokens = ctx
             techs = set(inputs.get("unlocked_techs") or [])
@@ -921,13 +927,18 @@ class App(tk.Tk):
             inputs = self.collect()
         except (Exception, SystemExit):  # noqa: BLE001
             return
+        import time as _t
         orgs = self._air_orgs()[0]
+        cache = self._plans.get(self._plan_key(inputs)) or {}
+        redo = sum(1 for org in orgs if org["organization"] not in cache)
+        _t0 = _t.time()
         scored = []
         for org in orgs:
             plan = self._org_plan(org, inputs)
             if plan:
                 scored.append((org, plan))
         scored.sort(key=lambda item: -item[1]["score"])
+        spent = _t.time() - _t0
         if scored:
             best, best_plan = scored[0]
             label = next((l for l, k in self._org_keys.items() if k == best["organization"]), None)
@@ -946,8 +957,15 @@ class App(tk.Tk):
                 text="推荐：%s（满级 + %s%s）"
                      % (zh(self.loc, best["organization"]),
                         zh(self.loc, pol["token"]) if pol else "无方针", extra))
+            # 只打一行汇总：以前每个组织打一行，一次操作能刷 5 行
+            _dbg("MIO 路线：比较 %d 个组织（重算 %d，缓存命中 %d，用时 %.2fs）"
+                 "→ 推荐「%s」，方针「%s」%s"
+                 % (len(orgs), redo, len(orgs) - redo, spent,
+                    zh(self.loc, best["organization"]),
+                    zh(self.loc, pol["token"]) if pol else "无方针", extra))
         else:
             self.lbl_org_rec.configure(text="推荐：（暂无可比较的军工组织）")
+            _dbg("MIO 路线：比较 %d 个组织 → 无可比较结果（用时 %.2fs）" % (len(orgs), spent))
         self._on_org_change()
 
     def _air_orgs(self):
