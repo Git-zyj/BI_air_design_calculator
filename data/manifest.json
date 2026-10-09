@@ -1,0 +1,176 @@
+{
+ "generated_at": "2026-10-09T08:44:00+00:00",
+ "game_dir": "/mnt/d/Steam/steamapps/workshop/content/394360/1137372539",
+ "sources": [
+  {
+   "file": "localisation/english/equipment_l_english_SOV.yml",
+   "size": 137081,
+   "sha256": "1906b2ff3db1edd31cfee62163f197d3a1ffef4710875aff147a955d2409f709"
+  },
+  {
+   "file": "common/units/equipment/upgrades/air_upgrades.txt",
+   "size": 6638,
+   "sha256": "b861bdd9f0a8b3fa8015532a342dcd66fbe19701c703193fd3bce7a438290883"
+  },
+  {
+   "file": "common/defines/00_defines.lua",
+   "size": 417011,
+   "sha256": "3c0225126ca9452695a1e663e8a2127d94e4d7c067183679a8bbfd2234c66a35"
+  },
+  {
+   "file": "common/units/equipment/_airframe_cas.txt",
+   "size": 53315,
+   "sha256": "6fd0389257dc6b8f41228d207bee2022cb454c8ab089c4df8e524859f849a818"
+  },
+  {
+   "file": "common/units/equipment/_airframe_cv_cas.txt",
+   "size": 23523,
+   "sha256": "27f9eda3927edbfba8c11c511fbd80061f7a2e7a1e1c2b5472807435f792504e"
+  },
+  {
+   "file": "common/units/equipment/_airframe_cv_fighter.txt",
+   "size": 33349,
+   "sha256": "1db365143cfc29a654c6fb68c1ac64f6ce35514cc853841b342e4cf81656ec6a"
+  },
+  {
+   "file": "common/units/equipment/_airframe_cv_multirole.txt",
+   "size": 7876,
+   "sha256": "479496ab6d4362e8c0f142357d4538be69e47235ee360bdb78d6d47c6a9529c5"
+  },
+  {
+   "file": "common/units/equipment/_airframe_cv_nav_bomber.txt",
+   "size": 28884,
+   "sha256": "add721df01c28e5287f060470d094d686fd4d342953f1ad3794e1601466784b7"
+  },
+  {
+   "file": "common/units/equipment/_airframe_fast_bomber.txt",
+   "size": 21871,
+   "sha256": "376d86843f6a971a585f01860938955b86967b046310fc86f0076db063b30284"
+  },
+  {
+   "file": "common/units/equipment/_airframe_fighter.txt",
+   "size": 50945,
+   "sha256": "f68b68fb17be4c687d35cd29554b089fb58ab32c96868cd69b1419379fc80056"
+  },
+  {
+   "file": "common/units/equipment/_airframe_fighter_alt.txt",
+   "size": 24536,
+   "sha256": "e1414d0e70fb485987d6e78c7a96518302720a54a463b04775d7287dcee677fd"
+  },
+  {
+   "file": "common/units/equipment/_airframe_flying_boats.txt",
+   "size": 19787,
+   "sha256": "4ff967927f69121234211979cdb57582c3a53365cc622f2d79464259ef5db0d9"
+  },
+  {
+   "file": "common/units/equipment/_airframe_heavy_cas.txt",
+   "size": 19826,
+   "sha256": "18b241f448f00b58be46504c51c66fb14f0a7d47cc87a7c52819839e3310e4bc"
+  },
+  {
+   "file": "common/units/equipment/_airframe_heavy_fighter.txt",
+   "size": 35136,
+   "sha256": "5837e35f815581380f84065f2ebc381259b3cdf18a4cccfa89e80e242bb36373"
+  },
+  {
+   "file": "common/units/equipment/_airframe_heavy_nav_bomber.txt",
+   "size": 9853,
+   "sha256": "9c195f2b26ca03b3f90d39bd9ad72afc3da9ea3f5c885c0510494cf00b1673e4"
+  },
+  {
+   "file": "common/units/equipment/_airframe_interceptor.txt",
+   "size": 39561,
+   "sha256": "9a4c976dbc94800e7a20479e42184180c4c08b93d119a1e9f101d9655ad13e57"
+  },
+  {
+   "file": "common/units/equipment/_airframe_jet_cas.txt",
+   "size": 2813,
+   "sha256": "e89e7a89d99ed4c45d319a3f93f5fe509141d41c1861332b67d5c6178fbc8a47"
+  },
+  {
+   "file": "common/units/equipment/_airframe_jet_fighter.txt",
+   "size": 6127,
+   "sha256": "e70d581f69fa3077f10181e0091e47a0aa7901f3c1d0bca4d10d9eac00fc8064"
+  },
+  {
+   "file": "common/units/equipment/_airframe_jet_multirole.txt",
+   "size": 4858,
+   "sha256": "7eb6ce730ac38b882a1aa63b0d0899d78148bea977caf24dbc8f5b40d92ef1de"
+  },
+  {
+   "file": "common/units/equipment/_airframe_jet_stratbomber.txt",
+   "size": 1401,
+   "sha256": "7b34f29920ca330cda1999d962eab7eb1103009488db7e486a5ec12e0f4551ee"
+  },
+  {
+   "file": "common/units/equipment/_airframe_jet_tacbomber.txt",
+   "size": 2846,
+   "sha256": "8cae468005fba60d31ed614f16de17832c90c8a1cbccfbd487607e71a8260b9a"
+  },
+  {
+   "file": "common/units/equipment/_airframe_light_bomber.txt",
+   "size": 50058,
+   "sha256": "96d9952a969662ba46e010c046eff5a8b362b6e8643e4fe0ec7997c3362c7372"
+  },
+  {
+   "file": "common/units/equipment/_airframe_multi_role.txt",
+   "size": 39292,
+   "sha256": "3ef6023f648ade1b9772f9ccf2f24637b7a2fd4713e1bfc0c817624713d59f45"
+  },
+  {
+   "file": "common/units/equipment/_airframe_nav_bomber.txt",
+   "size": 27612,
+   "sha256": "6b64f905065d104ef44a301e1b4ae9b5530d9cd1a2a903e29318f45b714970fb"
+  },
+  {
+   "file": "common/units/equipment/_airframe_nav_bomber_guided.txt",
+   "size": 5609,
+   "sha256": "91b847c901cdc7bd19a712dee015208872df4e74c31a6499440388bc964bef41"
+  },
+  {
+   "file": "common/units/equipment/_airframe_navy_fighter.txt",
+   "size": 6230,
+   "sha256": "5f831e7d2df5cf271c944bb964186cb0bc6034e0828a860e52c0187f4527ea97"
+  },
+  {
+   "file": "common/units/equipment/_airframe_navy_interceptor.txt",
+   "size": 4054,
+   "sha256": "a0be70f5bd9e0b4e91b2b124fa787f2652472065a2bac3ac8b577f37979b997c"
+  },
+  {
+   "file": "common/units/equipment/_airframe_night_fighter.txt",
+   "size": 15700,
+   "sha256": "dad672290d391da333aeb64446be53dbb8d5ca2d9c58991f18658b6f5ddc1e69"
+  },
+  {
+   "file": "common/units/equipment/_airframe_rocketinterceptor.txt",
+   "size": 3151,
+   "sha256": "392cb7f6e21da2e43c99352ea2b5cbf83d922aa8b0f8465cb93d4800337549b1"
+  },
+  {
+   "file": "common/units/equipment/_airframe_scout_plane.txt",
+   "size": 34055,
+   "sha256": "ae8a4b57f188dcc3fba017299a0e2123c4b1204fadfd159907dbc7a42c1962fa"
+  },
+  {
+   "file": "common/units/equipment/_airframe_stratbomber.txt",
+   "size": 34696,
+   "sha256": "14c5ce8fd5dd4dedd69efda4f1cbfec020f8bfc5ec84842b28954b8345a99a2b"
+  },
+  {
+   "file": "common/units/equipment/_airframe_suicide_craft.txt",
+   "size": 3371,
+   "sha256": "ddbe515d430b61b29f0999505f3935ce3bc3a1a343cabd10a2bf5b9ed1e358d9"
+  },
+  {
+   "file": "common/units/equipment/_airframe_tacbomber.txt",
+   "size": 40282,
+   "sha256": "4f2ef658ab0b1529aeb03b0279fec5d97cb886af54d521e2c4c39df9cc72c5cc"
+  },
+  {
+   "file": "common/units/equipment/_airframe_transport_plane.txt",
+   "size": 30086,
+   "sha256": "144fe12ceff82f6f24758614ed456b4ebe01f10b81f73600ba2bb5e0b57dec62"
+  }
+ ]
+}

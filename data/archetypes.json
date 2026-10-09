@@ -1,0 +1,449 @@
+[
+ {
+  "archetype": "CAS_equipment",
+  "category": "cas",
+  "upgrades": [
+   "plane_cas_upgrade",
+   "plane_fighter_bomb_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "cv_CAS_equipment",
+  "category": "cv_cas",
+  "upgrades": [
+   "plane_cas_upgrade",
+   "cv_plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "cv_fighter_equipment",
+  "category": "cv_fighter",
+  "upgrades": [
+   "cv_plane_gun_upgrade",
+   "cv_plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "cv_mr_fighter_equipment",
+  "category": "cv_mr_fighter",
+  "upgrades": [
+   "cv_plane_gun_upgrade",
+   "cv_plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_fighter_bomb_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "cv_nav_bomber_equipment",
+  "category": "cv_nav_bomber",
+  "upgrades": [
+   "cv_plane_naval_upgrade",
+   "cv_plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "fast_bomber_equipment",
+  "category": "fast_bomber",
+  "upgrades": [
+   "plane_bomb_capacity_upgrade",
+   "plane_tac_bomb_upgrade",
+   "plane_heavy_cannons_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_turret_defence_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "fighter_equipment",
+  "category": "fighter",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "fighter_alt_equipment",
+  "category": "light_fighter",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "flying_boat_equipment",
+  "category": "flying_boat",
+  "upgrades": [
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_naval_upgrade",
+   "plane_turret_defence_upgrade"
+  ]
+ },
+ {
+  "archetype": "twin_cas_equipment",
+  "category": "twin_cas",
+  "upgrades": [
+   "plane_range_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_fighter_bomb_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_heavy_cannons_upgrade",
+   "plane_turret_defence_upgrade"
+  ]
+ },
+ {
+  "archetype": "heavy_fighter_equipment",
+  "category": "heavy_fighter",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_fighter_bomb_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_heavy_cannons_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "heavy_nav_bomber_equipment",
+  "category": "heavy_nav_bomber",
+  "upgrades": [
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_naval_upgrade",
+   "plane_turret_defence_upgrade"
+  ]
+ },
+ {
+  "archetype": "interceptor_equipment",
+  "category": "interceptor",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "jet_cas_equipment",
+  "category": "jet_cas",
+  "upgrades": [
+   "plane_cas_upgrade",
+   "plane_fighter_bomb_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "jet_fighter_equipment",
+  "category": "jet_fighter",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "jet_mr_fighter_equipment",
+  "category": "jet_mr_fighter",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "jet_strat_bomber_equipment",
+  "category": "jet_strat_bomber",
+  "upgrades": [
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_range_upgrade",
+   "plane_reliability_upgrade",
+   "plane_bomb_capacity_upgrade",
+   "plane_bomb_upgrade",
+   "plane_turret_defence_upgrade"
+  ]
+ },
+ {
+  "archetype": "jet_tac_bomber_equipment",
+  "category": "jet_tac_bomber",
+  "upgrades": [
+   "plane_bomb_capacity_upgrade",
+   "plane_tac_bomb_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "light_bomber_equipment",
+  "category": "light_bomber",
+  "upgrades": [
+   "plane_bomb_capacity_upgrade",
+   "plane_tac_bomb_upgrade",
+   "plane_heavy_cannons_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_turret_defence_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "mr_fighter_equipment",
+  "category": "multi_role",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_fighter_bomb_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "nav_bomber_equipment",
+  "category": "nav_bomber",
+  "upgrades": [
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_naval_upgrade",
+   "plane_turret_defence_upgrade"
+  ]
+ },
+ {
+  "archetype": "nav_bomber_gb_equipment",
+  "category": "nav_bomber_gb",
+  "upgrades": [
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_naval_upgrade",
+   "plane_turret_defence_upgrade"
+  ]
+ },
+ {
+  "archetype": "fighter_navy_equipment",
+  "category": "fighter_navy",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_fighter_bomb_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "interceptor_navy_equipment",
+  "category": "interceptor_navy",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "night_fighter_equipment",
+  "category": "night_fighter",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "rocket_interceptor_equipment",
+  "category": "rocket_interceptor",
+  "upgrades": [
+   "plane_gun_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_light_cannons_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade",
+   "plane_anti_air_rocket_upgrade"
+  ]
+ },
+ {
+  "archetype": "scout_plane_equipment",
+  "category": "scout_plane",
+  "upgrades": [
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_drop_tank_upgrade",
+   "plane_bubble_canopy_upgrade",
+   "plane_airframe_upgrade"
+  ]
+ },
+ {
+  "archetype": "quad_engine_bomber_equipment",
+  "category": "quad_engine_bomber",
+  "upgrades": [
+   "plane_bomb_capacity_upgrade",
+   "plane_bomb_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_turret_defence_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "suicide_craft_equipment",
+  "category": "suicide_craft",
+  "upgrades": []
+ },
+ {
+  "archetype": "tac_bomber_equipment",
+  "category": "tac_bomber",
+  "upgrades": [
+   "plane_bomb_capacity_upgrade",
+   "plane_tac_bomb_upgrade",
+   "plane_heavy_cannons_upgrade",
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_turret_defence_upgrade",
+   "plane_airframe_upgrade",
+   "plane_radar_upgrade"
+  ]
+ },
+ {
+  "archetype": "transport_plane_equipment",
+  "category": "transport_plane",
+  "upgrades": [
+   "plane_range_upgrade",
+   "plane_engine_upgrade",
+   "plane_reliability_upgrade",
+   "plane_airframe_upgrade"
+  ]
+ }
+]

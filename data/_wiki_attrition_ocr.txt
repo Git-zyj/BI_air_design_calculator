@@ -1,0 +1,235 @@
+﻿aradox Wikis
+页 面 讨 论
+Heartsoflron 4 肉 i 如 v
+阅 读 编 辑 编 辑 源 代 到 杳 历 史
+This k ．
+丬 h 《 g
+0
+帚 菹 印 改
+随 刂 顶 囟
+Parad0k i 如 飞
+- Main por 《
+Wikis discord
+s01 皂 guidelines
+c14 00 以
+Gamediscord
+YouTub±
+工 以
+相 改
+特 贞 白
+可 门 0 版 事
+固 宇 卧
+00 信 旦
+OeutSCh
+些 cl
+PO 区 如
+Portugues
+P 儲
+Attr1tion and accidents
+Attrit10n 九 引 leaC 忆 the [ 0 “ 0f equipment and organization (though not manpower) beycnd combat operations. Only land units suffer from attr on ， but naval and air 」 n 乜 can suffer accidents that act in
+a similar 龟 shicn ， h ] training 0 「 0 口 巳 尾 ting in harsh wedther.
+目 鎩
+organization [ 0
+2 Equipmønt
+3 ． 1 Land units
+3 Air units
+」 」 卜 巧 v 訕 units
+4 Methods du 〔 巳 euuipment
+上 1 Custom diffcultysettings
+ReferenCeS
+Causes
+This 飞 community i 《 “ 」 “ 闃 、 、 m & 已 “ h ithf iL
+All on ． 记 0 units have a baseline attrition rate Of 09 山 Attrition can be caused or increased by the folloning:
+． Training: + 5 ％
+． MOVing in hostile Terrain 〔 i 卫 ． 0 Desert, Junglp. SMarsh, and Mountain): tO 噲 509b
+Wpather: up tO 70 ％
+． Re st 引 巳 up 忆 叶 309b
+． 80rder up to + 10 ％ ]
+． Lcss than 35 4 ] supply status: up to + 20 ％ 囹
+． Unit i s moung: 1.2
+Dff-map supply trucks have a baseline attriticn rate 0 ． 3 instead. They multiply all sources attr•tion by 0 ． 65x 阉 but can be far more ad 丐 2 ， affected by certain 30 u rces attrition than regular land units:
+． Transporting suppliesthrough rugged Terrain (i.e. ．
+0 ， •Marsh, and Mountain): up 十 400 ％
+ForeSt, Desert,
+． Transporting 」 ppliesthrough adv V / 翮 山 ： up [ 0 肀 500 ％
+Orgamzation IOSS [ 辑 ] 编 代 到 ]
+（ This 的 community 湖 ntai 《 」 如 、 刂 5p0 经 粼 就 helpwithfxing
+A division 氅 s 0 ℃ 8 。 (attrition)[91 crganization per hourfrom attrition ， both in combat and outofcombat. Divisions that 3 ℃ out 0f supply 3k0 suffcrup to ． 0 ． 2 [ 1D1 recovery ra 忆 @配 thus ， thcir hou.org/n讵3稻 on gain) bas2d cn both ho much they arc
+out supply and OW ng they have bpen out 引 、 up 在 with maximum 00t 凸 P 《 ng achleved aftpr R001 」
+Equipment IOSS [ 辑 ] 止 源 代 码 ]
+〔 0 This 的 community 门 湖 nta 汾 」 “ i 如 、 凵 5p0 经 粼 就 helpwithfxing-t•
+Higher reliability reducesequipment from attrition. Reliability above 1 毹 ％ has 閬 further impact on equipment 1 ses and acts identical to having a reliability of 1C0
+Land units
+For land units ， the a amount Of equipment lDSt per hour for each type Df equipment is:
+Equmpment lost per hour = 0 田 ） 5 · attrltlon @ number ofeqmpment · 卩 _ reliab111ty)112J
+For sufficiently high equiprnent counts or 巧 叭 阉 b 山 ty ， and with one day being 24 hours ， this simplifies to.
+Average daily attrition rate ” 12 ‰ 。 attrition · （ 1 一 reliability).
+For lOC%attrition andO% [ 毓 ility ， ajDUt 12 ％ equipmentwill lost 0 day. For5% attriticn and SD% reliability ， which a 唣 丿 comrnon conditions fcr training divisions 什 訕 use a lOt Dr infantry equiprnent ， days training (enough 10 go frorn
+Creent0 因 Trained) willcost about & 04 ％ Df equipment.
+lt should be noted that each cquipmcntvariant £ 3 ℃ L 《 地 te ； attrition independently.
+Air units
+While aircraft Co not sufferfrom attrition ， have a 109g 凵 base chance 引 suffering an acc dent. This gets modified by a balancing factor ： 0 、 1 刂 4 ] their reliability ()p to 2x 过 at 0 ％ reliabillty), ifthey are on a n aircraft carrier ： 1 ． 5 刈 [ 遁 ifthey are currently
+performing pilOt excrcises 《 + 丿 0 司 07 《 their veterancy, weather, 3 n d oth@r moCitiers (though not country•leveloncs from nati 0 n spirits it they are n 皂 ga 《 丙 到 ． 以 引 Euery game hour, all air bases ar@ ch2Cked fcr 2 （ cident Åt mo 貞 0n03000 皂 nt 03n happen pcr
+hour per airbase ， but multiple 〗 dn 起 5 could bedestroyed in it. The accidentcan effect a random portion ofthe wing between ％ and 1D0 ％ ， but o 冂 、 0 ． 7 ％ [ 1 明 ofthe wing ectually ts destroyed. lfthe effect 5 than one 0 冂 e 徊 冂 thecase with aircraft
+carricrs), these fractional pa 3 r2 3 毹 」 [ at 0 n 3 country wide 《 “ 乸 and 配 № d to the ne accident 0 什 ect ．
+Hourly accident chance = ] 0 ％ 。 Accident chance modifiers · 卩 00 _ reliabillty 〕 · 2
+Accident effect = random@， 1) - 住 7 ％
+Average accident effect = 住 5 · 0 ． 7 ％ = 0 ． 35 ％
+Average aircraft lost pcr hour per airbase = 10 ％ （ 跹 0 _ reliablhty) 。 2 。 0 、 35 ％ = 0 ． 07 ％ 卩 佣 ％ 一 rehabihty)
+Assurning reliability of 緔 and no other modifiers, 廿 № average arnountor aircraft ℃ 0 吖 酊 叭 00d 014 ％ Ofa wing per 山 a · This accumulates 10 D335 ％ Of wing 卩 吖 airbase 卩 雪 day and 12 ％ or an air wing per airbase peryear.
+AII aircraft (other than intercontinental bombers with *Cötterdämmerung) startwith a reliability of at least 80 ％ ， thcugh this can modified up or down through the use ofvariants and military industrial organizations. With a reliability of 90% and no other
+modifiers, 诿 average hourty loss rate from a 就 ℃ en 吓 0m0 № 〔 0m9 了 ％ 0f2 wing 0 airbase, which translates tO O 彐 58 酊 a wing perairhase rd and 61.32% of a n airwing per airbase per 翮 0 i 山 3 reliability of 40% (common with variants
+without dy Blood Alone's aircraft designer) 引 记 no other mod 丰 曰 、 ， the everage hourlv [ 05S 憷 from accidents would be （ omeO ℃ 429b0 「 a wing per rbas 巳 ， which translates 忆 I.ODB% Of a wing 0 巳 r airbase per day and 357 ． S2% Of an air wing per airbase
+Y 0
+D 巳 tO hOW 心 谚 the t55 起 5 from a 《 cid 巳 5 when compared tO actuel combdt, it's USUdlly 卩 r 巳 飞 b tO disregard relidbility in favor 引 combat stats 忙 most situdtions.
+Naval units
+[ 编 辑 》 编 辑 源 代 码 ]
+ShipsCc not sufferfrom attrition, but their r21iabi11ty corresponds 我 i 什 prcbability ofget'ting crit 3 hit by enemy attacks. How2ver, they can suffer accidents.
+Shipsthat are performing naval e 冠 5 heve a 2 ％ chance suffering an accident every hour. When it happens ， the ship 巧 5 30 君 ] of its “ 硭 n 《 organization and 5 ％ 惚 2 ] of 赵 maximum 目 巳 plus “ extre 42 引 strength damage. There is also a 30 ％ 4 ]
+chancc of 2 training accident being 3 酾 t 化 3 《 hit ， which multiplies all organi&ticn and strength damage taken from the accid2nt 卸 4 又 《 25 ]
+Shipscan 引 、 0 suffer accidents from operating in mined dt 扈 0 ． The 》 cf a ship hittinge mine in a particular sea zone d 它 0 巳 nds on hOW saturated the sea zone with 「 ni 丨 憷 、 ()p tO 5 ％ 0 到 》 鞠 刨 [ dsthe 5 a z 旧 、 憷 「 rain. When a ship dO 它 5 hit d mine ，
+s [ 0 s 50 ％ 皆 」 of its current organization and “ [ 20 strength damage, which can sink smaller “ “ 皂 忑 outright. Thcre 3 ] so 14 ％ [ 匹 ] chan of 3 trainingaccidcnt being 3 critlcal hit, which multiplies all organization and strength damagc taken
+frDm 叶 还 accident 剪 5 跹 00 ]
+ng mines tO nt 怡 instantly sink pven larger 卜 ．
+Prides of the fleet are far 3 affected by accidents. rheiraccident chances are scaled 01x 01 》 and even when they d0 get an accident ， 2 chance of it beinga critical hitare also scaled 卸 O ． 01x 04
+There 这 引 50 dn additiondl 49b 引 bdlancingfactor presentfor 「 引 accidents ， including frcm training dnd from mines. This 巧 u 5 naval accidents a 硭 tO OCCU 「 at around thdt rate ， preventing 「 em 巳 ， lucky orunlucky stredks.
+The game does still ma refcrences 忆 naval attrition ， however. Some ofthe game's d2fines supposcdly control na tt n 0 龕 £ [ 34 ] asdo certain dm 学 3 《 traits 0k0 墨 Co 尾 Wat2r Expert and weathcr 0 Octs likc ． Arctic Water.
+Methods toreduceequipment loss 》 编 瞓 到 丬 》 代 谒 ]
+〔 心 VhS community 门 nt 引 《 」 如 、 ycu s00 mistake. help ith it
+There a 唣 丿 雪 waystD 硭 山 《 the effects equipment IOSS.
+For land units, 0n0 彗 t0 improve the reliability oftheir equipmcnt by attaching a “ M2intcnancecompany tc divisions or 卸 creating va an and designs (for etanks, eships, and •aircraft) with mo 俺 reliability.
+Another way 飞 [ 0 们 the scurce 0 「 attrition and mitigate or eliminate it:
+． Fcr attrition from lcw attaching 3 啭 Logistics ccmpany № divisions 03n be hclpful, as can improving thc supp y netwcrk ， 0 r 0 n simply moving unitsout ofcverload2d are until thcre is enough supply left for rcmaining units.
+． Fcr attrltion due tO rough terrain ， such 0 Mountains ， it can be helpful tc reduce the amount Of time spent in thcse terrains in thefirst p ] 30 espcc•ally with divisions containing reliability equipment.
+． Fcr attrition due tO ． Extrcmely hotcr 0 Extrcm21y （ 0 尾 wcather ， acclimatiz ng units tO thatweather 03n reducc thcir attrition from it. Ccrtain national spirits, support £ 001p3ni0s I 山 VWinter Logistics, special fO 2S doctrincs/special forces
+concantration tpthno ℃ g 苤 and commandprtraits li kP AdaptahlP and Winter Spgcialistcan spppd up hOt and/or COld acclimatizatlon-
+． For attrition 0 」 totomporary weathereffpcts, su c h a ； 0 Mud, 0 引 iZ1ard or 0 Sandstorms, can be hplpful tO wait until thesg conditions cloar up- ThP build-up Of 0 M 凵 d i n particular can 3 0 rgC [ ℃ Pd hy upgrading 3 statp
+lnfrastructure_
+《 Opprpssion and pgrforming RO aut kesistance mission i 冒 1 operatiVOS can bg used 10 lOkNerit- 《 《 № m 丿 oporatives arp boosting rpsistancp through
+． For attrition from h 0 rgsistance, cprtain 0 u 卩 ion rti LaW O r
+operations ， th 巳 / （ 引 1 be thwarted perfcrm•ngthe Counter ntelligence mission with O* 巳 t 、 es 引 ••d ／ or teking the@ Passive d 起 ns 它 and/or @ lnterrogation techniques intelligence agenCY d 起 5 ．
+0
+． Fcr attrition tO m30 0 y trucks ， it can useful toreduce pply rnD ri 翮 tiO 能 Thiswill reducethe range 引
+Su 《 ply 讹 anC potentially 儲 u a 也 t00 for land units whO 画 《 om cutOf a S a su ， it can a 《 h 刨 pf 山 tC build new
+0 pply Hubs or
+0
+Naval a 5 to reduce increased load on the supply network ceused by lowering the “ [ of motorization.
+「 or attrition from training, itcan be hel•ful tO restrict vvhet equipmentdivisions are 引 巧 ed tO 巳 Divisions can 旧 be 1 貊 起 d even when they a using outdated equipment, or even noequipment ， and dO nct [ 05e any experience from receiving more
+equipment.
+Therc a re 3k0 3 t0 reducc attrition globally. These include:
+· Certain political ad 0 「 5 and military high command gu 5 can reduce attrition when employed
+． Certain naticnal spirits unlocked through national focuses can reduce attrition
+． Thc
+0p12 忑 乃 rmy land doctrine undcrthe M 3 “ Mobilization path 耐 Mass “ u 上 reduccs attrition for land units
+Custom difficulty settings
+Adjusting the strength slider 0 《 a major country in difficulty settings prior a game will reduce the amount of attrition that that country's units w'll ． However, d0ing 50 引 sab achievements.
+References [ 缳 ] 缳 代 ]
+] D CIIA_NCL [
+] D CR3 LCSS
+ACC 旧 〔 :IT [ 巳
+ACC ！ CRITLCAL
+Defines.
+L111 A 们 工 rIO = I)
+in Defines.
+NSupp1r. SLV?LY_TRESELD_FOR ] 了 IT [ 0 蕉 过 0 ． 35
+Definps.
+in 〕 射 in 扈 5 ．
+： 二 豇 ． OC CF SUPFLY 二 〔 ． 2
+in Defines.
+M 」 111 丑 A ] 1 ] TI 〕 WHILE 荑 FACTCR 二 2
+in Oefines.
+NSu 1 新 TFUCX_AHRLTION = 〕 03
+in Defines.
+& NSupp1y. AHRLTION_FACTI 〕 R ” 6 5
+in Defines.
+！ 二 t y ． AITRITIDH_LAHICE_ORC —
+in OQfinøs
+！ 二 1 t y ． CF_SIJPFLf HCIRALE = (4). 二
+in Defines.
+& ] ACCIDEIÜ CIMCE 3 王 L IAß IL ， 工 T = 2
+Defines.
+ACCIDEIÜ CINICE 2 」 上 I 猖 工 ” 1. 5
+& “ 。 AIF. WINC 〕@ N [ C [ ION XCCIDENT FACTOR _
+modifier from game file
+H 亡 “ ts [ 1
+noéifi
+opfinps_
+． t rcr 」 mpost: 250305
+ND 已 £ 」 上 & ] ACCIDENT EFFECT 1 = 0 ． 0 〕 7
+2 彐 ma ， ． 蕉 ／ ． S OFC S S FACTCR — 〔 ． 5
+20 冒 犴
+f M 《 不 ． L 一 INHS 一 角 湖 H 一 C 下 ] T [ C 且 一 H [ T 〔 HANCE S = 上 ] 4
+in
+《 0 TFAINLKG
+化 ， } 狂 KC
+in
+= 02
+Defines.
+ACC ： 打
+11 ．
+， ！ 二 t y ． 0 耳 一 OF P12 辶 〕 丫 S
+i n 0 旧 0
+12 ． t
+A ] 1 月 1 冂 一 卜 [ [ 一 LCSS 一 C 驯 匚 = 以 00 ，
+ACC ！ CHANCE EA3E
+Dpfinps_
+ND 已 £ 上 & 、 TFAINLKG
+)efines.
+opfines.
+R 卫 1 ℃ 咀 LO S S 法 CTOR — 0 ． 〕 5
+= 4 in Defines.
+5 ] NG 咀 LO 5 5
+HIT C 刂 ℃ ES 二 0 ． ]
+彐 二 T DA_H_ÅGE ； 巳 齔
+27 ．
+2 &
+32 、
+34 ．
+D 起 n 起 5 ．
+3 彐 了 ． 。 I 彐 ℃ ACCIDE}E CRITICAZ HIT 〕 3E S 巳 吐 三 ” 4
+Defines.
+N[ fir s 」 ． 售 L 一 ． C 棖 一 上 D 就 了 ] 〔 一 一 F 田 = 1 01
+Defines.
+和 蕉 L CC [ D 囗 汀 刂 ] 112 」 IIIT CIIANCE F 〕 U 〔 TI 〕 [ 0 ] =
+in Defines.
+工 01
+明 ， 一 《 泮 S 让 嫻 〔 和 ÄACTCIR = 0 ． 04 in Dpfines_
+] L 和 众 C?T 自 F, = [
+in Oefines.
+14 ． T
+詵 旺 E ！ CH.å.NCE E ℃ E 机 工 T — 〔 ． 1
+ND 驸 in 巴 ． ] ] [ 了 I （ DMAGE 〔 KG = 匚 〕
+3 彐 了 ． T [ TI （ D 囗 独 记 三 ” 匚 〕
+． T [ TI 〔 ； 黑 《 G C 驯 2
+and
+in 囗 迎 n 皂 s ．
+= 0 、 2
+Mechanics
+． pnductl
+宀 0 “ ch
+． [ out 阉 匚 00n 。 Equ•pmcnt ． 「 《 ， 、 0 0 in u 引 or ni 《 0
+S 凵 ppo m ” c 卜 00 型 到 厶 「 十 00 ' 0k0 十 0 NO S 卩 8a 練 〕 嘰 众 叶 ． 0 “ hn 「 8 / ' nd dætn
+' 河 十 outV nt 卜 P001 到 · 阌 司 “ p 卩 “ “ 嘰 N 到
+R Cha d [ hnO 《 OEy
+拙 ap
+' 十 劊 的 8y 引 0 「 川 「 0 司 。 焦 i 「 dO 「 n
+rm 巳 t “ 《 0 。 貊 du 十 no 8Y · 卩 的 ient
+ar ℃ Pezce 〔 0 的 e e ' L3nd u 门 。 Land 30 e ÜiViSicndesigner “ Tank dESigner ' Armyplanner [ cmn 「 ou 卩 。 Command2r 。 Ba plan ' 〔 O•m 匕 酊 〔 t ℃ S Sh 卩 1 (London a 姹 口 re 訛 切 ' ava 《 驗 are 鄰 ℃ des 地 n Air
+℃ 》 p 巴 尾 「 匚 e 。 C 「 〔 O Attritionand acCident5 。 LD0500 到 M 引 ] PO NUClearbomb 嘰 尾
+lntel 。 0 ； 祀 山 《 、 MSSions 。 Ope tiO'
+cr - 5 巧
+分 类 ： I.IS 》 Gamc concepts 《 Pagesthatusea deprccated fcrmatofthe ma 小 tags
+十 S Oflron 4
+paradox
+Discover
+Ou1 《 5
+PIay ] Paradox
+0
+0
+0
+e 」 W
+卩 adox Forums
+P&ddox 、 Vi 籼 5
+AtÄ)ut us
+JOin a es 尷
+contacT

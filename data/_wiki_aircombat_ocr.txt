@@ -1,0 +1,312 @@
+﻿0
+帚 菹 印 改
+随 刂 顶 囟
+Parad0k i 如 飞
+- Main por 《
+Wikis discord
+s01 皂 guidelines
+c14 00 以
+Gamediscord
+YouTub±
+工 以
+相 改
+特 贞 白
+可 门 0 版 事
+固 宇 卧
+00 信 旦
+aradox Wikis
+Heartsoflron 4 肉 i 如 v
+页 面 讨 论
+1 nu 、 丘 01u speed = ． 0 25
+阅 读 编 辑
+编 辑 源 代 到 杳 后 历 史
+Air combat
+Aircombat is generally simulated every 8
+1 Ai rtO 「 ombat phase
+上 1 Sub-phase I: DetecTion
+1 卫 Sub-phase 2 ： Damage
+1 」 Sub-phase 圭 Disrupticn
+Escortand equipment ； phase
+hours ()t 佣 0 ， IE 0 ， and 24 ℃ 21001 time). Each cfthe following phases is £ 0m00t from 飞 he perspective 引 02 （ h country befcre the nQ phase begins.
+2 ． 1 Sub-phase 处 Protecticn from or
+2 丿 Sub-phase 2 ： [ 0 什 om 湖 「 一 tO 一 air 「 舭
+Ground Mission Phase
+*-1 Sub-phase State anti-air
+3 丿 Sub-phase 2 ： Naval and d iDn
+3 」 Sub-phase 圭 Disrupticn ncgation
+1 Example
+只 《
+Air tO air combat phase 《 辑 《 韉 汾 代 码 1
+This k ．
+丬 h 《 g
+Heartsof 1 n IV
+Air warfare
+Aircraft designer
+Air missions
+Air combat
+Air technology on ． B ）
+Air doctrine
+Missiles
+貊 this phase, own airwings will try 忆 attack all enemy 「 vvings operating in the same air reglon. bDth by directls•' damaging them 引 记 in the case 0 「 enemy 湖 丨 vwngs on ground m 这 5i0 丨 巧 alSO dlsruptingthem. Enemy countnes zreany that this 匚 OL 旧 t or the
+hOSt country Of air volunteers) is at war with.
+Sub-phase 七 Detection
+The number f 《 nd 、 pla 「 that can attack is 訕 most 3 是 蚓 thp numbpr Of d 可 匿 憷 0 enerny planes, g000 detection impo 曲 nt tO rully utilize available air wings, pecia whprl the enemy has 地 vv planes.
+The detcction chance determincs tFQ pc entage cfcnemy 刎 an in an air region that will № visible. lt depends “ multip12 factors:
+The following factors are additive:
+． 0 凵 pation ： 0 」 ing land in the strategic reglon spotting planes from the ground and yields a chance up to + 10 ％ [ 引 (when controlling 0 whole reg•on).
+． Radar: Radar coverage yields u 卩 № 卞50％@ detectiDn ct 阉 0 ()t full radar coverage)
+． 声 「 missions: Planes 00 它 in in the reglon yield u p № 十 80 ％ detection 山 引 ] (with 3m0 国 引 5 ， 《 lon-fighters on （ 0L 旧 t 忒 50 囝 efficiency)
+Then ， dcpendingon the time cf day and weather, detection is rcduced:
+· N•ght-time: modifies detection by ． 20 ％
+． 8 weather: mcdifies detection by upto 一 90 ％
+FinalbJ the number visible 0 磨 n is rurther mo 引 fi by the fcllowing situational 毽 ors ：
+． lfthe enemy side includes both ground missions and superiority 0 虍 (g) fghters the latterwill be / v 这 Thefighters anC bombers don't n to be from the same enemy country.
+． Regular bO 〕 0 on ratpg bombing mission and carripr•basgd bombprs can reduce thpiruisibllity with thP "Stratpgic bombing uisibility moditier g., 什 om t00 lnfiltration 80mblng air doctring)-
+． Planps on CIOSP air support mission arptwicp 3 ； uisiblp though cannot 2U0 more than 1D0 ％ siö 山 t 丿 ．
+． Planes on 凶 0 、 trik 然 are ten times 《 no visible, though cannot have rnore than 100%visibility.
+Airwings “ 虍 in descending ordcr air atta （ and agi 就 against detected enemies ， meaning more pab air wings gct pri0 ' 《 计 not all plancs t0 participatc due to limitcd enemyvisibility.
+The 0 麾 n 起 s Of 皂 a 山 sortieing wing are allccated against enemy wings pr000 山 00 引 tD their visibility (against all wings for damage and against g ℃ und missions a 飞 0 fD 「 disruption).
+For example, if cight full wings cffighters 2 配 0n0 CAS wing@0」 Q visibility) face a n equal opponent underfulldctection, wingwill scnd 跹 planes against each enemy fighterwingand ag n the 迎 n 迎 m CAS wing. At lower detect Dn ， thc CAS wing
+would face attackers, while theescorting fighters retain full visibility. At even lower detection 03U ％ ] ， visibility vvculd limited enough that some planes wculd not № attackanymore. starting vvith the CAS and then the fighter wings with the
+worststats.
+Sub-phase 2 ！ Damage
+[ 《 洎 代 码 ]
+unless the d nd 起 air d 可 皂 n is ℃ ， the number planes destroyed
+(base darnage 一 agility mitigafion + bonlls from relative + bonus from 楠 solute speed 〕 ， O.OI 思 carrier factor
+Planes destroyed = max
+au• defense
+base damage = number 0f attackers attack 。 0 ． 2
+defender agility
+agllity mitigation = round
+basedamage•O.45•max min
+4
+attacker agihty
+attacker speed
+from relative = round base damage · 65 · min
+defcnder speed
+rnin 〔 t k speed, 8 開 km/h)
+， D ． 001
+ifattacker speed > defender speed otherwise 0 凵
+1D0 km/h
+carrier factor = 5 ifboth attacker and defender are carrier based, otherwise 10 ，
+lfthe d 尾 、 dir d 卣 “ 5 巳 “ ℃ ， 起 5 aredestroyed.
+Sub-phase 3 ： Disruption
+Finally ， air wings on air superionty C r interceptlon missiDn will disrupt enemy air wings ground mlSS ℃ ns.The following components contribute tO th2 稻 n disruption value:
+． agility factor: attackerß agility multiplied by 0 ] 」 4 ]
+． attack factor: attacker's attack multiplled by 005 ]
+． speed factor: attacker•s speed diuided 卸 800
+． detection factor: dP 地 0 ℃ 0 chance multi 的 丽 by 辽
+． carrierfactor 40 引 for 冂 orm and 6LlgJ for d “ i 巳 「 combat 力 0 the attackerend defender are carrierwings)
+Disruption numberof attackers 0 + agility factor) · 卩 斗 attack factor) 〔 1 + speed factor) 。 0 + detectionfactor) •carrier factor
+貊 practice, this tU rns out tO be:
+Disruption ” number Of attackers 生 0 + speed factor 〕 。 〔 [ + detection chance) · carrier factor
+This makes detection critical for disruption as it increases both the number 《 gh 憷 巧 acting against ] ] ] y bom 巧 as well as the disruption e of each individual one.
+Esc01 、 [ and equipment loss phase
+[ 辑 1 源 代 ]
+到 e the aftermath Ofthe prpvious phase is tallipd
+Sub-phase 1 ： Protection from escorts
+Fighters airsuperiority/escort m on counteract the disruption that bom 廴 reccivcC from 什 cnemy in the disruption phase. 80m 匕 £ Of 3 山 £ d ccuntries don'tgctcscorted. The following ccmponents ccntribute 忆 thc escort's disruptlon reduction:
+． 2 [ 川 」
+50e 巳 d factor- speed divided by 32 引 ]
+． 20 《 i factcr• agility divided 10 2 《
+． attack factcr: attack divided 100 」
+． detpction
+2 ， number ofescorts · 卩 + speed factor) ， 0 + agility factor) · （ 1 + attack factor) · （ 1 + detection)
+disruption leduction IatiO 一
+total disruption amount
+This 忆 gets removed from the received disruption 引 [ bomber wings The number of ct e 5 [ ort planes is not n2calculated for this phase and 这 used as the 麾 st 0 」 nt in the previDus 卩 se left it in ， causing some countries to have 酊 b 让 “ i ， 叭 0 巧 e
+迎 s 〔 0 改 efficiency.
+Sub-phase 2 ： Losses from air-to-air combat
+Each pointcf damage received in the previous phase results in the 巧 ss of one airplane. Damage is rounded statistically, 12 damage received causes 1 plane to lost in 80%ofcombats and2 planes in 20 ％ of combats resulting in 1.2 average losses per
+If a wing 巧 at t one plane and has an 瓿 皂 ， there is a chance that they die as a result of the air combet.
+Ground Mission Phase
+missions. Wings may take additional losses 貊 飞 s phase from state, naval ， or divisional anti-air.
+All ground missions except drO[) and mine 0 磨 冂 ti 「 g ／ s 鞠 它 巳 ping require the selection 引 d specific target. If mu 0 missions are selected they are 哲 d in the following 0 虍 皂 0
+． CIOSC air support
+． strategic bombing
+． 「 a 《 bo 「 nberfkdmikaze
+port strike
+． air supply
+0 口 、 the first 《 d 憷 星 0 that produces a valid target is useC, 《 t d singlewing Cdn hdndle multiple targets witWn the samecategory in on 巳 sortie. lt is not n （ E55 引 y tO split up wings tO 5u0 ort multiple land ccmbats 「 example. large naval bcmber wing
+can for example notsend any remaining planes a portstrl ke vvhen another partofthe wing executed a naval strike.
+Night time's "Ground dcrnbing Targeting" modi(ier 卜 50 ％ } 〔 礼 S S a corresponding probability t wing being un 丽 地 find their target. They are still subjected tO
+nti•air.
+14. 1
+彐 ， C 札 刂
+& “ 。 AIF. WINC 獄 STATS SPEED
+3 de pld
+Sub-phase 1 ： State anti-air
+辑 《 辑 源 代 码 ]
+引 ra 0 （ bombing, portstrike and air pp missions are a 飞 配 by BState Anti-Air 羊
+ThP probability that a damage puant occurs （ [ ： and the numbgr Of planes destroyed (D) 00p on the following componpnts.
+． damage base chance: 10 ％ 4 ]
+． hit chancc modifier: the "Static 山 诩 Air hit chancc factor" modifier (e.g., + 20 ％ each from 彭 C2ntimetric R2d30 孬 Phased Array ， 3 配 孬 Monopulse RaCar)
+． 2 random number R b2tween ℃ and IO 住 0 ％
+． 02m3g0 忪 000 到
+． enti-airfactor. for air su 卩 0 mis 、 ions ， the AA value oftheirtargetS 5 t (even 叭 h ] that a 飞 friendly) divided by the maximum AA level 〔 5) ． FD 「 the othertwo mission types ， the averageAA 地 了 貊
+enemy states in the strategic regicn, divided by the maximumM. level 囹 ．
+皂 0 乪 ive number plan2S
+． damage modifier: th2 "Static Anti Air dama 甲 factor" mcCifier (e.g., + 10 ‰ each 什 om ． lmproved Anti•Air and ． ' ， Advanced Anti•Air)
+． air wing's dpfensp Stat
+C = 10 ％ · 0 + chancemodifier) anti airfactor
+If R smallerthan C, 3 hit OCCLTS with 冒 fOllOWing damage ()n numbpr Of planps dastroypd).•
+小 dis 刎 ay 对 o=max\left(l,[\frac 引 。 t BtextInumber of
+planps}hcdot R\cdot 《 1 + 韋 。 叫 ma modifigrh})}{qcdot{\tpxtåairwing•s № 俗 n “ 肀 吨 叫 }
+Or aueraging 诿 random number 五 10 C/2:
+伍 4 anti-atr factor 生 number ofplanes 。 0 + damage modifier 〕
+0 = Tna.'E 1 ，
+alr wmg ， s defense
+Small bom 「 wings and 起 sp 剛 strategic bDmbers (having high air d 皂 n 〕 will 什 皂 爬 ntl 丿 他 」 丽 by the minimum-one 《 0
+Sub-phase 2 ： Naval and divisional anti-air
+编 辑 《 编 辑 源 代 码 ]
+For air wings 0 n close air support missions ， thcy WIll havc 忆 contend with the enemy diVÆions' anti•air capabilitics. 、 10r0 details are in the re van scct ℃ n in the air mission artic12
+And for air wings on naval/Kamikaze/port strike m 5 n they will have to contend with the enemy 5h0 anti-air capabllities. Moredetails are in the relevant section 貊 the naval e article.
+Sub-phase 3 ： Disruption negation
+山 b [ 建 幻 、
+Chanceto damage attacking 0 〕 mbers
+已 № t 已 d bC1 ] 虍 “ 《 05 5 貊 differentscenarios
+ThP ground mission wingcan rpd [ ℃ 0 any disruption lpft ouerafterthp PSCOrt phasp furthpr using its own at A 00r calculated 什 om id StatS and thP disruption valup Obtainpd from th2 prpvious phases- This final "disruption damagp f30 “ tells us hOW
+much ofthe remaining disruption negated ()r "damaged"). lt [ 巧 es the following components.
+． 0 訂 凵 ption: 韧3@0 after thP esco phasg
+． de 佰 n 00r ： air irg 、 defensp dividphy 20
+etteck factor: airwing's attack d 200 [ 2 刂
+speed factor airwing's speed Civided by 80 的 ]
+． air number of planes (not r2duced 卸 mission 0 稻 C1enc / 》
+The factor defineC as:
+disruption
+dlsruption damage factor = 1 } ％
+1D•numbcr 0f planes （ 1 + defensc factor) 。 （ 1 +attackfactor 〕 + speed factor)
+The value that g 5 《 1 d "Planes disrupted" in the stetistics of an 00n isnumber ofplanes （ 1 一 disruptmon damage factor) accumulated over missions and sorties in the time frame.
+CuidcC missi12S always have 3 “ L 《 ption damage or 1 ％ ， negating 3 disruption applled agalnst them 《
+Expe1ience
+Wlngs executing their missions galn experience fcrthemselves (wing experience) anC their country (country air experience).
+AII wings taking pa 飞 in air-to-air cornbat 《 no 刂 u fighters and even ifthey don'tget s d for damage dealing) gain 住 8 [ ] wing experiencp. This gain getS 但 duc 闻 ifthpre are not enough enerny planes allow 測 planps attack. Wings completing their
+grounC mission gain 0 ． 28 31 WIng experience.
+AII wings taking 0 酊 t in air-to-air ccmbat 《 described abovel produce 0 刀 004 二 1 country 《 皂 ri 起 0 gereffectiv2 plane. AdCitiDnally ， th2} gain the same amountof e per 0 for 起 a 什 country attacking them. This means a 0 air rorce getting attacked b/
+multiplecountries gets a multiple of experience.
+Country air 離0暫i@n倥 frorn other missiDns 0 effective 0 磨 0 竺
+． Close airsupport: 住 佣 05 [ 3 引 { on counting planes 3 £ combats)
+． Stratpgic bombi 住 000 丿 卩 41
+． Pa 囝 d ℃ 0 ： 住 03 〔 on 《 y courting 0 s actually needed fordrop)
+lfthe wing is lacking 'FL 《 bcth types expcrience proportionally. lfthe wing contains aircraft prcduced by anothercountry anC that country currcntly sends any lcnd•lease ， it gains up 忆 50 much country aircxperience, depcndingon
+什 迎 prcpcrtion 耐 equipment present. This shared 2xperience nct further shared with attachés and dces not diminish the 皂 又 p000n 耐 the country cperating the planes.
+Example
+编 辑 源 仃 ]
+（ ？ ThiS community 门 如 1 汾 」 证 如 ． pot pleasehelpwithfLXing
+Thp LJK has a wingof 1D0 strategic bombers hombing WPSt Gprmany at g 的 mission efficiency. 40q otthp bomber are lJS•madP and thP 吓 厶 still have an activp lend-lease tOthP IJK_ № bomhers gpt intprcpptpd ' German a nd ltalian fightprs
+The IJK galns the fcllcwingcountry air
+． 行 orn air-tO-air fight: IOO 。 30 ％ C01 ， 0 ． D9
+· 什 0 重 beingattacked byGermany: 1 ％ 脔 0 ℃ 01 二 · D ℃ 9
+． beingattacked by ltaly: ICC 90 ％ 0 ． 1 竺 +O.og
+． from strategic bombing: 13 〕 } 0 ℃ 002 + 0 刀 18
+． TOtal: J288
+The USAget50h · 40% 20 ％ Df this experience ， ． 0 £ 57 &
+References
+[ 蝙 ] 菲 代 码 ]
+in Defines, doubled
+& HOIJF.S )ELLY A_FTER EXCH 。 刂
+becausg roundtrip.
+in Defines.
+NA 二 记 田 T_I ] 上 上 = 3
+and
+0 刂 E GCALE =
+i n Ogfinps.
+s 1 丫 ． 0 众 R ] R =
+and
+NDefines, “ DISK[I?TICN_AGILII"I_FKTOH = 刂
+in
+ND 已 £ 」 上 & ． WING STAT3 AGIL
+and
+] D 二 SRUPTICN FACTI 〕 R =
+in Dcfines.
+3 wInc ℃ 〈 STATS — 〔
+and
+“ D 二 SRUPTION ;PEED T 〕 R - -
+in Defines
+NDefines, “ ． AIH 」 WI G 一 一 A 僞 SPF8D
+in Defines
+巴 二 n 巴 & 计 ． D 二 5 L 伊 T ] 0 DETECTLON F 熟 C 重 〕 _ 1
+DeFines.
+ND 已 £ 」 上 & ． D 二 SRU?TICN FÅCTOR 二 4
+Defines.
+] D 二 SRUPTICN FÅCTOR CAMIER = 6
+Defines.
+& 三 ORT 「 CTI 理 = 2
+= 00 旧 Defines.
+二 E WIIIG ST ] I 二 二 Tr = 还 0 in Defin2s.
+s 1 丫 ． 《 F, STATS =
+Dpfinps_
+s 1 丫 ． 划 仃 I 0 冒 仆 C 的 = CI_ 1
+Warfare
+LandEettle 。 ]
+0 汀 I PLÄ_hE 黑 气 CE FLCT)R ”
+and
+2 。 蕉 乶 1r XIR 以 STATS [ ℃ E — 10 〕
+NDaf " 庶 lr ， I) ] S 衅 T ] 〔 刑 一 DE 卜 FLVC 一 D 巨 〔 一 和 羔 〔 10 = 以 》 in [)efines.
+= 还 0 and
+」 ] 巴 倉 1r 。 ] K 一 《 NG 」 一 5 [ ATS 一 ] TA 〔
+Defines.
+10 ] GR ] 0 DLFENP-E AI¯rÄClf FACTOR = 匚 5
+DETECT 刂 I 卫 2 三
+D 了 就 〔 彐 。 刂 I 卫 2 三
+D 了 江 〔 T 刂 卫 2 三
+in Defines.
+FN 〕 OCCU?ATION 二 匚 1
+[ Oå 3 = 3. 5
+in
+[ OH ] n23 」 13 = 〔 ． 日
+FFOH ] RC •IS 2 〕 IJI _ 3 〔 0 〕
+2 &
+10 KIR 彐 CTATS 3 「 三 E [
+and
+£ 蕉 恿 10 ] SRJPTION DEFENCE SPEED FACTOR = 1 in 00f 貊 &
+丿 torumpost:2S559207
+in Defines.
+KLefines. NAII. 包 一 5 匕 CH 一 IS S ICN_JETECI_±AUIUK = 删 ． ：
+nefines. NAII. DE 就 《 C 札 一 F 〗 上 ] 仃 二 - 〕 ． 2
+in Defines.
+D ] T 上 J 3 三 31AT3 袒儿T 二 LFIEÄ 二 0 ． 2
+BEHER ÅGILITY DAM_ÅGE RELLCTIOK = 0 ． 45
+and
+11 ． T
+EICCEST FACTCR 〕 过 噗
+T 巨 〕 LAMAßE R 恿 S = 就 弓 5
+and
+32 、
+34 ．
+LLefLnes. NA 二 SFEEJ_FAUIUF.DIYF
+and
+SF 一 D GE 一 30mJ5 一 ， CT （ 珉 = 匚 〕 2 5
+in
+& AIR WING NN STATS SEEED ” 〕 l)
+in D 皂 《 0 皂 &
+」 ] 门 巴 s 誦 10 A ] K 一 《 NG 一 〕 一 ] 一 了 5 一 1\ 乁 A 了 GAIN = 0
+±f 〕 巴 焦 10 ] 一 [ NG 一 〕 G 厘 〕 工 一 1 仃 5 5 ] 0 C 圉 L 孓 L GALK 二
+Defines.
+in
+2 。 蕉 乶 10 FIELD SC' 止 三 — I)(I 〔 4
+£ 蕉 恿 1r CLOSE ÅIR 引 下 ORT R ] 囤 SCALE = 0 ． 0 〔 05 i n
+NI 〕 1 门 lr ， 侣 I G 一 D 阳 L 噁 卜 一 I 引 〖 卜 一 SC 上 = 上 以 刂 2
+in D2fines.
+」 ] 巴 10 」 KOF 一 & E I NCE 一 50 E = 0 ． 03
+in 〕 in 它 5 ．
+GXIn 二 〔 ． 5
+〕 巴 1r 。 LEW_LEASED_EQUIpmlT_E>YEilEKCE
+。 Ldnd
+。 5 舁 i 引 fO
+铲 巧 v N 己 Shp
+Sh 甲 N
+圄 50
+withoutVan thc C01
+分 类 ： L15 》 Military
+十 ea s oflron 4 稻 图
+paradox
+Discover
+0
+0
+e 」 W
+卩 adox Forums
+Pæadox 、 Vi 籼 5
+AtÄ)ut us
+JOin a es 尷
+contacT

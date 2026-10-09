@@ -1,0 +1,469 @@
+[
+ {
+  "token": "mio_policy_air_perfect_finish",
+  "file": "common/military_industrial_organization/policies/_air_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_small_plane",
+   "mio_cat_eq_all_small_plane_no_cv",
+   "mio_cat_eq_all_medium_plane",
+   "mio_cat_eq_all_heavy_plane",
+   "mio_cat_eq_all_close_air_support",
+   "mio_cat_eq_all_cv_aircraft",
+   "mio_cat_eq_all_cv_fighter",
+   "mio_cat_eq_all_cv_bomber",
+   "mio_cat_eq_only_light_fighter",
+   "mio_cat_eq_only_light_fighter_no_cv",
+   "mio_cat_eq_only_tactical_bomber",
+   "mio_cat_eq_only_strategic_bomber",
+   "mio_cat_eq_all_naval_aircraft"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "advanced_machine_tools"
+  ],
+  "equipment_bonus": {
+   "maximum_speed": 0.01,
+   "air_agility": 0.01,
+   "production_cost_factor": 0.02
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_air_heavy_gantry_cranes",
+  "file": "common/military_industrial_organization/policies/_air_policies.txt",
+  "equipment_types": [],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "electric_hoist"
+  ],
+  "equipment_bonus": {},
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_air_propulsion_experimenters",
+  "file": "common/military_industrial_organization/policies/_air_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_small_plane",
+   "mio_cat_eq_all_small_plane_no_cv",
+   "mio_cat_eq_all_medium_plane",
+   "mio_cat_eq_all_heavy_plane",
+   "mio_cat_eq_all_close_air_support",
+   "mio_cat_eq_all_cv_aircraft",
+   "mio_cat_eq_all_cv_fighter",
+   "mio_cat_eq_all_cv_bomber",
+   "mio_cat_eq_only_light_fighter",
+   "mio_cat_eq_only_light_fighter_no_cv",
+   "mio_cat_eq_only_tactical_bomber",
+   "mio_cat_eq_only_strategic_bomber",
+   "mio_cat_eq_all_naval_aircraft"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "improved_turbine_engines"
+  ],
+  "equipment_bonus": {},
+  "organization_modifier": {
+   "military_industrial_organization_research_bonus": 0.05
+  }
+ },
+ {
+  "token": "mio_policy_air_wind_tunnel_pioneers",
+  "file": "common/military_industrial_organization/policies/_air_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_small_plane",
+   "mio_cat_eq_all_small_plane_no_cv",
+   "mio_cat_eq_all_medium_plane",
+   "mio_cat_eq_all_heavy_plane",
+   "mio_cat_eq_all_close_air_support",
+   "mio_cat_eq_all_cv_aircraft",
+   "mio_cat_eq_all_cv_fighter",
+   "mio_cat_eq_all_cv_bomber",
+   "mio_cat_eq_only_light_fighter",
+   "mio_cat_eq_only_light_fighter_no_cv",
+   "mio_cat_eq_only_tactical_bomber",
+   "mio_cat_eq_only_strategic_bomber",
+   "mio_cat_eq_all_naval_aircraft"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "computing_machine"
+  ],
+  "equipment_bonus": {
+   "maximum_speed": 0.015
+  },
+  "organization_modifier": {
+   "military_industrial_organization_funds_gain": -0.05,
+   "military_industrial_organization_research_bonus": 0.02
+  }
+ },
+ {
+  "token": "mio_policy_air_modular_assembly",
+  "file": "common/military_industrial_organization/policies/_air_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_small_plane",
+   "mio_cat_eq_all_small_plane_no_cv",
+   "mio_cat_eq_all_medium_plane",
+   "mio_cat_eq_all_heavy_plane",
+   "mio_cat_eq_all_close_air_support",
+   "mio_cat_eq_all_cv_aircraft",
+   "mio_cat_eq_all_cv_fighter",
+   "mio_cat_eq_all_cv_bomber",
+   "mio_cat_eq_only_light_fighter",
+   "mio_cat_eq_only_light_fighter_no_cv",
+   "mio_cat_eq_only_tactical_bomber",
+   "mio_cat_eq_only_strategic_bomber",
+   "mio_cat_eq_all_naval_aircraft"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "Ltaircraft_industry2"
+  ],
+  "equipment_bonus": {
+   "production_cost_factor": -0.03
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_general_ruthless_contracts",
+  "file": "common/military_industrial_organization/policies/_general_policies.txt",
+  "equipment_types": [],
+  "allowed_all": true,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {},
+  "organization_modifier": {
+   "military_industrial_organization_funds_gain": 0.1
+  }
+ },
+ {
+  "token": "mio_policy_general_assembly_line_optimisers",
+  "file": "common/military_industrial_organization/policies/_general_policies.txt",
+  "equipment_types": [
+   "armor",
+   "mio_cat_eq_all_motorized",
+   "mio_cat_eq_all_mechanized",
+   "mio_cat_eq_all_anti_tank",
+   "mio_cat_eq_all_anti_air",
+   "mio_cat_eq_all_artillery",
+   "rocket_artillery_equipment",
+   "mio_cat_eq_all_infantry_weapons",
+   "mio_cat_eq_all_special_forces",
+   "railway_gun",
+   "train_equipment",
+   "mio_cat_eq_all_light_tank",
+   "mio_cat_eq_all_medium_tank",
+   "mio_cat_eq_all_heavy_tank",
+   "mio_cat_eq_all_tank_destroyers",
+   "mio_cat_eq_all_spgs",
+   "mio_cat_eq_light_only",
+   "mio_cat_eq_medium_only"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "assembly_line_production"
+  ],
+  "equipment_bonus": {},
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_general_vertical_integration",
+  "file": "common/military_industrial_organization/policies/_general_policies.txt",
+  "equipment_types": [],
+  "allowed_all": true,
+  "min_size": 6,
+  "requires_techs": [
+   "worker_training"
+  ],
+  "equipment_bonus": {},
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_general_mechanical_genius",
+  "file": "common/military_industrial_organization/policies/_general_policies.txt",
+  "equipment_types": [],
+  "allowed_all": true,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {
+   "reliability": 0.04
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_general_experimental_development_teams",
+  "file": "common/military_industrial_organization/policies/_general_policies.txt",
+  "equipment_types": [],
+  "allowed_all": true,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {},
+  "organization_modifier": {
+   "military_industrial_organization_research_bonus": 0.03
+  }
+ },
+ {
+  "token": "mio_policy_NOR_general_permanent_industrial_revolution",
+  "file": "common/military_industrial_organization/policies/_general_policies.txt",
+  "equipment_types": [],
+  "allowed_all": true,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {},
+  "organization_modifier": {
+   "military_industrial_organization_research_bonus": 0.02
+  }
+ },
+ {
+  "token": "mio_policy_land_armor_welding_specialists",
+  "file": "common/military_industrial_organization/policies/_land_policies.txt",
+  "equipment_types": [
+   "armor",
+   "mio_cat_eq_all_motorized",
+   "mio_cat_eq_all_mechanized",
+   "mio_cat_eq_all_light_tank",
+   "mio_cat_eq_all_medium_tank",
+   "mio_cat_eq_all_heavy_tank",
+   "mio_cat_eq_all_tank_destroyers",
+   "mio_cat_eq_all_spgs",
+   "mio_cat_eq_light_only",
+   "mio_cat_eq_medium_only"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "submerged_arc_weld"
+  ],
+  "equipment_bonus": {
+   "armor_value": 0.03,
+   "maximum_speed": 0.01
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_land_casting_specialists",
+  "file": "common/military_industrial_organization/policies/_land_policies.txt",
+  "equipment_types": [
+   "armor",
+   "mio_cat_eq_all_motorized",
+   "mio_cat_eq_all_mechanized",
+   "mio_cat_eq_all_anti_tank",
+   "mio_cat_eq_all_anti_air",
+   "mio_cat_eq_all_artillery",
+   "mio_cat_eq_all_infantry_weapons",
+   "mio_cat_eq_all_special_forces",
+   "mio_cat_eq_all_light_tank",
+   "mio_cat_eq_all_medium_tank",
+   "mio_cat_eq_all_heavy_tank",
+   "mio_cat_eq_all_tank_destroyers",
+   "mio_cat_eq_all_spgs",
+   "mio_cat_eq_light_only",
+   "mio_cat_eq_medium_only"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "tech_trm_armour_construction_cast_partial_eng",
+   "tech_trm_armour_construction_cast_partial_ger",
+   "tech_trm_armour_construction_cast_partial_ita",
+   "tech_trm_armour_construction_cast_partial_jap",
+   "tech_trm_armour_construction_cast_partial_sov",
+   "tech_trm_armour_construction_cast_partial_usa",
+   "tech_trm_armour_construction_cast_partial_cze",
+   "tech_trm_armour_construction_cast_partial_hun",
+   "tech_trm_armour_construction_cast_partial_swe",
+   "tech_trm_armour_construction_cast_partial_pol",
+   "alloy_steel"
+  ],
+  "equipment_bonus": {
+   "hardness": 0.01,
+   "build_cost_ic": -0.03
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_land_heavy_gantry_cranes",
+  "file": "common/military_industrial_organization/policies/_land_policies.txt",
+  "equipment_types": [
+   "armor",
+   "mechanized",
+   "railway_gun",
+   "train_equipment",
+   "mio_cat_eq_all_light_tank",
+   "mio_cat_eq_all_medium_tank",
+   "mio_cat_eq_all_heavy_tank",
+   "mio_cat_eq_all_tank_destroyers",
+   "mio_cat_eq_all_spgs",
+   "mio_cat_eq_light_only",
+   "mio_cat_eq_medium_only"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "electric_hoist"
+  ],
+  "equipment_bonus": {},
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_land_factory_applied_camouflage",
+  "file": "common/military_industrial_organization/policies/_land_policies.txt",
+  "equipment_types": [
+   "armor",
+   "mio_cat_eq_all_motorized",
+   "mio_cat_eq_all_mechanized",
+   "mio_cat_eq_all_anti_tank",
+   "mio_cat_eq_all_anti_air",
+   "mio_cat_eq_all_artillery",
+   "rocket_artillery_equipment",
+   "mio_cat_eq_all_infantry_weapons",
+   "mio_cat_eq_all_special_forces",
+   "mio_cat_eq_all_light_tank",
+   "mio_cat_eq_all_medium_tank",
+   "mio_cat_eq_all_heavy_tank",
+   "mio_cat_eq_all_tank_destroyers",
+   "mio_cat_eq_all_spgs",
+   "mio_cat_eq_light_only",
+   "mio_cat_eq_medium_only"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {
+   "defense": 0.03,
+   "breakthrough": 0.03
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_land_cutting_corners",
+  "file": "common/military_industrial_organization/policies/_land_policies.txt",
+  "equipment_types": [
+   "armor",
+   "mio_cat_eq_all_motorized",
+   "mio_cat_eq_all_mechanized",
+   "mio_cat_eq_all_anti_tank",
+   "mio_cat_eq_all_anti_air",
+   "mio_cat_eq_all_artillery",
+   "rocket_artillery_equipment",
+   "mio_cat_eq_all_infantry_weapons",
+   "mio_cat_eq_all_special_forces",
+   "mio_cat_eq_all_light_tank",
+   "mio_cat_eq_all_medium_tank",
+   "mio_cat_eq_all_heavy_tank",
+   "mio_cat_eq_all_tank_destroyers",
+   "mio_cat_eq_all_spgs",
+   "mio_cat_eq_light_only",
+   "mio_cat_eq_medium_only"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {
+   "build_cost_ic": -0.05,
+   "reliability": -0.04,
+   "soft_attack": -0.03,
+   "hard_attack": -0.03,
+   "defense": -0.02,
+   "breakthrough": -0.02,
+   "armor_value": -0.03
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_navy_welding_specialists",
+  "file": "common/military_industrial_organization/policies/_navy_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_carrier",
+   "mio_cat_eq_all_battleship",
+   "mio_cat_eq_all_cruiser",
+   "mio_cat_eq_all_destroyer",
+   "mio_cat_eq_all_escort",
+   "mio_cat_eq_all_surface",
+   "mio_cat_eq_all_submarine"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [
+   "submerged_arc_weld"
+  ],
+  "equipment_bonus": {},
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_navy_space_efficient_design",
+  "file": "common/military_industrial_organization/policies/_navy_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_carrier",
+   "mio_cat_eq_all_battleship",
+   "mio_cat_eq_all_cruiser",
+   "mio_cat_eq_all_destroyer",
+   "mio_cat_eq_all_escort",
+   "mio_cat_eq_all_surface",
+   "mio_cat_eq_all_submarine"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {
+   "naval_range": 0.05,
+   "naval_speed": 0.01,
+   "production_cost_factor": -0.02
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_navy_stable_platforms",
+  "file": "common/military_industrial_organization/policies/_navy_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_carrier",
+   "mio_cat_eq_all_battleship",
+   "mio_cat_eq_all_cruiser",
+   "mio_cat_eq_all_destroyer",
+   "mio_cat_eq_all_escort",
+   "mio_cat_eq_all_surface"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {
+   "naval_light_gun_hit_chance_factor": 0.05,
+   "naval_heavy_gun_hit_chance_factor": 0.05
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_navy_great_sea_keeping",
+  "file": "common/military_industrial_organization/policies/_navy_policies.txt",
+  "equipment_types": [
+   "mio_cat_eq_all_carrier",
+   "mio_cat_eq_all_battleship",
+   "mio_cat_eq_all_cruiser"
+  ],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {
+   "naval_weather_penalty_factor": -0.1
+  },
+  "organization_modifier": {}
+ },
+ {
+  "token": "mio_policy_navy_coastal_battlefleet",
+  "file": "common/military_industrial_organization/policies/_navy_policies.txt",
+  "equipment_types": [],
+  "allowed_all": false,
+  "min_size": 6,
+  "requires_techs": [],
+  "equipment_bonus": {
+   "build_cost_ic": 0.1,
+   "naval_range": -0.25
+  },
+  "organization_modifier": {}
+ }
+]

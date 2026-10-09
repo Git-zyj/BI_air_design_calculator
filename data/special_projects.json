@@ -1,0 +1,80 @@
+[
+ {
+  "project": "sp_air_anti_air_rocket",
+  "file": "common/special_projects/projects/air_projects.txt",
+  "flags": [
+   "unlock_plane_anti_air_rocket_upgrade"
+  ],
+  "requires_techs": [
+   "rocket_artillery4",
+   "advanced_machine_tools"
+  ]
+ },
+ {
+  "project": "sp_nuclear_reactor",
+  "file": "common/special_projects/projects/nuclear_projects.txt",
+  "flags": [
+   "nuclear_reactor_heavy_water_flag",
+   "nuclear_reactor_classify_flag",
+   "nuclear_reactor_public_flag"
+  ],
+  "requires_techs": [
+   "nuclear_fission"
+  ]
+ },
+ {
+  "project": "sp_nuclear_design_choice_reward",
+  "file": "common/special_projects/projects/nuclear_projects.txt",
+  "flags": [
+   "nuclear_reactor_heavy_water_flag"
+  ],
+  "requires_techs": []
+ },
+ {
+  "project": "sp_nuclear_reactor_tested_reward",
+  "file": "common/special_projects/projects/nuclear_projects.txt",
+  "flags": [
+   "nuclear_reactor_classify_flag",
+   "nuclear_reactor_public_flag"
+  ],
+  "requires_techs": []
+ },
+ {
+  "project": "sp_nuclear_bomb",
+  "file": "common/special_projects/projects/nuclear_projects.txt",
+  "flags": [
+   "nuclear_bomb_low_security_flag",
+   "nuclear_bomb_high_security_flag"
+  ],
+  "requires_techs": [
+   "nuclear_weapons_production"
+  ]
+ },
+ {
+  "project": "sp_nuclear_bomb_espionage_threats_reward",
+  "file": "common/special_projects/projects/nuclear_projects.txt",
+  "flags": [
+   "nuclear_bomb_low_security_flag",
+   "nuclear_bomb_high_security_flag"
+  ],
+  "requires_techs": []
+ },
+ {
+  "project": "sp_rockets_improved_ballistic_missile",
+  "file": "common/special_projects/projects/rocket_projects.txt",
+  "flags": [
+   "refused_to_replace_relay_flag"
+  ],
+  "requires_techs": [
+   "improved_rocket_engines"
+  ]
+ },
+ {
+  "project": "sp_rocket_relay_failure_reward",
+  "file": "common/special_projects/projects/rocket_projects.txt",
+  "flags": [
+   "refused_to_replace_relay_flag"
+  ],
+  "requires_techs": []
+ }
+]
