@@ -11,6 +11,18 @@
   ]
  },
  {
+  "project": "sp_naval_torpedo_cruiser",
+  "file": "common/special_projects/projects/naval_projects.txt",
+  "flags": [
+   "sp_naval_torpedo_cruiser"
+  ],
+  "requires_techs": [
+   "early_ship_hull_cruiser",
+   "advanced_ship_torpedo_launcher",
+   "improved_heavy_ship_torpedo_launcher"
+  ]
+ },
+ {
   "project": "sp_nuclear_reactor",
   "file": "common/special_projects/projects/nuclear_projects.txt",
   "flags": [

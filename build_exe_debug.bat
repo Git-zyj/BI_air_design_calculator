@@ -12,7 +12,8 @@ if errorlevel 1 (
   exit /b 1
 )
 
-set EXE_NAME=飞机设计计算器_黑冰正式版v12.1.0_调试版
+rem beta 分支：适配「黑冰测试版」（Blackice HOI IV TEST, workshop id 1851181613）
+set EXE_NAME=飞机设计计算器_黑冰测试版v12.3.0_调试版
 
 echo Building (DEBUG, with console) "%EXE_NAME%" ...
 python -m PyInstaller --noconfirm --onefile ^

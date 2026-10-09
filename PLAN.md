@@ -38,6 +38,7 @@
 19. [前置科技勾选 / 军工组织推荐 / 路线前缀配点（2026-10-09）](#前置科技勾选--军工组织推荐--路线前缀配点2026-10-09)
 20. [打包成 exe 与调试日志（2026-10-09）](#打包成-exe-与调试日志2026-10-09)
 21. [构建产物与发布（2026-10-09）](#构建产物与发布2026-10-09)
+22. [测试版分支 beta（2026-10-10）](#测试版分支-beta2026-10-10)
 
 ## 1. 目标
 
@@ -1381,7 +1382,7 @@ GitHub 会把 Release 附件名里的**非 ASCII 字符清洗成 `_`**，实测�
 
 | 项 | 值 |
 | --- | --- |
-| 仓库 | `https://github.com/Git-zyj/BI_air_design_calculator`（**private**，与 BIX 一致）|
+| 仓库 | `https://github.com/Git-zyj/BI_air_design_calculator`（发布时先建的 private，2026-10-10 已转 **public**）|
 | 账号 | `Git-zyj`（BIX 用的同一个 GitHub 账号）|
 | Release | `https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.1.0` |
 | 附件 | `BI_air_design_calculator_v12.1.0.zip`（17.0 MB）、`BI_air_design_calculator_v12.1.0.exe`（16.92 MB）|
@@ -1389,9 +1390,72 @@ GitHub 会把 Release 附件名里的**非 ASCII 字符清洗成 `_`**，实测�
 | 源码状态 | 提交 `5affbd8`（含 ⑦ 工具栏两行、① 用途行重叠修复）；exe 构建于 2026-10-09 23:58 |
 | 仓库体积 | 421 KiB（重写历史剔除二进制后）|
 
-⚠️ **Release 挂在 private 仓库上，别人下载不了**。要让使用者直接下载，需要把仓库转公开：
-`gh repo edit Git-zyj/BI_air_design_calculator --visibility public`（这条命令随时可执行）。
+⚠️ 发布时踩到：Release 挂在 **private** 仓库上别人下载不了，转公开要带上确认参数：
+`gh repo edit Git-zyj/BI_air_design_calculator --visibility public --accept-visibility-change-consequences`
+（只写 `--visibility public` 会被 gh 拒绝并打印用法）。
 
 **历史重写**：`git filter-branch --index-filter "git rm -r --cached --ignore-unmatch build dist '*.spec'"`
 把之前误提交的两个 17 MB exe 与打包中间文件从**所有提交**里剔除，`.git` 从 ~109 MB 降到 421 KB；
 提交信息与顺序都没变，且重写发生在推送之前（远端本来就还没有）。
+
+## 22. 测试版分支 `beta`（2026-10-10）
+
+黑冰同时存在**正式版**与**测试版**两套（数据不通用），所以用分支隔离：
+
+| 分支 | 适配 | workshop id | 模组版本 | exe 名 |
+| --- | --- | --- | --- | --- |
+| `main` | BlackICE Historical Immersion Mod（正式版）| 1137372539 | 12.1.0 | `飞机设计计算器_黑冰正式版v12.1.0.exe` |
+| `beta` | Blackice HOI IV TEST（测试版）| 1851181613 | 12.3.0 | `飞机设计计算器_黑冰测试版v12.3.0.exe` |
+
+分支之间**只有数据（`data/`）与版本标识**不同，`*.py` 代码完全一致。
+所以改代码的原则是：**在 `main` 上改，再把那个提交 cherry-pick 到 `beta`**，
+别让两边的 `gui.py` 各改一份（否则以后合并必冲突）。
+
+### 22.1 切换 / 重抽数据
+
+```bash
+python extract_game_data.py --game-dir /mnt/d/Steam/steamapps/workshop/content/394360/1851181613
+```
+
+`extract_loc_zh.py` **不用重跑**：汉化包 `extract_loc_zh.py` 一次就吃下正式/测试两套内核汉化
+（`3556011214` / `3431515994`），两个版本的中文名一致。
+
+### 22.2 测试版数据 vs 正式版（2026-10-10 实测）
+
+| 数据 | 正式版 12.1.0 | 测试版 12.3.0 | 说明 |
+| --- | --- | --- | --- |
+| `airframes.json` / `airframes_all.json` / `upgrades.json` / `archetypes.json` / `defines.json` | — | **完全相同** | 机身、改装、NAir 常量一个都没改 |
+| `mio.json` | 332 个组织 | **333** 个组织 | 特质 4860 → **4873** 条 |
+| `national_ideas.json` | 923 条 | **713** 条 | 测试版少了 `AC_ideas.txt` / `EAI_ideas.txt` / `_unity.txt` 里的条目 |
+| `policies.json` | 21 条 | **19** 条 | |
+| `special_projects.json` | 8 条 | **9** 条 | |
+| `tech_years.json` | 2474 项 | **2442** 项 | 测试版缺 `armor.txt` / `China_techs.txt` |
+
+因为**机身 / 改装 / 常量完全相同**，`python run.py --anchor` 的期望值在两边都是
+`Yak-9U@1944 = 15540.543552`（两分支实测均通过）——这个锚点守的是「评分管线」，
+数据侧的差异由上面这张表单独盯（改了数据就重跑一次对比）。
+
+### 22.3 beta 的发布约定
+
+流程同 §21.2，差别只在：
+
+- tag 用 `v<测试版号>-test`（如 `v12.3.0-test`），避免与 `main` 的 `v12.3.0` 混淆；
+- exe / zip 名字里带「测试版」（`飞机设计计算器_黑冰测试版v12.3.0.exe`）；
+- Release 正文**开头就写清楚只适配测试版**，并给出正式版 Release 的链接。
+
+### 22.4 本地打包环境（不动系统 Python）
+
+这台机器上的 `python` 是**商店版**（`...\WindowsApps\python.exe`），沙箱里的账号读不到它，
+所以打包用项目内的本地 venv（已加进 `.gitignore`）：
+
+```powershell
+& "<任意一个 python.exe>" -m venv .venv_build
+.\.venv_build\Scripts\python.exe -m pip install pyinstaller openpyxl
+.\.venv_build\Scripts\python.exe -m PyInstaller --noconfirm --onefile --windowed ^
+    --name "飞机设计计算器_黑冰测试版v12.3.0" ^
+    --add-data "data;data" --add-data "BI_SOV.xlsx;." --hidden-import openpyxl ^
+    --exclude-module numpy --exclude-module matplotlib --exclude-module PIL gui.py
+```
+
+（`build_exe.bat` / `build_exe_debug.bat` 仍然照旧用 PATH 上的 `python`，
+你自己双击时走的是商店版 Python；两者产出的 exe 功能一致。）

@@ -1,11 +1,11 @@
 {
- "generated_at": "2026-10-09T08:44:00+00:00",
- "game_dir": "/mnt/d/Steam/steamapps/workshop/content/394360/1137372539",
+ "generated_at": "2026-10-09T16:16:58+00:00",
+ "game_dir": "/mnt/d/Steam/steamapps/workshop/content/394360/1851181613",
  "sources": [
   {
    "file": "localisation/english/equipment_l_english_SOV.yml",
-   "size": 137081,
-   "sha256": "1906b2ff3db1edd31cfee62163f197d3a1ffef4710875aff147a955d2409f709"
+   "size": 136979,
+   "sha256": "9df14222397be9e56aad38448df65388fa4465275c2df7d65294c2d45baf471b"
   },
   {
    "file": "common/units/equipment/upgrades/air_upgrades.txt",
@@ -14,8 +14,8 @@
   },
   {
    "file": "common/defines/00_defines.lua",
-   "size": 417011,
-   "sha256": "3c0225126ca9452695a1e663e8a2127d94e4d7c067183679a8bbfd2234c66a35"
+   "size": 416999,
+   "sha256": "36e28b76f2abf0c1147f11d6db46f43a6ec5aead887082ba53cfb3ac331e2753"
   },
   {
    "file": "common/units/equipment/_airframe_cas.txt",

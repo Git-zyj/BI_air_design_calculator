@@ -30,18 +30,6 @@
   "organization_modifier": {}
  },
  {
-  "token": "mio_policy_air_heavy_gantry_cranes",
-  "file": "common/military_industrial_organization/policies/_air_policies.txt",
-  "equipment_types": [],
-  "allowed_all": false,
-  "min_size": 6,
-  "requires_techs": [
-   "electric_hoist"
-  ],
-  "equipment_bonus": {},
-  "organization_modifier": {}
- },
- {
   "token": "mio_policy_air_propulsion_experimenters",
   "file": "common/military_industrial_organization/policies/_air_policies.txt",
   "equipment_types": [
@@ -450,19 +438,6 @@
   "requires_techs": [],
   "equipment_bonus": {
    "naval_weather_penalty_factor": -0.1
-  },
-  "organization_modifier": {}
- },
- {
-  "token": "mio_policy_navy_coastal_battlefleet",
-  "file": "common/military_industrial_organization/policies/_navy_policies.txt",
-  "equipment_types": [],
-  "allowed_all": false,
-  "min_size": 6,
-  "requires_techs": [],
-  "equipment_bonus": {
-   "build_cost_ic": 0.1,
-   "naval_range": -0.25
   },
   "organization_modifier": {}
  }

@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 if getattr(sys, "stdout", None):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+# beta 分支：默认指**测试版**（Blackice HOI IV TEST）。
+# main 分支这里应是正式版 1137372539 —— 重抽数据时务必显式带 --game-dir，别靠默认值。
 DEFAULT_GAME_DIR = r"D:\Steam\steamapps\workshop\content\394360\1851181613"
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "data")
