@@ -5,6 +5,7 @@
 
 | 日期 | 变更 |
 | --- | --- |
+| 2026-10-10 | 测试版 Release `v12.3.0-test` 发布（tag 指向 `beta` 分支，附件 `BI_air_design_calculator_beta-v12.3.0.zip` / `.exe`，SHA256 `654d283f…3219dc`）；**踩坑：不加 `--prerelease` 会顶掉正式版成为 Latest**，已用 `gh release edit --prerelease` 纠正；见 §22.3 |
 | 2026-10-10 | 新建 **`beta` 分支**专门适配**测试版**（`Blackice HOI IV TEST` 1851181613 / v12.3.0）：重抽 `data/`，机身·改装·NAir 常量与正式版完全相同，差异在 MIO（333 组织）、国家精神（713 条）、方针（19）、特殊工程（9）、科技年份（2442）；exe 名改「黑冰测试版」；见 §22 |
 | 2026-10-10 | `.gitignore` 增加 `.venv_build/`（项目内本地打包用 venv，避免依赖系统商店版 Python）；仓库转为**公开**；删掉重写前的历史备份 bundle |
 | 2026-10-10 | **首次发布**：仓库 `Git-zyj/BI_air_design_calculator`（private，与 BIX 同账号）+ Release `v12.1.0`（附件：`BI_air_design_calculator_v12.1.0.zip` / `.exe`，SHA256 `dc5d3473…54510646`）；发布记录见 §21.3 |

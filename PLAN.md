@@ -1441,7 +1441,10 @@ python extract_game_data.py --game-dir /mnt/d/Steam/steamapps/workshop/content/3
 
 - tag 用 `v<测试版号>-test`（如 `v12.3.0-test`），避免与 `main` 的 `v12.3.0` 混淆；
 - exe / zip 名字里带「测试版」（`飞机设计计算器_黑冰测试版v12.3.0.exe`）；
-- Release 正文**开头就写清楚只适配测试版**，并给出正式版 Release 的链接。
+- Release 正文**开头就写清楚只适配测试版**，并给出正式版 Release 的链接；
+- **必须加 `--prerelease`**：GitHub 会把"最新发布的那个"标成 **Latest**
+  （不看分支），不加的话测试版会顶掉正式版成为首页默认下载，第二次发布就踩到了，
+  用 `gh release edit v12.3.0-test --prerelease` 纠正（改完 Latest 自动回到 `v12.1.0`）。
 
 ### 22.4 本地打包环境（不动系统 Python）
 
