@@ -491,12 +491,12 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
 
 
 def production_gain(prod, cap_now=100.0, capacity_now=200.0):
-    """把 MIO 的生产修正折算成**产量倍率**（等价于"造价 ÷ 倍率"）。
+    """把 MIO 的生产修正折算成**产能倍率**（等价于"造价 ÷ 倍率"）。
 
     只折算三项（用户口径：效率增长 / 资源 / 转换速度 不计）：
       效率上限 `production_efficiency_cap_factor`：**加法（百分点）** →(现上限+加成)/现上限
       产能     `production_capacity_factor`      ：相对加成 →(1+现产能+加成)/(1+现产能)
-      生产花费 `production_cost_factor`          ：每件花费 ×(1+加成) → 产量 ×1/(1+加成)
+      生产花费 `production_cost_factor`          ：每件花费 ×(1+加成) → 产能 ×1/(1+加成)
 
     `cap_now` / `capacity_now` 是用户填的**当前实际值**（百分比，例如 118、241）——
     因为"+5"在 100 上限与 200 上限下含义完全不同，必须用实际堆叠来折算。
@@ -1109,7 +1109,7 @@ def pick_mio_traits_exact(org, level, base, upgrade_map, mods, enemy, roles, ran
 
 def production_route(org, base, techs=(), cap_now=100.0, capacity_now=200.0,
                      max_level=MIO_MAX_LEVEL):
-    """只求**生产（产量）最优**的特质子集：直接最大化 `production_gain()`。
+    """只求**生产（产能）最优**的特质子集：直接最大化 `production_gain()`。
 
     用在两种口径里：
       设计/生产分离 → 生产那家 MIO 就按它点这些特质；
