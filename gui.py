@@ -927,7 +927,11 @@ class App(tk.Tk):
                 tuple(sorted(inputs.get("unlocked_techs") or [])),
                 float(inputs.get("range_cap") or 0),
                 json.dumps(inputs.get("experience") or {}, sort_keys=True),
-                inputs.get("country"))
+                inputs.get("country"),
+                # 口径与生产堆叠也要进键：换了它们，路线与折算都会变
+                inputs.get("alloc_mode") or "split",
+                int(inputs.get("efficiency_cap_now") or 100),
+                int(inputs.get("capacity_bonus_now") or 200))
 
     def _policies_for_org(self, org, techs):
         """该军工组织可用且科技已满足的方针。"""
@@ -1044,15 +1048,24 @@ class App(tk.Tk):
                     best = (score, pol, start)
             if best:
                 _proxy, pol, start = best
-                # 满级配点用穷举求全局最优（贪心会陷局部最优），再取前 level 步
-                _chosen, mods, log = engine.pick_mio_traits_exact(
+                # 满级配点：用与计算路径**同一套**搜索（每个候选集跑真实管线）
+                fold = (inputs.get("alloc_mode") or "split") == "balanced"
+                cap_now = int(inputs.get("efficiency_cap_now") or 100)
+                ca_now = int(inputs.get("capacity_bonus_now") or 200)
+                _chosen, mods, log = engine.route_best(
                     org, engine.MIO_MAX_LEVEL, ref, upgrade_map, start, enemy_values,
                     inputs["roles"], inputs.get("range_cap"), inputs.get("experience"),
-                    techs=inputs.get("unlocked_techs") or [])
-                score = engine.evaluate(ref, {t: 0 for t in tokens}, upgrade_map, mods,
-                                        enemy_values, inputs.get("range_cap"),
-                                        inputs.get("experience"),
-                                        accident_factor=acc)[2][score_key]
+                    techs=inputs.get("unlocked_techs") or [], cap_now=cap_now,
+                    capacity_now=ca_now, available=tokens, fold=fold,
+                    cache_key=(org["organization"], "plan", fold, cap_now, ca_now,
+                               ref.get("key"), key))
+                result = engine.optimize(ref, upgrade_map, mods, enemy_values, score_key,
+                                         available=tokens, range_cap=inputs.get("range_cap"),
+                                         experience=inputs.get("experience"), accident_f=acc)
+                gain = engine.production_gain(
+                    {k: v for item in log for k, v in dict(item.get("production") or {}).items()},
+                    cap_now, ca_now)[0] if fold else 1.0
+                score = result["scores"].get(score_key, 0.0) * gain
                 plan = {"score": score, "policy": pol["token"] if pol else None,
                         "mods": mods, "start": start, "log": log,
                         "route": [item["token"] for item in log]}
