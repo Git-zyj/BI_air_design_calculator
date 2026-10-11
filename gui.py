@@ -379,7 +379,7 @@ class App(tk.Tk):
         dbox = ttk.Combobox(box, textvariable=self.var_distance, width=8, state="readonly",
                             values=DISTANCES)
         dbox.grid(row=0, column=3, sticky="w")
-        dbox.bind("<<ComboboxSelected>>", lambda e: self._refresh_totals())
+        dbox.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
         ttk.Label(box, text="（= 航程上限，600 起每 300 一档）").grid(row=0, column=4, sticky="w")
         row += 1
 
@@ -411,7 +411,7 @@ class App(tk.Tk):
         eb = ttk.Combobox(box, textvariable=self.var_enemy_tag, width=10,
                           state="readonly")
         eb.grid(row=1, column=3, sticky="w")
-        eb.bind("<<ComboboxSelected>>", lambda e: self._refresh_enemy())
+        eb.bind("<<ComboboxSelected>>", lambda e: self._on_enemy_change())
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
         ttk.Label(box, text="选取规则").grid(row=1, column=4, sticky="e", padx=(PADX, 4))
@@ -420,7 +420,7 @@ class App(tk.Tk):
         rb = ttk.Combobox(box, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
                           width=12, state="readonly")
         rb.grid(row=1, column=5, sticky="w")
-        rb.bind("<<ComboboxSelected>>", lambda e: self._sync_rule())
+        rb.bind("<<ComboboxSelected>>", lambda e: self._on_rule_change())
 
         self.frm_manual_plane = ttk.Frame(box)
         self.frm_manual_plane.grid(row=3, column=0, columnspan=6, sticky="w")
@@ -429,7 +429,7 @@ class App(tk.Tk):
         self.var_override = tk.StringVar(value=enemy.get("override_key") or "")
         ov = ttk.Entry(self.frm_manual_plane, textvariable=self.var_override, width=46)
         ov.grid(row=0, column=1, sticky="w")
-        ov.bind("<FocusOut>", lambda e: self._refresh_enemy())
+        ov.bind("<FocusOut>", lambda e: self._on_enemy_change())
 
         # 对手（AI）的「设计商修正 + 满经验」：默认按模组 ai_bonus_weights 自动判定
         # （该国 AI 会挑哪家 MIO、点哪些特质），也可在这里手填覆盖
@@ -597,7 +597,10 @@ class App(tk.Tk):
         ttk.Label(box, text="国家精神（逗号分隔，可空）").grid(row=0, column=0, sticky="e",
                                                               padx=(PADX, 4), pady=PADY)
         self.var_spirits = tk.StringVar(value=",".join(self.inputs.get("national_spirits") or []))
-        ttk.Entry(box, textvariable=self.var_spirits, width=64).grid(row=0, column=1, sticky="w")
+        ent_spirits = ttk.Entry(box, textvariable=self.var_spirits, width=64)
+        ent_spirits.grid(row=0, column=1, sticky="w")
+        # 国家精神也会影响"哪条路线/哪个方针最优"→ 填完（离开输入框）就重推一次
+        ent_spirits.bind("<FocusOut>", lambda e: self._on_inputs_affecting_plan())
         ttk.Button(box, text="预览国家精神总加成", command=self._refresh_totals).grid(
             row=0, column=2, sticky="w", padx=PADX)
         self.lbl_spirit = ttk.Label(box, text="—", foreground=ACCENT,
@@ -987,11 +990,14 @@ class App(tk.Tk):
         以前 run.py 会自己再按"不含方针"优化一遍，而 ④ 预览用的是"含方针"的优化
         —— 两条路线可能不同（实测 1939：预览选织物覆盖、计算却用金属覆盖），
         于是"看到的"和"算出来的"对不上。现在统一由界面把路线定下来。
+
+        2026-10-11：**兼顾口径也一起钉**。`_org_plan` 对兼顾用的就是
+        `route_best(fold=True)`（每条候选集跑真实管线、含生产折算），和 run.py
+        自己搜的是同一套；钉住之后"预览路线 == 计算路线"由结构保证，
+        不再依赖两边各自搜出来的结果碰巧一致。
         """
         mio = dict(inputs.get("mio") or {})
-        # 分离口径：路线就用界面这条（`_org_plan` 是"含方针"优化的，比 run.py 自己那条更优）；
-        # 兼顾口径要让 run.py 自己按"设计×生产"挑路线，不能在这里钉死。
-        if mio.get("manual_traits") is None and inputs.get("alloc_mode", "split") != "balanced":
+        if mio.get("manual_traits") is None:
             org = self._org()
             plan = self._org_plan(org, inputs) if org else None
             if plan and plan.get("route"):
@@ -1554,6 +1560,32 @@ class App(tk.Tk):
             self.frm_manual_plane.grid_remove()
         self._refresh_enemy()
 
+    def _on_enemy_change(self):
+        """换对手国别 / 手填对手机型：对手数值变了，最优路线与方针也可能跟着变。"""
+        self._refresh_enemy()
+        self._on_inputs_affecting_plan()
+
+    def _on_rule_change(self):
+        self._sync_rule()
+        self._on_inputs_affecting_plan()
+
+    def _on_inputs_affecting_plan(self, recalc=False):
+        """年份 / 距离 / 对手 / 国家精神这类输入变了：路线与方针缓存作废、重挑方针。
+
+        以前只有"换国家 / 改等级 / 改科技"才会重推方针，改**当前年份**不会 ——
+        于是 ④ 预览（内部为当前输入重挑方针）和计算（用下拉里那个旧方针）会用
+        不同方针：实测苏联 1944 拉沃契金，预览选风洞先驱、计算用完美抛光，
+        机动 8% vs 9%、速度 7% vs 6.5%。现在这几类输入一动就同步。
+        """
+        self._plans.clear()
+        try:
+            self._refresh_policies()
+        except (Exception, SystemExit):       # noqa: BLE001
+            pass
+        self._refresh_totals()
+        if recalc and getattr(self, "rows", None):
+            self.on_calculate()
+
     def _rule_value(self):
         return dict(RULE_LABELS)[self.var_rule.get()]
 
@@ -2008,6 +2040,7 @@ class App(tk.Tk):
             except (tk.TclError, ValueError):
                 return                     # 还在输入中（例如只敲了 "19"）
             self._refresh_enemy()
+            self._on_inputs_affecting_plan()   # 年份变了：重推路线与方针，别让下拉停在旧值
 
         self.var_year.trace_add("write", on_year)
 
