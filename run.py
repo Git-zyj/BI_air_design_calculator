@@ -45,7 +45,10 @@ INPUTS = os.path.join(app_dir(), "inputs.json")
 # 两者**同一套键**，所以"离线算过"和"现算过"的命中效果一样。
 PLAN_TABLE = os.path.join(engine.DATA_DIR, "route_table.json")   # 离线表（随包发布）
 PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓存（本地生成）
-PLAN_CACHE_VERSION = 2          # 算法/口径变了就改这里，旧条目自动作废
+# 算法/口径/方针数据变了就改这里，旧的离线表与本机缓存自动作废：
+#   v3 = 方针的 production_bonus 抽全（same_as_mio 嵌套）→ 「不断的工业革命」等
+#        现在会把生产资源需求/效率算进来，方针集合与分数都可能变
+PLAN_CACHE_VERSION = 3
 
 
 def plan_key(inputs, org_name, ref_key):

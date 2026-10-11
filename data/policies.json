@@ -175,7 +175,10 @@
    "assembly_line_production"
   ],
   "equipment_bonus": {},
-  "production_bonus": {},
+  "production_bonus": {
+   "production_efficiency_cap_factor": 0.02,
+   "production_efficiency_gain_factor": 0.02
+  },
   "organization_modifier": {}
  },
  {
@@ -188,7 +191,10 @@
    "worker_training"
   ],
   "equipment_bonus": {},
-  "production_bonus": {},
+  "production_bonus": {
+   "production_efficiency_gain_factor": 0.05,
+   "production_resource_penalty_factor": 0.1
+  },
   "organization_modifier": {}
  },
  {
@@ -225,7 +231,10 @@
   "min_size": 6,
   "requires_techs": [],
   "equipment_bonus": {},
-  "production_bonus": {},
+  "production_bonus": {
+   "production_resource_need_factor": -0.05,
+   "reliability": -0.03
+  },
   "organization_modifier": {
    "military_industrial_organization_research_bonus": 0.02
   }
@@ -320,7 +329,9 @@
   "requires_techs": [
    "electric_hoist"
   ],
-  "equipment_bonus": {},
+  "equipment_bonus": {
+   "production_efficiency_cap_factor": 0.05
+  },
   "production_bonus": {},
   "organization_modifier": {}
  },
@@ -409,7 +420,11 @@
    "submerged_arc_weld"
   ],
   "equipment_bonus": {},
-  "production_bonus": {},
+  "production_bonus": {
+   "production_cost_factor": -0.02,
+   "armor_value": 0.01,
+   "max_strength": 0.02
+  },
   "organization_modifier": {}
  },
  {
