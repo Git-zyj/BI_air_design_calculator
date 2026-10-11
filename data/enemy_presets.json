@@ -1,0 +1,23 @@
+{
+  "_note": "对手（AI）在空战中的设计加成预设，按【对手国别】取值。modifiers = 该国飞机设计商（满级特质、无方针）带来的机动/速度修正；experience = 经验加成。都是最终百分比的小数写法（0.04 = +4%）。",
+  "_howto": "游戏内实测校准：看该国 AI 主力战斗机的『出厂机动/速度』÷『基础机动/速度』= 设计商修正；再乘『满经验』就是你看到的最终值。改本文件，或在界面②『对手修正』里手填（手填值存在 inputs 的 enemy.by_country，优先级高于本文件）。",
+  "_units": "下面所有数值都是小数比率，不是百分数。",
+  "default": {
+    "modifiers": {},
+    "experience": {"air_agility": 0.20, "maximum_speed": 0.05}
+  },
+  "by_country": {
+    "GER": {
+      "mio": "GER_arado_flugzeugwerke_organization",
+      "modifiers": {"air_agility": 0.04, "maximum_speed": 0.015},
+      "experience": {"air_agility": 0.20, "maximum_speed": 0.05},
+      "source": "游戏内实测校准：Bf 109 G-14 出厂机动 71.7 → 满经验 86.04；出厂速度 674.97 → 满经验 708.72（1944 年）"
+    },
+    "SOV": {
+      "mio": "SOV_lavochkin_design_bureau_organization",
+      "modifiers": {"air_agility": 0.04, "maximum_speed": 0.045},
+      "experience": {"air_agility": 0.20, "maximum_speed": 0.05},
+      "source": "按拉沃契金设计局『满级穷举路线』自动算出（尚未用游戏内实测校准；若与游戏不符请在界面手填或告诉我改这里）"
+    }
+  }
+}

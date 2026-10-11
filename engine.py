@@ -695,12 +695,57 @@ CARRIER_ENEMY_CATEGORIES = {
 }
 
 
-def enemy_spec(role, enemy_cfg):
-    """该用途对应的 (对手机种类别, 经验加成, 制造商修正)。"""
+# 对手预设（data/enemy_presets.json）：按对手国别给"设计商修正 + 经验"。
+# 之前写死成德国（阿拉多）那一套，换对手国别时不生效 —— 例如拿苏联当对手，
+# 苏联飞机照样被套上德国的 +4% 机动 / +1.5% 速度，分数自然是错的。
+_ENEMY_PRESETS = None
+
+
+def enemy_presets():
+    """按国别的对手预设：{"default": {...}, "by_country": {国家: {...}}}（懒加载 + 缓存）。"""
+    global _ENEMY_PRESETS
+    if _ENEMY_PRESETS is None:
+        path = os.path.join(DATA_DIR, "enemy_presets.json")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                _ENEMY_PRESETS = json.load(fh)
+        else:
+            _ENEMY_PRESETS = {}
+    return _ENEMY_PRESETS
+
+
+def enemy_preset(country, presets=None):
+    """该对手国别的预设（没有国别条目时退回 default；都没有则 {}）。"""
+    pres = presets if presets is not None else enemy_presets()
+    return ((pres.get("by_country") or {}).get(country or "")
+            or pres.get("default") or {})
+
+
+def _first_not_none(*vals):
+    """取第一个不是 None 的值（空 dict 算"明确给了值"，用来表达"该国没有设计商加成"）。"""
+    for v in vals:
+        if v is not None:
+            return v
+    return {}
+
+
+def enemy_spec(role, enemy_cfg, presets=None):
+    """该用途对应的 (对手机种类别, 经验加成, 制造商修正)。
+
+    取值顺序：手填的 by_country[该国] → data/enemy_presets.json 的该国预设
+    → 预设 default → 老式全局 modifiers/experience（兼容旧 inputs.json）。
+    """
     cfg = enemy_cfg or {}
+    country = cfg.get("country") or ""
+    hand = (cfg.get("by_country") or {}).get(country) or {}
+    pre = enemy_preset(country, presets)
+    mods = _first_not_none(hand.get("modifiers"), pre.get("modifiers"),
+                           cfg.get("modifiers"), {})
+    exp = _first_not_none(hand.get("experience"), pre.get("experience"),
+                          cfg.get("experience"), {})
     if role in CARRIER_ROLES:
-        return CARRIER_ENEMY_CATEGORIES[role], {}, cfg.get("modifiers") or {}
-    return ("fighter",), cfg.get("experience") or {}, cfg.get("modifiers") or {}
+        return CARRIER_ENEMY_CATEGORIES[role], {}, mods
+    return ("fighter",), exp, mods
 
 
 def pick_enemy_values(all_airframes, enemy_cfg, role, year):

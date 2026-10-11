@@ -25,8 +25,7 @@
     "country": "GER",
     "rule": "previous_year",
     "override_key": null,
-    "modifiers": { "air_agility": 0.04, "maximum_speed": 0.015 },
-    "experience": { "air_agility": 0.2, "maximum_speed": 0.05 }
+    "by_country": {}
   },
   "mio": { "organization": "", "level": 14, "manual_traits": null },
   "range_cap": 900,
