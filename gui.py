@@ -1026,7 +1026,7 @@ class App(tk.Tk):
         return types
 
     def _available_policies(self):
-        """按**装备类型**筛出能选的方针；无设计侧加成的方针不列（等级/科技只标注不隐藏）。"""
+        """当前组织**装备类型匹配**的方针（不管等级/科技），用于列出与统计。"""
         org = self._org()
         if not org:
             return []
@@ -1045,17 +1045,48 @@ class App(tk.Tk):
             out.append(pol)
         return out
 
+    def _unlocked_techs(self):
+        """界面当前勾选的科技（不要读 self.inputs —— 那是启动时的初始值）。"""
+        return {t for t, v in getattr(self, "tech_vars", {}).items() if v.get()}
+
+    def _ready_policies(self):
+        """**真正能选**的方针：装备类型匹配 + 等级够（方针都是 6 级起）+ 前置科技已勾。
+
+        不满足的不进下拉框——游戏里点不了，工具里也不该能选。
+        """
+        return [p for p in self._available_policies() if self._policy_ready(p)]
+
+    def _locked_policies(self):
+        """装备类型匹配、但等级或科技还没到的方针（用来提示"为什么没得选"）。"""
+        return [p for p in self._available_policies() if not self._policy_ready(p)]
+
+    def _policy_gap(self, pol):
+        """这个方针还差什么才能选（等级/科技），用于提示文案。"""
+        gaps = []
+        level = int(self.var_level.get())
+        if level < (pol.get("min_size") or 0):
+            gaps.append("需 %d 级（当前 %d 级）" % (pol["min_size"], level))
+        techs = self._unlocked_techs()
+        miss = [t for t in (pol.get("requires_techs") or []) if t not in techs]
+        if miss:
+            gaps.append("需科技 " + "、".join(zh(self.loc, t) or t for t in miss))
+        return "%s（%s）" % (zh(self.loc, pol["token"]) or pol["token"],
+                            "；".join(gaps) or "—")
+
     def _refresh_policies(self):
         self._policy_map = {"（不选）": None}
         labels = ["（不选）"]
-        for pol in self._available_policies():
+        ready = self._ready_policies()
+        for pol in ready:
             name = zh(self.loc, pol["token"]) or pol["token"]
             if name in self._policy_map:
                 name = "%s [%s]" % (name, pol["token"])
             self._policy_map[name] = pol
             labels.append(name)
         self.cb_policy.configure(values=labels)
-        # 默认选"满级 + 方针"路线里那个方针；取不到再退回逐个试算
+        # 默认选"满级 + 方针"路线里那个方针；取不到再退回逐个试算。
+        # 关键：只有这个方针**当前可选**（等级/科技都到）时才认它，
+        # 否则（例如 1 级时）退回"（不选）"——以前会直接把 6 级方针套上去。
         want = None
         org = self._org()
         if org:
@@ -1063,6 +1094,8 @@ class App(tk.Tk):
                 want = (self._org_plan(org, self.collect()) or {}).get("policy")
             except (Exception, SystemExit):  # noqa: BLE001
                 want = None
+        if want and not any(p["token"] == want for p in ready):
+            want = None
         best = want or self._best_policy_token()
         target = next((l for l, p in self._policy_map.items() if p and p["token"] == best),
                       "（不选）")
@@ -1078,13 +1111,13 @@ class App(tk.Tk):
         """门槛（等级 + 科技）是否满足。"""
         if int(self.var_level.get()) < (pol.get("min_size") or 0):
             return False
-        techs = set(self.inputs.get("unlocked_techs") or [])
+        techs = self._unlocked_techs()
         return all(t in techs for t in (pol.get("requires_techs") or []))
 
     def _policy_desc(self, pol):
         """右侧说明：前置要求 + 预计加成。"""
         level = int(self.var_level.get())
-        techs = set(self.inputs.get("unlocked_techs") or [])
+        techs = self._unlocked_techs()
         need = []
         if pol.get("min_size"):
             need.append("%d 级%s" % (pol["min_size"], "✓" if level >= pol["min_size"] else "✗"))
@@ -1143,13 +1176,26 @@ class App(tk.Tk):
     def _on_policy_change(self):
         pol = getattr(self, "_policy_map", {}).get(self.var_policy.get())
         if not pol:
-            avail = len(self._available_policies())
-            self.lbl_policy.configure(
-                text=("（本组织可选 %d 个方针，默认已选预计最优的那个）" % avail) if avail else
-                     "（本组织无对应装备类型的方针）")
+            ready = self._ready_policies()
+            locked = self._locked_policies()
+            if ready:
+                text = "（本组织可选 %d 个方针，默认已选预计最优的那个）" % len(ready)
+            elif locked:
+                text = "（本组织 %d 个方针现在还选不了：%s）" % (
+                    len(locked), "、".join(self._policy_gap(p) for p in locked))
+            else:
+                text = "（本组织无对应装备类型的方针）"
+            self.lbl_policy.configure(text=text)
         else:
             self.lbl_policy.configure(text=self._policy_desc(pol))
         self._refresh_totals()
+
+    def _selected_policy_token(self):
+        """下拉框里选中的方针 token；等级/科技没到的一律算"未选"（挡住旧值/程序设置）。"""
+        pol = getattr(self, "_policy_map", {}).get(self.var_policy.get())
+        if not pol or not self._policy_ready(pol):
+            return None
+        return pol["token"]
 
     def _fill_traits(self):
         self.tree_traits.delete(*self.tree_traits.get_children())
@@ -1298,8 +1344,7 @@ class App(tk.Tk):
             "unlocked_flags": [f for f, v in getattr(self, "flag_vars", {}).items() if v.get()],
             "mio": {"organization": self._org_key(),
                     "level": int(self.var_level.get()),
-                    "policy": ((getattr(self, "_policy_map", {}).get(self.var_policy.get())
-                                or {}).get("token") if policy is _UNSET else policy),
+                    "policy": (self._selected_policy_token() if policy is _UNSET else policy),
                     "manual_traits": (sorted(self.chosen_traits)
                                       if self.var_alloc.get() == "pick" else None)},
         })

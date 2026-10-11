@@ -38,6 +38,8 @@
 19. [前置科技勾选 / 军工组织推荐 / 路线前缀配点（2026-10-09）](#前置科技勾选--军工组织推荐--路线前缀配点2026-10-09)
 20. [打包成 exe 与调试日志（2026-10-09）](#打包成-exe-与调试日志2026-10-09)
 21. [构建产物与发布（2026-10-09）](#构建产物与发布2026-10-09)
+22. [测试版分支 beta（2026-10-10）](#测试版分支-beta2026-10-10)
+23. [MIO 门槛与配点路线合法性（2026-10-11）](#mio-门槛与配点路线合法性2026-10-11)
 
 ## 1. 目标
 
@@ -1381,7 +1383,7 @@ GitHub 会把 Release 附件名里的**非 ASCII 字符清洗成 `_`**，实测�
 
 | 项 | 值 |
 | --- | --- |
-| 仓库 | `https://github.com/Git-zyj/BI_air_design_calculator`（**private**，与 BIX 一致）|
+| 仓库 | `https://github.com/Git-zyj/BI_air_design_calculator`（发布时先建的 private，2026-10-10 已转 **public**）|
 | 账号 | `Git-zyj`（BIX 用的同一个 GitHub 账号）|
 | Release | `https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.1.0` |
 | 附件 | `BI_air_design_calculator_v12.1.0.zip`（17.0 MB）、`BI_air_design_calculator_v12.1.0.exe`（16.92 MB）|
@@ -1389,9 +1391,153 @@ GitHub 会把 Release 附件名里的**非 ASCII 字符清洗成 `_`**，实测�
 | 源码状态 | 提交 `5affbd8`（含 ⑦ 工具栏两行、① 用途行重叠修复）；exe 构建于 2026-10-09 23:58 |
 | 仓库体积 | 421 KiB（重写历史剔除二进制后）|
 
-⚠️ **Release 挂在 private 仓库上，别人下载不了**。要让使用者直接下载，需要把仓库转公开：
-`gh repo edit Git-zyj/BI_air_design_calculator --visibility public`（这条命令随时可执行）。
+⚠️ 发布时踩到：Release 挂在 **private** 仓库上别人下载不了，转公开要带上确认参数：
+`gh repo edit Git-zyj/BI_air_design_calculator --visibility public --accept-visibility-change-consequences`
+（只写 `--visibility public` 会被 gh 拒绝并打印用法）。
 
 **历史重写**：`git filter-branch --index-filter "git rm -r --cached --ignore-unmatch build dist '*.spec'"`
 把之前误提交的两个 17 MB exe 与打包中间文件从**所有提交**里剔除，`.git` 从 ~109 MB 降到 421 KB；
 提交信息与顺序都没变，且重写发生在推送之前（远端本来就还没有）。
+
+## 22. 测试版分支 `beta`（2026-10-10）
+
+黑冰同时存在**正式版**与**测试版**两套（数据不通用），所以用分支隔离：
+
+| 分支 | 适配 | workshop id | 模组版本 | exe 名 |
+| --- | --- | --- | --- | --- |
+| `main` | BlackICE Historical Immersion Mod（正式版）| 1137372539 | 12.1.0 | `飞机设计计算器_黑冰正式版v12.1.0.exe` |
+| `beta` | Blackice HOI IV TEST（测试版）| 1851181613 | 12.3.0 | `飞机设计计算器_黑冰测试版v12.3.0.exe` |
+
+分支之间**只有数据（`data/`）与版本标识**不同，`*.py` 代码完全一致。
+所以改代码的原则是：**在 `main` 上改，再把那个提交 cherry-pick 到 `beta`**，
+别让两边的 `gui.py` 各改一份（否则以后合并必冲突）。
+
+### 22.1 切换 / 重抽数据
+
+```bash
+python extract_game_data.py --game-dir /mnt/d/Steam/steamapps/workshop/content/394360/1851181613
+```
+
+`extract_loc_zh.py` **不用重跑**：汉化包 `extract_loc_zh.py` 一次就吃下正式/测试两套内核汉化
+（`3556011214` / `3431515994`），两个版本的中文名一致。
+
+### 22.2 测试版数据 vs 正式版（2026-10-10 实测）
+
+| 数据 | 正式版 12.1.0 | 测试版 12.3.0 | 说明 |
+| --- | --- | --- | --- |
+| `airframes.json` / `airframes_all.json` / `upgrades.json` / `archetypes.json` / `defines.json` | — | **完全相同** | 机身、改装、NAir 常量一个都没改 |
+| `mio.json` | 332 个组织 | **333** 个组织 | 特质 4860 → **4873** 条 |
+| `national_ideas.json` | 923 条 | **713** 条 | 测试版少了 `AC_ideas.txt` / `EAI_ideas.txt` / `_unity.txt` 里的条目 |
+| `policies.json` | 21 条 | **19** 条 | |
+| `special_projects.json` | 8 条 | **9** 条 | |
+| `tech_years.json` | 2474 项 | **2442** 项 | 测试版缺 `armor.txt` / `China_techs.txt` |
+
+因为**机身 / 改装 / 常量完全相同**，`python run.py --anchor` 的期望值在两边都是
+`Yak-9U@1944 = 15540.543552`（两分支实测均通过）——这个锚点守的是「评分管线」，
+数据侧的差异由上面这张表单独盯（改了数据就重跑一次对比）。
+
+### 22.3 beta 的发布约定
+
+流程同 §21.2，差别只在：
+
+- tag 用 `v<测试版号>-test`（如 `v12.3.0-test`），避免与 `main` 的 `v12.3.0` 混淆；
+- exe / zip 名字里带「测试版」（`飞机设计计算器_黑冰测试版v12.3.0.exe`）；
+- Release 正文**开头就写清楚只适配测试版**，并给出正式版 Release 的链接；
+- **必须加 `--prerelease`**：GitHub 会把"最新发布的那个"标成 **Latest**
+  （不看分支），不加的话测试版会顶掉正式版成为首页默认下载，第二次发布就踩到了，
+  用 `gh release edit v12.3.0-test --prerelease` 纠正（改完 Latest 自动回到 `v12.1.0`）。
+
+### 22.4 本地打包环境（不动系统 Python）
+
+这台机器上的 `python` 是**商店版**（`...\WindowsApps\python.exe`），沙箱里的账号读不到它，
+所以打包用项目内的本地 venv（已加进 `.gitignore`）：
+
+```powershell
+& "<任意一个 python.exe>" -m venv .venv_build
+.\.venv_build\Scripts\python.exe -m pip install pyinstaller openpyxl
+.\.venv_build\Scripts\python.exe -m PyInstaller --noconfirm --onefile --windowed ^
+    --name "飞机设计计算器_黑冰测试版v12.3.0" ^
+    --add-data "data;data" --add-data "BI_SOV.xlsx;." --hidden-import openpyxl ^
+    --exclude-module numpy --exclude-module matplotlib --exclude-module PIL gui.py
+```
+
+（`build_exe.bat` / `build_exe_debug.bat` 仍然照旧用 PATH 上的 `python`，
+你自己双击时走的是商店版 Python；两者产出的 exe 功能一致。）
+
+## 23. MIO 门槛与配点路线合法性（2026-10-11）
+
+用户实测报了两个真 bug，用拉沃契金（`SOV_lavochkin_design_bureau_organization`）复现。
+
+### 23.1 bug 1：配点路线会"跳过前置"
+
+`pick_mio_traits_exact()` 先穷举出满级最优**集合**——集合本身是前提闭合的，没问题；
+但把它排成"升级路线"时**只按边际收益排序**，完全不管前置。结果 1 级的第一条推荐是
+**截击机**，而截击机要求 `缩短机翼 → (悬臂式机翼结构 + 最低武器要求)`，1 级根本点不了。
+
+游戏规则：MIO 每升一级给 1 次特质，特质必须先满足前置（`parents`：all / any），
+且 `mutually_exclusive` 的两条不能同时点。
+
+**改法**：路线改成"**逐步贪心 + 前提闭合**"——每一步只从"前置已被前面步骤满足"的特质里挑：
+
+```python
+avail = [i for i in remaining
+         if all(p in picked for p in req_all[i])
+         and (not req_any[i] or any(p in picked for p in req_any[i]))]
+```
+
+于是 1 级只会从 5 个无前置特质里选：**最低武器要求 / 悬臂式机翼结构 / 大号引擎 /
+表层金属覆盖 / 表层织物覆盖**（用户给的这个判断是对的）。
+
+实测：**SOV 全部 21 个组织**的路线逐步校验通过（0 处非法）；拉沃契金满级 10 步：
+
+```
+表层织物覆盖 → 大号引擎 → 高辛烷燃料 → 燃油喷射发动机 → 悬臂式机翼结构
+→ 最低武器要求 → 机翼截短 → 截击机 → 硬化机翼 → 战斗机截击机
+```
+
+13 个特质里排除了 3 个互斥的"输家"（表层金属覆盖 / 炮舰 / 子公司供应商）。
+
+### 23.2 bug 2：方针在 6 级前就能选，而且还真的生效了
+
+方针数据里有 `min_size`（BICE 全部是 6）。但实际情况是：
+
+- `_available_policies()` **只按装备类型过滤**，原注释甚至写着"等级/科技只标注不隐藏"；
+- `_refresh_policies()` 默认选中的方针来自"满级（14 级）最优"，**不看当前等级**，
+  所以 1 级时默认就把 6 级方针套上去并计入修正；
+- `run.resolve_manufacturer()` 也照单全收 —— 命令行 / `inputs.json` 同样绕得过去；
+- 顺带发现 `_policy_ready()` / `_policy_desc()` 读的是 `self.inputs[...]`，
+  那是**启动时的初始值**、不是界面上当前勾选的科技（`self.tech_vars`），
+  所以科技门槛一直按旧值判断。
+
+**改法**（一起改，界面和引擎都挡）：
+
+| 位置 | 改动 |
+| --- | --- |
+| `gui._available_policies()` / 新增 `_ready_policies()` `_locked_policies()` | 下拉框**只列真正能选的**（装备类型 + 等级 + 科技）|
+| `gui._refresh_policies()` | 默认方针只有**当前可选**时才认，否则退回"（不选）"；`_policy_gap()` 说明差什么 |
+| `gui._policy_ready()` / `_policy_desc()` | 改读实时勾选（`_unlocked_techs()`）|
+| `gui._selected_policy_token()` | `collect()` 走它：等级/科技没到的一律当"未选"（挡旧配置与程序调用）|
+| `run.resolve_manufacturer()` | 同样门槛；不满足就**不计入**，并在 `info["policy_rejected"]` 记一笔 |
+
+实测（拉沃契金，界面自检）：
+
+```
+等级  1｜下拉方针=（不选）
+        提示：（本组织 3 个方针现在还选不了：完美抛光（需 6 级（当前 1 级））…）
+        配点：1 级 表层织物覆盖
+等级  2｜下拉方针=（不选）  配点：1 级 表层织物覆盖；2 级 大号引擎
+等级  6｜下拉方针=完美抛光  配点：… 5 级 悬臂式机翼结构；6 级 最低武器要求
+取消先进机床后：下拉方针=风洞先驱（自动改选仍然可用的那个）
+```
+
+`run.resolve_manufacturer` 的门槛实测：等级 1 / 5 → 不计入且
+`policy_rejected={"need_level": 6}`；等级 6 → 正常计入。
+
+锚点未变：`Yak-9U@1944 = 15540.543552` ✓
+
+### 23.3 有意保留的行为
+
+- "手动勾选特质"那条路**不校验前置/互斥**：它的用途是让你如实录入"我游戏里点了哪些"，
+  游戏里不可能存在非法组合，工具不必再挡一次；
+- 低级时的配点仍然是"**满级最优路线的前缀**"（保证升级途中不换路线），
+  只是现在**每一步都点得出来**。

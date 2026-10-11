@@ -717,18 +717,32 @@ def pick_mio_traits_exact(org, level, base, upgrade_map, mods, enemy, roles, ran
         if value > best_score:
             best_mask, best_score = mask, value
 
-    # 在最优子集内部按边际收益排序，形成"升级路线"
+    # 在最优子集内部按边际收益排序，形成"升级路线"。
+    #
+    # ⚠️ 每一步都必须**游戏里点得出来**：只能从"前置已经满足"的特质里挑。
+    # 以前不管前置、直接按收益排序，结果拉沃契金 1 级的第一条推荐是"截击机"——
+    # 而截击机要求 缩短机翼 → (悬臂式机翼结构 + 最低武器要求)，1 级根本点不了。
+    # 现在按"前提闭合"逐步贪心：1 级只会从 5 个无前置特质里选
+    # （最低武器要求 / 悬臂式机翼结构 / 大号引擎 / 表层金属覆盖 / 表层织物覆盖）。
+    _o, req_all, req_any, _excl = _trait_tree(org, techs)      # 顺序与 order 一致
     remaining = [i for i in range(len(order)) if (best_mask >> i) & 1]
+    picked = []
     cur = dict(mods)
     log = []
     while remaining:
+        avail = [i for i in remaining
+                 if all(p in picked for p in req_all[i])
+                 and (not req_any[i] or any(p in picked for p in req_any[i]))]
+        if not avail:      # 兜底：可行集本身是前提闭合的，理论上到不了这里
+            avail = list(remaining)
         pick, pick_value = None, None
-        for i in remaining:
+        for i in avail:
             value = score_of(combine_modifiers(cur, order[i].get("bonuses") or {}))
             if pick is None or value > pick_value:
                 pick, pick_value = i, value
         cur = combine_modifiers(cur, order[pick].get("bonuses") or {})
         remaining.remove(pick)
+        picked.append(pick)
         log.append({"token": order[pick]["token"], "score": round(pick_value, 8),
                     "bonuses": order[pick].get("bonuses") or {}})
     log = log[:max(0, int(level))]

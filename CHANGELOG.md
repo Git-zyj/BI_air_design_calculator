@@ -5,7 +5,10 @@
 
 | 日期 | 变更 |
 | --- | --- |
-| 2026-10-10 | 新增 **`beta` 分支**适配黑冰**测试版**（`Blackice HOI IV TEST` 1851181613 / v12.3.0），配套 Pre-release `v12.3.0-test`；README 顶部加了指向测试版的说明；`.gitignore` 加 `.venv_build/`。两版数据差异（机身·改装·常量完全相同；MIO / 国家精神 / 方针 / 科技年份不同）见 `beta` 分支的 `PLAN.md` §22 |
+| 2026-10-11 | 修两个 MIO 真 bug（拉沃契金复现）：① **配点路线跳过前置**——1 级第一条推荐"截击机"，而它要求 缩短机翼→(悬臂式机翼结构+最低武器要求)；改成"逐步贪心 + 前提闭合"，1 级只会从 5 个无前置特质里选。② **方针 6 级前就能选且真生效**——下拉框改为只列真正能选的（等级+科技），`run.resolve_manufacturer` 同步设门槛；顺带修 `_policy_ready`/`_policy_desc` 读启动时科技（应读界面实时勾选）；见 §23 |
+| 2026-10-10 | 测试版 Release `v12.3.0-test` 发布（tag 指向 `beta` 分支，附件 `BI_air_design_calculator_beta-v12.3.0.zip` / `.exe`，SHA256 `654d283f…3219dc`）；**踩坑：不加 `--prerelease` 会顶掉正式版成为 Latest**，已用 `gh release edit --prerelease` 纠正；见 §22.3 |
+| 2026-10-10 | 新建 **`beta` 分支**专门适配**测试版**（`Blackice HOI IV TEST` 1851181613 / v12.3.0）：重抽 `data/`，机身·改装·NAir 常量与正式版完全相同，差异在 MIO（333 组织）、国家精神（713 条）、方针（19）、特殊工程（9）、科技年份（2442）；exe 名改「黑冰测试版」；见 §22 |
+| 2026-10-10 | `.gitignore` 增加 `.venv_build/`（项目内本地打包用 venv，避免依赖系统商店版 Python）；仓库转为**公开**；删掉重写前的历史备份 bundle |
 | 2026-10-10 | **首次发布**：仓库 `Git-zyj/BI_air_design_calculator`（private，与 BIX 同账号）+ Release `v12.1.0`（附件：`BI_air_design_calculator_v12.1.0.zip` / `.exe`，SHA256 `dc5d3473…54510646`）；发布记录见 §21.3 |
 | 2026-10-10 | 重写历史剔除打包二进制（`build/` `dist/` `*.spec` 从所有提交移除），`.git` 从 ~109 MB 降到 **421 KiB**；同时记录「GitHub Release 附件名会把非 ASCII 清洗成 `_`、PowerShell 传中文参数给 gh 会丢字符」两个坑；见 §21.2 |
 | 2026-10-10 | 文档补「**六个用途的区别**」速查（PLAN §12 + 开始使用前先看.txt）：陆基的「对空/对海」会纳入舰载机（舰载机能下舰），两个「（舰载）」用途只留 `cv_*` 机种、对手换舰载机且经验加成清零 |
