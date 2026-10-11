@@ -225,6 +225,9 @@ def build_rows(inputs, data):
     gain, gain_parts = engine.production_gain(mfr_info.get("production"),
                                              inputs.get("efficiency_cap_now", 100),
                                              inputs.get("capacity_bonus_now", 200))
+    if mfr_info.get("production_gain_override"):     # 设计/生产分离：用生产伙伴的倍率
+        gain = float(mfr_info["production_gain_override"])
+        gain_parts = {}
     mfr_info["production_gain"] = gain
     mfr_info["production_gain_parts"] = gain_parts
     # 国家精神按装备类别识别：只有落在本次用途对应类别里的条目才算数
@@ -297,6 +300,58 @@ def mio_organizations(data):
     return out
 
 
+def route_value(org, plane, tokens, mods0, upgrade_map, data, inputs, enemy_values, role):
+    """一条路线在某机型上的"折算后总分数"（性能 ÷ 等效造价），用于口径比较。"""
+    by_token = {t.get("token"): t for t in (org.get("traits") or [])}
+    mods, prod = dict(mods0), {}
+    for token in tokens:
+        trait = by_token.get(token)
+        if not trait:
+            continue
+        mods = engine.combine_modifiers(mods, trait.get("bonuses") or {})
+        prod = engine.combine_modifiers(prod, trait.get("production") or {})
+    avail = engine.available_upgrades(
+        plane["category"], data, techs=inputs.get("unlocked_techs") or [],
+        flags=inputs.get("unlocked_flags") or [], archetype=plane.get("archetype"))[0]
+    key = engine.score_role(role)
+    result = engine.optimize(plane, upgrade_map, mods, enemy_values, key, available=avail,
+                             range_cap=inputs.get("range_cap"),
+                             experience=inputs.get("experience"),
+                             accident_f=engine.accident_factor(role in engine.CARRIER_ROLES))
+    gain = engine.production_gain(prod, inputs.get("efficiency_cap_now", 100),
+                                  inputs.get("capacity_bonus_now", 200))[0]
+    return result["scores"].get(key, 0.0) * gain
+
+
+def best_production_plan(inputs, data, plane):
+    """在"覆盖该机型"的本国 MIO 里找生产折算最优的一家。
+
+    返回 {"organization", "tokens", "gain", "level"}（找不到增益 > 1 的返回 None）。
+    用于"设计 / 生产分离"口径：设计还是用当前 MIO，生产交给这一家。
+    """
+    country = inputs.get("country") or ""
+    groups = engine.plane_groups((plane or {}).get("archetype"))
+    techs = inputs.get("unlocked_techs") or []
+    cap = inputs.get("efficiency_cap_now", 100)
+    ca = inputs.get("capacity_bonus_now", 200)
+    best = None
+    for org in data["mio"]:
+        if not os.path.basename(org.get("file") or "").upper().startswith(country + "_"):
+            continue
+        types = set(org.get("equipment_types") or [])
+        if groups and not (types & groups):
+            continue
+        tokens, gain = engine.production_route(org, plane, techs, cap, ca)
+        if gain <= 1.0 + 1e-9:
+            continue
+        better = (best is None or gain > best["gain"] + 1e-9
+                  or (abs(gain - best["gain"]) <= 1e-9 and len(tokens) < len(best["tokens"])))
+        if better:
+            best = {"organization": org["organization"], "tokens": tokens, "gain": gain,
+                    "level": engine.MIO_MAX_LEVEL}
+    return best
+
+
 def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
     """按 manufacturer_mode 解析制造商修正。
 
@@ -345,15 +400,50 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
                                                 inputs["current_year"])
                     for r in inputs["roles"]}
                 ref = pick_reference_plane(candidates, inputs, data, upgrade_map, enemy_by_role)
-            # 按"满级最优路线"取前 level 步，而不是每级单独跑一遍贪心
-            _chosen, mods, log = engine.mio_route(
-                org, level, ref, upgrade_map, mods, None, inputs["roles"],
+            base_mods = dict(mods)          # 只含"初始特质"，用于比较不同路线（别被前一条污染）
+            # 满级最优路线（前 level 步）：用"粗筛 + 完整体校验"，保证和实际计分口径一致
+            avail = engine.available_upgrades(
+                ref["category"], data, techs=inputs.get("unlocked_techs") or [],
+                flags=inputs.get("unlocked_flags") or [], archetype=ref.get("archetype"))[0]
+            _chosen, mods, log = engine.mio_route_folded(
+                org, level, ref, upgrade_map, base_mods, None, inputs["roles"],
                 inputs.get("range_cap"), inputs.get("experience"),
-                techs=inputs.get("unlocked_techs") or [])
+                techs=inputs.get("unlocked_techs") or [], available=avail, fold=False)
             for item in log:
                 prod = engine.combine_modifiers(prod, item.get("production") or {})
             info["traits"] = log
             info["level"] = level
+            # 「兼顾 / 分离」两种口径（默认 design = 纯设计最优）
+            mode = inputs.get("alloc_mode") or "design"
+            if mode in ("balanced", "split") and ref is not None:
+                role = inputs["roles"][0]
+                enemy_values = engine.pick_enemy_values(
+                    data["airframes_all"], inputs.get("enemy") or {}, role,
+                    inputs["current_year"])[1]
+                cap = inputs.get("efficiency_cap_now", 100)
+                ca = inputs.get("capacity_bonus_now", 200)
+                alt_tokens, alt_gain = engine.production_route(
+                    org, ref, inputs.get("unlocked_techs") or [], cap, ca)
+                if mode == "balanced":
+                    # 兼顾 = 同一条路线里最大化"折算后总分数"（生产特质 + 设计链并存）
+                    if alt_gain > 1.0 + 1e-9:
+                        _c, mods2, log2 = engine.mio_route_folded(
+                            org, level, ref, upgrade_map, base_mods, enemy_values,
+                            inputs["roles"], inputs.get("range_cap"),
+                            inputs.get("experience"), techs=inputs.get("unlocked_techs") or [],
+                            cap_now=cap, capacity_now=ca, available=avail)
+                        log, mods = log2, mods2
+                        info["traits"] = log
+                        info["alloc_mode"] = "balanced（兼顾）"
+                        prod = {}
+                        for item in log:
+                            prod = engine.combine_modifiers(prod, item.get("production") or {})
+                elif mode == "split":
+                    partner = best_production_plan(inputs, data, ref)
+                    if partner and partner["organization"] != org["organization"]:
+                        info["production_partner"] = partner
+                        info["production_gain_override"] = partner["gain"]
+                        prod = {}          # 本 MIO 只做设计，生产不算它的
 
     # MIO 方针（6 级起可选）：只计入"设计侧"的装备修正
     policy = cfg.get("policy")
