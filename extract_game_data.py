@@ -359,6 +359,37 @@ def _pairs(block):
             re.findall(r"(?<![\w.])([a-z_0-9]+)\s*=\s*(-?[\d.]+)", block)}
 
 
+def _sub_block(body, name):
+    """取 `name = { … }` 的块体（只取第一处，花括号配对）。"""
+    m = re.search(r"(?<![\w.])%s\s*=\s*\{" % name, body)
+    if not m:
+        return ""
+    i, depth = m.end() - 1, 0
+    while i < len(body):
+        if body[i] == "{":
+            depth += 1
+        elif body[i] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        i += 1
+    return body[m.end():i]
+
+
+def _production_bonus(body):
+    """生产侧修正（`production_bonus`，可能嵌一层 `same_as_mio = { … }`）。
+
+    我们以前只抽了 equipment_bonus（设计侧），生产侧的这 7 个键全漏了：
+    production_capacity_factor / resource_need / efficiency_gain / efficiency_cap /
+    cost / resource_penalty / conversion_speed。
+    """
+    inner = _sub_block(body, "production_bonus")
+    if not inner:
+        return {}
+    nested = _sub_block(inner, "same_as_mio")
+    return _pairs(nested or inner)
+
+
 def parse_policies(game_dir):
     """MIO 方针（policies/*.txt）。
 
@@ -401,6 +432,7 @@ def parse_policies(game_dir):
                 "requires_techs": re.findall(r"has_tech\s*=\s*([A-Za-z_0-9]+)",
                                              subs.get("available", "")),
                 "equipment_bonus": equip,
+                "production_bonus": _production_bonus(subs.get("production_bonus", "")),
                 "organization_modifier": _pairs(subs.get("organization_modifier", "")),
             })
     return out
@@ -536,6 +568,7 @@ def parse_mio(game_dir):
                 "includes": [m.group(1) for m in re.finditer(r"include\s*=\s*([A-Za-z_0-9]+)", block)],
                 "equipment_types": [],
                 "traits": [],
+                "production": _production_bonus(block),   # 组织级生产修正（若有）
             }
             for key, value in re.findall(r"([A-Za-z_0-9]+)\s*=\s*([^\{}\n]+)", block):
                 pass
@@ -626,6 +659,7 @@ def _trait_payload(segment):
     return {
         "token": token,
         "bonuses": bonuses,
+        "production": _production_bonus(body),      # 生产侧：以前完全没抽
         "ai_will_do": ai_base,
         "parents": parents,
         "limit_to_equipment_type": limits,
