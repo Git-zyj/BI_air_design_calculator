@@ -277,16 +277,32 @@ class App(tk.Tk):
         self.canvas.bind_all("<Button-5>", on_down)      # X11 向下
 
     def _wrap_to_card(self, label, container):
-        """累计标签按卡片实际宽度换行：只有文本快超出时才折行。"""
-        def on_conf(event):
-            width = max(event.width - WRAP_RESERVE, 240)
+        """让长标签按**画布实际可用宽度**换行（不是按卡片自己的宽度）。
+
+        ⚠️ 别用 event.width（卡片宽度）：长文本会把卡片撑宽，卡片一宽 wraplength 又变大，
+        两者互相追着涨，最后整张卡片比窗口还宽、右边直接被画布裁掉——雅科夫列夫满级
+        （十几个修正）就是被这个坑撑爆的。这里改成：
+            画布可见宽度 − 标签在画布里的横向起点 − 预留
+        """
+        def on_conf(_event=None):
+            avail = self.canvas.winfo_width()
+            if avail <= 1:                       # 还没完成布局
+                avail = max(self.winfo_width() - 2 * PADX, 640)
             try:
-                cur = int(label.cget("wraplength"))
+                x = label.winfo_x() + container.winfo_x()
+            except Exception:                    # noqa: BLE001
+                x = 0
+            width = int(max(avail - x - WRAP_RESERVE, 240))
+            try:
+                cur = int(float(label.cget("wraplength") or 0))
             except (TypeError, ValueError):
                 cur = -1
             if cur != width:
                 label.configure(wraplength=width)
-        container.bind("<Configure>", on_conf, add="+")
+
+        for target in (container, label):
+            target.bind("<Configure>", on_conf, add="+")
+        on_conf()
 
     # ---------- 界面 ----------
     def _build(self):
@@ -431,28 +447,33 @@ class App(tk.Tk):
         self.cb_org = ttk.Combobox(card, textvariable=self.var_org, width=22, state="readonly")
         self.cb_org.grid(row=1, column=1, sticky="w")
         self.cb_org.bind("<<ComboboxSelected>>", lambda e: self._on_org_change())
-        ttk.Label(card, text="等级").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
-        self.spin_level = ttk.Spinbox(card, from_=0, to=14, textvariable=self.var_level, width=6,
-                                      command=self._on_level_changed)
-        self.spin_level.grid(row=1, column=3, sticky="w")
-        ttk.Label(card, text="方针").grid(row=2, column=0, sticky="e", padx=(PADX, 4))
+        ttk.Label(card, text="方针").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
         self.var_policy = tk.StringVar(value="（不选）")
         self.cb_policy = ttk.Combobox(card, textvariable=self.var_policy, width=26, state="readonly")
-        self.cb_policy.grid(row=2, column=1, sticky="w")
+        self.cb_policy.grid(row=1, column=3, sticky="w")
         self.cb_policy.bind("<<ComboboxSelected>>", lambda e: self._on_policy_change())
         self.lbl_policy = ttk.Label(card, text="", foreground="#5A6472",
                                     font=(self.family, BODY - 2), justify="left")
-        self.lbl_policy.grid(row=2, column=2, columnspan=4, sticky="w", padx=PADX)
-        self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
-                                       font=(self.family, BODY - 2), justify="left")
-        self.lbl_mio_route.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_policy.grid(row=1, column=4, columnspan=2, sticky="w", padx=PADX)
+        self._wrap_to_card(self.lbl_policy, card)
+
+        # 第 2 行：等级 + 预览按钮
+        ttk.Label(card, text="等级").grid(row=2, column=0, sticky="e", padx=(PADX, 4))
+        self.spin_level = ttk.Spinbox(card, from_=0, to=14, textvariable=self.var_level, width=6,
+                                      command=self._on_level_changed)
+        self.spin_level.grid(row=2, column=1, sticky="w")
         ttk.Button(card, text="预览军工组织总加成", command=self.on_preview).grid(
-            row=1, column=4, sticky="w",
-                                                                      padx=PADX)
+            row=2, column=2, sticky="w", padx=PADX)
+
+        # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
                                        font=(self.family, BODY, "bold"), justify="left")
-        self.lbl_mio_total.grid(row=1, column=5, sticky="w", padx=PADX)
+        self.lbl_mio_total.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_mio_total, card)
+
+        self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
+                                       font=(self.family, BODY - 2), justify="left")
+        self.lbl_mio_route.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
 
         self.tree_mio = ttk.Treeview(card, columns=("lvl", "trait", "bonus"),
                                      show="headings", height=5)
@@ -460,10 +481,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=4, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=5, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=5, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=6, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -1122,7 +1143,8 @@ class App(tk.Tk):
         if pol.get("min_size"):
             need.append("%d 级%s" % (pol["min_size"], "✓" if level >= pol["min_size"] else "✗"))
         for tech in pol.get("requires_techs") or []:
-            need.append("%s%s" % (tech, "✓" if tech in techs else "✗"))
+            need.append("%s%s" % (zh(self.loc, tech) or tech,
+                                  "✓" if tech in techs else "✗"))
         bonus = {k: v for k, v in (pol.get("equipment_bonus") or {}).items()
                  if k != "production_cost_factor" and v}
         parts = ["前置：" + ("、".join(need) if need else "无"),
@@ -1132,8 +1154,9 @@ class App(tk.Tk):
             parts.append("生产产出花费 %+.0f%%（只作用于生产，不计入）" % (prod * 100))
         org_mod = pol.get("organization_modifier") or {}
         if org_mod:
-            parts.append("组织：" + "、".join("%s %+.0f%%" % (k, v * 100)
-                                            for k, v in org_mod.items() if v))
+            # 这些是组织级修正（经费/研究），**不影响飞机属性**，说清楚免得误读
+            parts.append("组织（不影响飞机属性）：" + fmt_mods(
+                {k: v for k, v in org_mod.items() if v}, self.loc))
         return "　".join(parts)
 
     def _best_policy_token(self):
@@ -1540,7 +1563,7 @@ class App(tk.Tk):
         self._render_rows()
 
     def _show_design(self):
-        """在表格下方用可换行标签显示选中行的完整推荐改装。"""
+        """表格下方（散点图上方）：选中行的完整推荐改装 + **性能分数怎么乘出来的**。"""
         sel = self.tree_out.selection()
         if not sel:
             self.lbl_design.configure(text="")
@@ -1548,7 +1571,21 @@ class App(tk.Tk):
         values = self.tree_out.item(sel[0])["values"]
         if not values:
             return
-        self.lbl_design.configure(text="推荐改装（%s）：%s" % (values[3], values[-1]))
+        lines = ["推荐改装（%s）：%s" % (values[3], values[-1])]
+        row = getattr(self, "_row_by_iid", {}).get(sel[0])
+        v = (row or {}).get("values") or {}
+        if v:
+            lines.extend(engine.score_breakdown(row["role"], v, row.get("effective_cost")))
+            ev = row.get("enemy_values") or {}
+            if ev:
+                lines.append(
+                    "战斗比值 %s 由双方机动/速度合成：我方 机动 %s / 速度 %s，"
+                    "对手 %s 机动 %s / 速度 %s"
+                    % (engine.fmt_num(v.get("combat_ratio")),
+                       engine.fmt_num(v.get("agility")), engine.fmt_num(v.get("speed")),
+                       (row.get("enemy") or {}).get("name") or "对手",
+                       engine.fmt_num(ev.get("agility")), engine.fmt_num(ev.get("speed"))))
+        self.lbl_design.configure(text="\n".join(lines))
 
     def _render_rows(self):
         """按当前 X/Y 轴重算帕累托标记，套用筛选与排序后刷新表格和散点图。
@@ -1590,8 +1627,9 @@ class App(tk.Tk):
         view.sort(key=self._sort_value, reverse=getattr(self, "_sort_desc", True))
 
         dist = int(self.var_distance.get())
+        self._row_by_iid = {}
         for row in view:
-            self.tree_out.insert("", "end", values=(
+            iid = self.tree_out.insert("", "end", values=(
                 "%s@%d" % (ROLE_SHORT.get(row["role"], ROLE_LABELS[row["role"]]), dist), row["rank"],
                 "★" if row.get("pareto") else "",
                 self._row_name(row),
@@ -1602,6 +1640,7 @@ class App(tk.Tk):
                 "{:,.2f}（装配 {}）".format(row["weighted"],
                                            row["airframe"].get("air_production", 0)),
                 row["design"]))
+            self._row_by_iid[iid] = row
         star = sum(1 for r in self.rows if r.get("pareto"))
         self.lbl_pareto.configure(
             text="帕累托前沿：%d / %d 架（X = %s，Y = %s，同一用途内比较；● 前沿，○ 被支配）"

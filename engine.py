@@ -424,6 +424,7 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
     mine = max(1 - a * (min(1 / r_agility, cap_a) - 1) + s * (min(r_speed, cap_s) - 1), floor)
     theirs = max(1 - a * (min(r_agility, cap_a) - 1) + s * (min(1 / r_speed, cap_s) - 1), floor)
     ratio = mine / theirs          # 两侧都有了正地板，ratio 恒 > 0，不会再出现 0 或 ∞
+    values["combat_ratio"] = ratio     # 暴露出来，界面上要展示"分数是怎么乘出来的"
 
     cost = values["effective_cost"]
     ground = max(values["ground_attack"], GROUND_FLOOR)
@@ -445,6 +446,74 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
         "naval_far": naval_near * values["range"],
     }
     return values, values["effective_cost"], scores
+
+
+def score_terms(role, values):
+    """分数由哪些因子相乘而来 → [(中文名, 数值, 指数), …]（**不含** ÷ 有效造价）。
+
+    与 evaluate() 里的公式一一对应：
+      air_*   = 对空攻击 × 空中防御 × 战斗比值 [× 航程]
+      ground_* = 对地攻击 × 空中防御^0.5     [× 航程]
+      naval_* = 对海攻击 × 对海瞄准 × 空中防御^0.5 [× 航程]
+      recon   = 航程
+    """
+    base = score_role(role)
+    defo = values.get("defence", 0.0)
+    sq = EFFECT_EXPONENTS["ground"]["defence"]      # 非对空用途的防御指数（0.5 = 开方）
+    if base in ("air_near", "air_far"):
+        terms = [("对空攻击", values.get("attack", 0.0), 1.0),
+                 ("空中防御", defo, 1.0),
+                 ("战斗比值", values.get("combat_ratio", 1.0), 1.0)]
+    elif base in ("ground_near", "ground_far"):
+        terms = [("对地攻击", values.get("ground_attack", 0.0), 1.0),
+                 ("空中防御", defo, sq)]
+    elif base in ("naval_near", "naval_far"):
+        terms = [("对海攻击", values.get("naval_attack", 0.0), 1.0),
+                 ("对海瞄准", values.get("aiming", 0.0), 1.0),
+                 ("空中防御", defo, sq)]
+    else:                                            # recon
+        terms = []
+    if base.endswith("_far") or base == "recon":
+        terms.append(("航程", values.get("range", 0.0), 1.0))
+    return terms
+
+
+def pure_score(role, values):
+    """不含造价的"性能分数" = 各因子按指数相乘。"""
+    out = 1.0
+    for _label, value, expo in score_terms(role, values):
+        out *= value ** expo
+    return out
+
+
+def fmt_num(value, digits=4):
+    """界面用：大数带千分位；小因子保留 6 位，保证读者自己乘一遍也能对上。"""
+    if value is None:
+        return "—"
+    if abs(value) >= 1000:
+        return "{:,.2f}".format(value)
+    if abs(value) >= 100 and float(value).is_integer():
+        return "{:,.0f}".format(value)
+    return "{:,.6f}".format(value)
+
+
+def score_breakdown(role, values, effective_cost=None):
+    """把分数写成"算术式"（界面显示用）：
+
+        性能分数 421,700 = 对空攻击 25.79 × 空中防御 31.70 × 战斗比值 1.2341 × 航程 900
+        总分数（性能 ÷ 有效造价） 15,540.54 = 上面 ÷ 27.14
+    """
+    cost = effective_cost if effective_cost is not None else values.get("effective_cost")
+    terms = score_terms(role, values)
+    pure = pure_score(role, values)
+    left = " × ".join(
+        "%s %s%s" % (label, fmt_num(value), "" if expo == 1.0 else "^%g" % expo)
+        for label, value, expo in terms) or "1"
+    lines = ["性能分数 %s = %s" % (fmt_num(pure), left)]
+    if cost:
+        lines.append("总分数（性能 ÷ 有效造价） %s = 上面 ÷ %s"
+                     % (fmt_num(pure / cost), fmt_num(cost)))
+    return lines
 
 
 def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,
