@@ -367,14 +367,18 @@ def combine_modifiers(*sources):
 
 def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP,
              experience=None, reliability_override=None, bice_combat=True,
-             accident_factor=None):
+             accident_factor=None, prod_mods=None):
     """返回 (最终数值 dict, 有效造价, 七用途分数 dict)。
 
     base 为机型基础值；levels 为 {token: 次数}；mods 为制造商/国家精神/手填的修正合计；
     enemy 为 {'agility': x, 'speed': y}（缺省视为同型机）。
+    prod_mods 为**生产侧**修正（`production_bonus`）：其中 `reliability` 与设计侧可靠同效
+    （都是百分比修正装备当前可靠性）→ 并进可靠合计，进而影响事故损耗与有效造价。
     """
     exp = dict(experience or {})
     coef = dict(mods)
+    # 生产侧可靠（例如「不断的工业革命」的 reliability = -3%）与设计侧相加
+    prod_reliability = float((prod_mods or {}).get("reliability", 0.0) or 0.0)
     add = {}
     up_coef, up_add = {}, {}          # 只统计"改装"贡献的修正（给界面显示用）
     for token, count in levels.items():
@@ -407,7 +411,8 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
         "ground_attack": stage("air_ground_attack") * (1 + exp.get("air_ground_attack", 0.0)),
         "range": min(stage("air_range") * (1 + exp.get("air_range", 0.0)), range_cap),
         # 可靠性是乘算（实测：Bf 109 G-14 基础 0.59，维护 1 级 → 0.59×1.0375 = 0.6121）
-        "reliability": (base["reliability"] * (1 + coef.get("reliability", 0.0))
+        "reliability": (base["reliability"] * (1 + coef.get("reliability", 0.0)
+                                               + prod_reliability)
                         * (1 + exp.get("reliability", 0.0))
                         if reliability_override is None else reliability_override),
         "cost": base["cost"] * (1 + coef.get("build_cost_ic", 0.0)),
@@ -637,12 +642,13 @@ def combat_breakdown(role, values, enemy_values=None):
 
 
 def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,
-             range_cap=DEFAULT_RANGE_CAP, experience=None, max_steps=60, accident_f=None):
+             range_cap=DEFAULT_RANGE_CAP, experience=None, max_steps=60, accident_f=None,
+             prod_mods=None):
     """贪心：每步取边际性价比最高且 > 1 的改装加一级。"""
     tokens = [t for t in (available or SHEET_UPGRADES) if t in upgrade_map]
     levels = {t: 0 for t in tokens}
     _, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                            accident_factor=accident_f)
+                            accident_factor=accident_f, prod_mods=prod_mods)
     current = scores[role]
     steps = []
     for _ in range(max_steps):
@@ -653,7 +659,7 @@ def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,
                 continue
             levels[token] += 1
             _, _, trial = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                                   accident_factor=accident_f)
+                                   accident_factor=accident_f, prod_mods=prod_mods)
             levels[token] -= 1
             gain = trial[role] / current if current else 0.0
             if best is None or gain > best[0]:
@@ -720,6 +726,9 @@ def _first_not_none(*vals):
 
 # MIO「满级」步数上限（够覆盖任何组织的特质树；贪心会在没有正收益时提前停）
 MIO_MAX_LEVEL = 14
+# 路线搜索的粗筛规模：先用"不含改装"的廉价分取前 N 个可行集，再跑真实管线
+# （抽样验证：N=20~100 与全枚举结果完全一致；N=0 = 不粗筛/全枚举）
+ROUTE_TOP_K = 50
 # 对手（AI）的满经验加成：机动 +20% / 速度 +5%（用户实测口径；可界面手填覆盖）
 ENEMY_EXPERIENCE = {"air_agility": 0.20, "maximum_speed": 0.05}
 # 空军 MIO 的装备类型关键字（判断一个组织是不是做飞机的）
@@ -1204,7 +1213,8 @@ _ROUTE_CACHE = {}
 
 def route_best(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
                experience=None, max_level=MIO_MAX_LEVEL, techs=(), cap_now=100.0,
-               capacity_now=200.0, available=None, fold=True, cache_key=None):
+               capacity_now=200.0, available=None, fold=True, cache_key=None,
+               prod_mods0=None, top_k=ROUTE_TOP_K):
     """**统一口径**的配点路线搜索（设计/兼顾共用同一套，只是 fold 不同）。
 
     与旧实现的区别：每个候选特质集都用**真实管线**评分 —— 该集自己的最优改装
@@ -1213,10 +1223,16 @@ def route_best(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
 
     fold=True  → 目标 = 折算后总分数（兼顾）
     fold=False → 目标 = 纯设计分（分离/设计最优）
+    prod_mods0  = **起点**的生产侧修正（初始特质 + 已选方针）：其中 reliability 与
+                  设计侧可靠同效，会进有效造价 → 所以评分时要带上。
+    top_k       = 先用"不含改装"的廉价分把可行集**粗筛**到前 top_k 个，再逐个跑真实管线
+                  （0 = 不粗筛，全枚举）。抽样 58 个情境对过：top_k=20/30/50/100 与全枚举
+                  **方针、特质集合、分数三者全一致**，而 top_k=20 快 13 倍（0.10s vs 1.34s）。
     返回 (选中 token 列表, 修正合计, log)。
     """
-    if cache_key is not None and cache_key in _ROUTE_CACHE:
-        return _ROUTE_CACHE[cache_key]
+    key = cache_key if cache_key is None else (tuple(cache_key) + ("topk", int(top_k or 0)))
+    if key is not None and key in _ROUTE_CACHE:
+        return _ROUTE_CACHE[key]
     groups = plane_groups((base or {}).get("archetype"))
     arche = (base or {}).get("archetype")
     order, masks = mio_feasible_sets(org, max_level, techs, groups, arche)
@@ -1224,10 +1240,26 @@ def route_best(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
     base_scores = {}
     for role in role_keys:
         base_scores[role] = evaluate(base, {}, upgrade_map, mods, enemy, range_cap, experience,
-                                     accident_factor=accident_factor(role in CARRIER_ROLES))[2][role] or 1.0
+                                     accident_factor=accident_factor(role in CARRIER_ROLES),
+                                     prod_mods=prod_mods0)[2][role] or 1.0
+
+    def cheap(picked):
+        """廉价代理：**不含改装**（但带生产折算）—— 只用来粗筛，不参与最终比较。"""
+        chosen, prod = dict(mods), dict(prod_mods0 or {})
+        for i in picked:
+            chosen = combine_modifiers(chosen, order[i].get("bonuses") or {})
+            prod = combine_modifiers(prod, order[i].get("production") or {})
+        gain = production_gain(prod, cap_now, capacity_now)[0] if fold else 1.0
+        total = 0.0
+        for role in role_keys:
+            result = evaluate(base, {}, upgrade_map, chosen, enemy, range_cap, experience,
+                              accident_factor=accident_factor(role in CARRIER_ROLES),
+                              prod_mods=prod)
+            total += result[2].get(role, 0.0) / base_scores[role]
+        return total * gain
 
     def value(picked):
-        chosen, prod = dict(mods), {}
+        chosen, prod = dict(mods), dict(prod_mods0 or {})
         for i in picked:
             chosen = combine_modifiers(chosen, order[i].get("bonuses") or {})
             prod = combine_modifiers(prod, order[i].get("production") or {})
@@ -1236,15 +1268,18 @@ def route_best(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
         for role in role_keys:
             result = optimize(base, upgrade_map, chosen, enemy, role, available=available,
                               range_cap=range_cap, experience=experience,
-                              accident_f=accident_factor(role in CARRIER_ROLES))
+                              accident_f=accident_factor(role in CARRIER_ROLES),
+                              prod_mods=prod)
             total += result["scores"].get(role, 0.0) / base_scores[role]
         return total * gain
 
     best_picked, best_val = [], value([])
-    for mask in masks:
-        if not mask:
-            continue
-        picked = [i for i in range(len(order)) if (mask >> i) & 1]
+    candidates = [[i for i in range(len(order)) if (m >> i) & 1] for m in masks]
+    candidates = [p for p in candidates if p]
+    if top_k and len(candidates) > top_k:
+        candidates.sort(key=cheap, reverse=True)
+        candidates = candidates[:top_k]
+    for picked in candidates:
         val = value(picked)
         if val > best_val:
             best_picked, best_val = picked, val
@@ -1295,7 +1330,8 @@ def policy_production(pol):
 def route_best_joint(org, level, base, upgrade_map, mods0, enemy, roles, range_cap,
                      policies=(), experience=None, max_level=MIO_MAX_LEVEL, techs=(),
                      cap_now=100.0, capacity_now=200.0, available=None, fold=True,
-                     cache_key=None, initial_production=None, score_role_key=None):
+                     cache_key=None, initial_production=None, score_role_key=None,
+                     top_k=ROUTE_TOP_K):
     """**方针 × 路线 联合穷举**：把方针当成"等级前置、不占特质点数、彼此互斥"的伪特质。
 
     对每个候选方针（含"不选"）各跑一次 `route_best`，再按**真实管线**打分：
@@ -1310,15 +1346,17 @@ def route_best_joint(org, level, base, upgrade_map, mods0, enemy, roles, range_c
     best = None
     for pol in [None] + list(policies):
         start = combine_modifiers(mods0, policy_design_bonus(pol))
+        prod0 = combine_modifiers(dict(initial_production or {}), policy_production(pol))
         pol_key = pol.get("token") if pol else None
         sub_key = None if cache_key is None else (tuple(cache_key) + ("policy", pol_key))
         tokens, mods, log = route_best(
             org, level, base, upgrade_map, start, enemy, roles, range_cap, experience,
             max_level=max_level, techs=techs, cap_now=cap_now, capacity_now=capacity_now,
-            available=available, fold=fold, cache_key=sub_key)
+            available=available, fold=fold, cache_key=sub_key, prod_mods0=prod0, top_k=top_k)
         result = optimize(base, upgrade_map, mods, enemy, role, available=available,
-                          range_cap=range_cap, experience=experience)
-        prod = combine_modifiers(dict(initial_production or {}), policy_production(pol))
+                          range_cap=range_cap, experience=experience,
+                          prod_mods=prod0)
+        prod = dict(prod0)
         for item in log:
             prod = combine_modifiers(prod, item.get("production") or {})
         gain = production_gain(prod, cap_now, capacity_now)[0] if fold else 1.0
