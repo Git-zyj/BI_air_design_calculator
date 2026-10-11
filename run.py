@@ -405,10 +405,16 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
             avail = engine.available_upgrades(
                 ref["category"], data, techs=inputs.get("unlocked_techs") or [],
                 flags=inputs.get("unlocked_flags") or [], archetype=ref.get("archetype"))[0]
-            _chosen, mods, log = engine.mio_route_folded(
-                org, level, ref, upgrade_map, base_mods, None, inputs["roles"],
-                inputs.get("range_cap"), inputs.get("experience"),
-                techs=inputs.get("unlocked_techs") or [], available=avail, fold=False)
+            if (inputs.get("alloc_mode") or "split") == "balanced":
+                _chosen, mods, log = engine.mio_route_folded(
+                    org, level, ref, upgrade_map, base_mods, None, inputs["roles"],
+                    inputs.get("range_cap"), inputs.get("experience"),
+                    techs=inputs.get("unlocked_techs") or [], available=avail, fold=True)
+            else:                     # 分离：路线就是设计最优（沿用已验证的那套搜索）
+                _chosen, mods, log = engine.mio_route(
+                    org, level, ref, upgrade_map, base_mods, None, inputs["roles"],
+                    inputs.get("range_cap"), inputs.get("experience"),
+                    techs=inputs.get("unlocked_techs") or [])
             for item in log:
                 prod = engine.combine_modifiers(prod, item.get("production") or {})
             info["traits"] = log
@@ -440,10 +446,15 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
                             prod = engine.combine_modifiers(prod, item.get("production") or {})
                 elif mode == "split":
                     partner = best_production_plan(inputs, data, ref)
-                    if partner and partner["organization"] != org["organization"]:
+                    own_gain = engine.production_gain(prod, cap, ca)[0]
+                    if (partner and partner["gain"] > own_gain + 1e-9
+                            and partner["organization"] != org["organization"]):
                         info["production_partner"] = partner
                         info["production_gain_override"] = partner["gain"]
                         prod = {}          # 本 MIO 只做设计，生产不算它的
+                        info["alloc_mode"] = "split→生产换家"
+                    else:
+                        info["alloc_mode"] = "split→本 MIO 顺手做生产"
 
     # MIO 方针（6 级起可选）：只计入"设计侧"的装备修正
     policy = cfg.get("policy")
