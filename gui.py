@@ -1427,11 +1427,9 @@ class App(tk.Tk):
         better = max(scores, key=scores.get)
         worse = min(scores, key=scores.get)
         gap = (scores[better] / scores[worse] - 1) * 100 if scores[worse] else 0.0
-        if gap < 0.05:
-            self.lbl_alloc_rec.configure(text="推荐：两者持平")
-            return
+        # 不给"持平"这种话：总有一个更高的，把差距直接给出来，用户自己判断
         short = dict(ALLOC_MODES)[better].split("（")[0]
-        self.lbl_alloc_rec.configure(text="推荐：%s（高 %.1f%%）" % (short, gap))
+        self.lbl_alloc_rec.configure(text="推荐：%s（比另一种高 %.2f%%）" % (short, gap))
 
     def _policy_ready(self, pol):
         """门槛（等级 + 科技）是否满足。"""

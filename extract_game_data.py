@@ -381,18 +381,27 @@ def _sub_block(body, name):
     return body[m.end():i]
 
 
-def _production_bonus(body):
-    """生产侧修正（`production_bonus`，可能嵌一层 `same_as_mio = { … }`）。
+def _bonus_pairs(inner):
+    """`xxx_bonus = { … }` 的**内层**：可能直接列修正，也可能嵌一层 `same_as_mio = { … }`。
 
-    我们以前只抽了 equipment_bonus（设计侧），生产侧的这 7 个键全漏了：
-    production_capacity_factor / resource_need / efficiency_gain / efficiency_cap /
-    cost / resource_penalty / conversion_speed。
+    ⚠️ 方针那边以前把"内层"当成"外层"再找一次 `production_bonus`，于是
+    `production_bonus = { same_as_mio = { … } }` 全被抽成空 —— 例如
+    「不断的工业革命」的 `production_resource_need_factor = -0.05`、`reliability = -0.03`
+    就是这么漏掉的（用户发现的）。
     """
-    inner = _sub_block(body, "production_bonus")
     if not inner:
         return {}
     nested = _sub_block(inner, "same_as_mio")
     return _pairs(nested or inner)
+
+
+def _production_bonus(body):
+    """生产侧修正（`production_bonus`，可能嵌一层 `same_as_mio = { … }`）。
+
+    生产侧这些键以前完全没抽：production_capacity_factor / resource_need /
+    efficiency_gain / efficiency_cap / cost / resource_penalty / conversion_speed。
+    """
+    return _bonus_pairs(_sub_block(body, "production_bonus"))
 
 
 def parse_mio_groups(game_dir):
@@ -459,9 +468,7 @@ def parse_policies(game_dir):
             subs = {}
             for sub_name, sub_body in parse_blocks(block):
                 subs.setdefault(sub_name, sub_body)
-            equip = {}
-            if "same_as_mio" in dict(parse_blocks(subs.get("equipment_bonus", ""))):
-                equip = _pairs(dict(parse_blocks(subs["equipment_bonus"]))["same_as_mio"])
+            equip = _bonus_pairs(subs.get("equipment_bonus", ""))
             size = re.search(r"has_mio_size\s*>\s*(\d+)", subs.get("available", ""))
             allowed_body = subs.get("allowed", "")
             out.append({
@@ -476,7 +483,9 @@ def parse_policies(game_dir):
                 "requires_techs": re.findall(r"has_tech\s*=\s*([A-Za-z_0-9]+)",
                                              subs.get("available", "")),
                 "equipment_bonus": equip,
-                "production_bonus": _production_bonus(subs.get("production_bonus", "")),
+                # 注意：这里传的是 `production_bonus = { … }` 的**内层**，
+                # 所以要用 _bonus_pairs（_production_bonus 是"从整块里找 production_bonus"）
+                "production_bonus": _bonus_pairs(subs.get("production_bonus", "")),
                 "organization_modifier": _pairs(subs.get("organization_modifier", "")),
             })
     return out
