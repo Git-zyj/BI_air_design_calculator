@@ -46,6 +46,7 @@
 27. [勾选状态与明细行补全（2026-10-11）](#勾选状态与明细行补全2026-10-11)
 28. [明细区排版美化（2026-10-11）](#明细区排版美化2026-10-11)
 29. [② 的对手信息：随年份刷新 + 数值口径（2026-10-11）](#-的对手信息随年份刷新--数值口径2026-10-11)
+30. [生产机制调研（2026-10-11，待确认）](#生产机制调研2026-10-11待确认)
 
 ## 1. 目标
 
@@ -1848,3 +1849,101 @@ engine 侧在 `evaluate()` 里顺带算出来（不额外重算）：
 
 **Bf 109 G-14 的账**：机体基础 机动 69.0 / 速度 664.99 → ×1.04（设计商）= **71.76 / 674.97**
 （正好是用户实测的"出厂 71.7 / 674.97"）→ ×1.20 / ×1.05（经验）= **86.112 / 708.72** ✓
+
+## 30. 生产机制调研（2026-10-11，待确认）
+
+目标：把**生产因素**纳入评分（用户举例：拉沃契金因为生产属性好，会考虑拿它当**生产商**，
+从而改选 表层织物覆盖 + 子公司供应商 这类特质 —— 这会改变整个特质路线）。
+本节先把"原版 / BI 到底怎么算产量"查清楚，口径与实现等用户确认（§30.5）。
+
+### 30.1 原版生产线模型
+
+```
+每日产出(IC) = 该线军工厂数 × BASE_FACTORY_SPEED_MIL × 效率
+件数/天     = 每日产出 ÷ 单件造价(IC)
+效率        = 10%（BASE_FACTORY_START_EFFICIENCY_FACTOR）爬到 50%（MAX_EFFICIENCY_FACTOR），
+              每天按 BASE_FACTORY_EFFICIENCY_GAIN 增长，并受"工厂数 / 上限均衡"约束
+换线        = 同变体保留 90%、同族 70%、父子 30%、跨原型 20%（BI 数值见下）
+缺资源      = 每缺一种资源，产能 −5%（PRODUCTION_RESOURCE_LACK_PENALTY）
+```
+
+结论：**产量 = 工厂数 × 1.8~3.5 × 效率(≤29~50%) ÷ 造价**，其中"造价"是线性项，
+"效率上限/增长"是爬坡项，"资源惩罚"是系数项。
+
+### 30.2 BI 改了哪些生产常量
+
+`common/defines/00_defines.lua` 的 `NProduction` 段：**正式版与测试版完全一致（0 处差异）**，
+相对原版改了 **63 处**。关键的：
+
+| 常量 | 原版 | BI | 影响 |
+| --- | --- | --- | --- |
+| `BASE_FACTORY_SPEED_MIL` | 3.5 | **1.8** | 每个军工厂日产出几乎减半 → 造价的影响被放大 |
+| `BASE_FACTORY_MAX_EFFICIENCY_FACTOR` | 50% | **29%** | 稳态效率上限砍掉 42% |
+| `BASE_FACTORY_START_EFFICIENCY_FACTOR` | 10% | 10% | 起点不变，但可爬的空间更小 |
+| 换线保留（变体/父子/原型/同族）| 90 / 30 / 20 / 70% | **75 / 75 / 45 / 75%** | 换线更"平" |
+| `MAX_MIL_FACTORIES_PER_LINE` | 150 | **300** | 单线能塞更多工厂 |
+| `PRODUCTION_RESOURCE_LACK_PENALTY` | −5% | **−7.5%** | 缺资源更疼 |
+| `MAX_EQUIPMENT_RESOURCES_NEED` | 3 | **6** | 装备可依赖更多资源 |
+| `CONVERSION_SPEED_BONUS` | 0 | **+70%** | BI 的"改装/转换"更快 |
+| 能源系统（煤→能源）| 产能 10 / 每厂耗 0.25 / 上限 6.6 | **50 / 1.0 / 600** | BI 把能源做成独立瓶颈 |
+| `POWERED_FACTORY_SPEED(_MIL)` | 5 / 4.5 | **3.2 / 2.4** | 有电时的工厂速度 |
+| `MAX_CIV_FACTORIES_PER_LINE` | 15 | 24 | |
+
+### 30.3 BI 的装配（assembly）系统 = 第二条瓶颈
+
+- `air_assembly` / `engine_assembly` / `tank_assembly` / `artillery_assembly` 是**建筑**；
+- 每国装配能力 = Σ 各州 `building_level@air_assembly` → 变量 `num_air_assembly`
+  （`common/scripted_effects/_resources_scripted_effects.txt`）；
+- **装配上限** `ap_plane_cap = num_air_assembly × modifier@air_production_capacity`
+  （`_ai_PRODUCTION_scripted_effects.txt` L2657-2658）；
+- 每型飞机有装配开销（机身文件的 `resources = { air_production = X, engine_production = Y }`，
+  工具里的"飞机装配 / 发动机装配"就是这两个）；
+- AI 用它判断还要不要造装配厂：`ai_delta_air_assembly = air_ratio − ap_plane_cap × ap_plane_cost`。
+
+→ **飞机产量受两条线共同限制：军工厂 IC 产能，和装配能力 ÷ 每架装配开销。**
+工具现在的"飞机装配资源加权分"只把后者当分母用了一次。
+
+### 30.4 我们漏掉的东西：MIO 的 `production_bonus`
+
+现在只抽了 `equipment_bonus`（**设计侧**），**完全没抽 `production_bonus`（生产侧）**。
+全模组用到 7 个生产键：
+
+| 键 | 含义 | 出现次数 |
+| --- | --- | --- |
+| `production_capacity_factor` | 工厂产能（产出）| 46 |
+| `production_resource_need_factor` | 资源需求 | 37 |
+| `production_efficiency_gain_factor` | 效率增长 | 34 |
+| `production_efficiency_cap_factor` | 效率上限 | 23 |
+| `production_cost_factor` | 生产产出花费 | 20 |
+| `production_resource_penalty_factor` | 资源短缺惩罚 | 10 |
+| `production_conversion_speed_factor` | 转换速度 | 3 |
+
+**飞机相关**、带生产加成的特质（共 27 个，摘关键的）：
+
+| 特质 | 设计加成 | 生产加成 |
+| --- | --- | --- |
+| **表层织物覆盖** `fabric_skin` | 机动 +2% | **资源惩罚 −5%、产能 +5%** |
+| **子公司供应商** `subsidiary_suppliers` | **（无）** | **效率上限 +5%、效率增长 +5%** |
+| 增强生产设施 `expanded_production_facilities` | （无）| 效率增长 +5% |
+| 高级生产技术 `advanced_production_techniques` | 可靠性 +2% | 产能 +5% |
+| 先进材料 `advanced_materials` | （无）| 产能 +5%、资源需求 +5% |
+| 标准化合金 `standardized_alloys` | （无）| 效率增长 +5%、资源惩罚 −5% |
+| 选材构造 `selectional_construction` | （无）| 效率增长 +5% |
+| 大型货舱门 `extra_cargo_doors` | （无）| 产能 +10% |
+
+→ 这正好解释了用户的观察：**织物覆盖**在图纸上只值 +2% 机动、**子公司供应商**在设计侧等于 0，
+所以当前工具把后者当成"互斥输家"直接排除了 —— 但对**生产商**来说它们是抬产能/抬效率上限的。
+
+### 30.5 待确认（等用户拍板）
+
+1. **生产侧怎么进分数**：折算成"等效产能倍率"再与设计分相乘（例如
+   `(1+产能)×(1+效率上限)×(1−资源惩罚)÷(1+生产产出花费)`），还是**分成两栏**（设计分 / 生产分）？
+2. **装配要不要建模**：是否按 `ap_plane_cap = 装配厂数 × air_production_capacity` 算
+   "我的装配能力够不够支撑这型飞机"，并让用户输入装配厂数量？
+3. **"生产商 MIO"的语义**：游戏里一个装备类型只能挂一个 MIO。是要比较"同一型飞机换 MIO 生产"
+   （设计用 A、生产用 B），还是同一个 MIO 两套配点（设计向 / 生产向）？
+4. **效率上限 / 增长怎么折算**：若假设长期稳态（效率已到 29%），只有
+   `capacity / resource / cost / efficiency_cap` 影响产量；`efficiency_gain` 只在**换线频繁**时有意义。
+   要不要按"这条生产线预计持续多少天"来折算？
+5. **资源系统**：BI 有铝/钢/橡胶/煤→能源的完整链条。要不要让用户输入"我缺哪些资源"
+   （或简化为一个"是否缺资源"开关）？
