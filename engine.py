@@ -430,6 +430,10 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
     theirs = max(1 - a * (min(r_agility, cap_a) - 1) + s * (min(1 / r_speed, cap_s) - 1), floor)
     ratio = mine / theirs          # 两侧都有了正地板，ratio 恒 > 0，不会再出现 0 或 ∞
     values["combat_ratio"] = ratio     # 暴露出来，界面上要展示"分数是怎么乘出来的"
+    values["combat_mine"] = mine       # 我方伤害项
+    values["combat_theirs"] = theirs   # 对方伤害项
+    values["combat_params"] = {"agility": a, "speed": s, "cap_agility": cap_a,
+                               "cap_speed": cap_s, "floor": floor, "bice": bool(bice_combat)}
 
     cost = values["effective_cost"]
     ground = max(values["ground_attack"], GROUND_FLOOR)
@@ -506,7 +510,9 @@ def score_breakdown(role, values, effective_cost=None):
     """把分数写成"算术式"（界面显示用）：
 
         性能分数 421,700 = 对空攻击 25.79 × 空中防御 31.70 × 战斗比值 1.2341 × 航程 900
-        总分数（性能 ÷ 有效造价） 15,540.54 = 上面 ÷ 27.14
+        　航程效率 0.723333 = 实际航程 651 ÷ 目标航程 900（不够按比例减，够了封顶 1）
+
+    （"总分数 = 上面 ÷ 有效造价"不再显示在明细里，表里已经有那一列。）
     """
     cost = effective_cost if effective_cost is not None else values.get("effective_cost")
     terms = score_terms(role, values)
@@ -519,10 +525,46 @@ def score_breakdown(role, values, effective_cost=None):
         lines.append("　航程效率 %s = 实际航程 %s ÷ 目标航程 %s（不够按比例减，够了封顶 1）"
                      % (fmt_num(values.get("range_factor")), fmt_num(values.get("range")),
                         fmt_num(values.get("range_cap"))))
-    if cost:
-        lines.append("总分数（性能 ÷ 有效造价） %s = 上面 ÷ %s"
-                     % (fmt_num(pure / cost), fmt_num(cost)))
     return lines
+
+
+def combat_breakdown(role, values, enemy_values=None):
+    """战斗比值的**完整算式**（界面显示用；只有对空用途有这一项）。
+
+    游戏机制（§16.3）：两侧各自算一个"伤害项"，各自乘到自己的伤害上；本工具取两者之比。
+
+        MAX(1 − a×(MIN(对方机动 ÷ 我方机动, 上限) − 1) + s×(MIN(我方速度 ÷ 对方速度, 上限) − 1), 地板)
+    """
+    if score_role(role) not in ("air_near", "air_far"):
+        return []                      # 对地 / 对海 / 侦察不与敌机交战，没有这一项
+    p = values.get("combat_params") or {}
+    if not p or enemy_values is None:
+        return []
+    a, s = p.get("agility", 0.0), p.get("speed", 0.0)
+    ca, cs, fl = p.get("cap_agility", 0.0), p.get("cap_speed", 0.0), p.get("floor", 0.0)
+    ag, sp = values.get("agility", 0.0), values.get("speed", 0.0)
+    eag, esp = enemy_values.get("agility", 0.0), enemy_values.get("speed", 0.0)
+
+    def ratio_of(num, den):
+        return (num / den) if den else 1e9      # 分母为 0 时按"无限优势"处理（会撞上限）
+
+    line = ("战斗比值 %s = 我方伤害项 %s ÷ 对方伤害项 %s"
+            % (fmt_num(values.get("combat_ratio")), fmt_num(values.get("combat_mine")),
+               fmt_num(values.get("combat_theirs"))))
+    out = [line,
+           "　伤害项 = MAX(1 − %.1f×(MIN(对方机动 ÷ 我方机动, %.1f) − 1)"
+           " + %.1f×(MIN(我方速度 ÷ 对方速度, %.1f) − 1), %.2f)" % (a, ca, s, cs, fl),
+           "　我方（机动 %s、速度 %s）：MIN(%s ÷ %s, %.1f) = %s，MIN(%s ÷ %s, %.1f) = %s → %s"
+           % (fmt_num(ag), fmt_num(sp), fmt_num(eag), fmt_num(ag), ca,
+              fmt_num(min(ratio_of(eag, ag), ca)), fmt_num(sp), fmt_num(esp), cs,
+              fmt_num(min(ratio_of(sp, esp), cs)),
+              fmt_num(values.get("combat_mine"))),
+           "　对方（机动 %s、速度 %s）：MIN(%s ÷ %s, %.1f) = %s，MIN(%s ÷ %s, %.1f) = %s → %s"
+           % (fmt_num(eag), fmt_num(esp), fmt_num(ag), fmt_num(eag), ca,
+              fmt_num(min(ratio_of(ag, eag), ca)), fmt_num(esp), fmt_num(sp), cs,
+              fmt_num(min(ratio_of(esp, sp), cs)),
+              fmt_num(values.get("combat_theirs")))]
+    return out
 
 
 def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,

@@ -488,6 +488,11 @@ class App(tk.Tk):
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
+        ttk.Button(self.frm_traits, text="全不选", command=self._clear_traits).grid(
+            row=0, column=2, sticky="e", padx=(PADX, 0))
+        ttk.Button(self.frm_traits, text="按满级最优勾选",
+                   command=self._seed_traits_from_route).grid(row=0, column=3, sticky="e")
+        self.frm_traits.columnconfigure(1, weight=1)      # 中间留白，按钮靠右
         self.tree_traits = ttk.Treeview(self.frm_traits,
                                         columns=("sel", "trait", "bonus", "req"),
                                         show="headings", height=6)
@@ -497,6 +502,7 @@ class App(tk.Tk):
             self.tree_traits.column(cid, width=w, anchor=anchor)
         self.tree_traits.grid(row=1, column=0, sticky="ew")
         self.tree_traits.bind("<Button-1>", self._on_trait_click)
+        self.tree_traits.tag_configure("locked", foreground="#A8AEB8")   # 现在点不了的特质
         sb = ttk.Scrollbar(self.frm_traits, orient="vertical", command=self.tree_traits.yview)
         sb.grid(row=1, column=1, sticky="ns")
         self.tree_traits.configure(yscrollcommand=sb.set)
@@ -1239,8 +1245,10 @@ class App(tk.Tk):
                 "☐", zh(self.loc, token), fmt_mods(trait.get("bonuses") or {}),
                 self._trait_req(trait)))
         base = "点击行勾选/取消（初始特质已默认计入，不需要勾）"
-        self.lbl_traits_hint.configure(
-            text=base + ("　另有 %d 个特质需前置科技，已隐藏" % hidden if hidden else ""))
+        self._traits_hint_base = base + ("　另有 %d 个特质需前置科技，已隐藏" % hidden
+                                         if hidden else "")
+        self.lbl_traits_hint.configure(text=self._traits_hint_base)
+        self._refresh_trait_states()
 
     def _trait_req(self, trait):
         parts = []
@@ -1251,6 +1259,67 @@ class App(tk.Tk):
         if mx:
             parts.append("互斥 " + "、".join(zh(self.loc, m) for m in mx))
         return "；".join(parts) or "—"
+
+    def _trait_state(self, trait):
+        """这个特质现在能不能点？返回 (能点?, 不能点的原因)。
+
+        规则与游戏一致：前置（all 全要 / any 任一）+ 互斥（不能与已选的同时点）。
+        已勾选的特质永远可以取消。
+        """
+        tok = (trait or {}).get("token")
+        if not tok:
+            return False, "未知特质"
+        if tok in self.chosen_traits:
+            return True, ""
+        for kind, parents in trait.get("parents") or []:
+            hit = [p for p in parents if p in self.chosen_traits]
+            if kind == "all_parents" and len(hit) != len(parents):
+                miss = [p for p in parents if p not in self.chosen_traits]
+                return False, "需要先选 " + "、".join(zh(self.loc, p) for p in miss)
+            if kind == "any_parent" and not hit:
+                return False, "需要先选其中之一 " + "、".join(zh(self.loc, p) for p in parents)
+        for other in trait.get("mutually_exclusive") or []:
+            if other in self.chosen_traits:
+                return False, "与已选的「%s」互斥" % zh(self.loc, other)
+        return True, ""
+
+    def _refresh_trait_states(self):
+        """把"现在点不了"的特质置灰：**依旧展示**，但点不进去。"""
+        org = self._org()
+        if not org:
+            return
+        for trait in org.get("traits", []):
+            tok = trait.get("token")
+            if not tok or not self.tree_traits.exists(tok):
+                continue
+            ok, _why = self._trait_state(trait)
+            locked = (not ok) and tok not in self.chosen_traits
+            self.tree_traits.item(tok, tags=("locked",) if locked else ())
+
+    def _clear_traits(self):
+        """一键清空手动勾选的特质。"""
+        self.chosen_traits = set()
+        self._trait_order = []
+        _dbg("操作：清空手动勾选的特质")
+        self._fill_traits()
+        self.on_preview()
+
+    def _seed_traits_from_route(self):
+        """按"满级最优路线"把所有条目预勾上（手动配点的默认起点，也是清空后的还原按钮）。"""
+        org = self._org()
+        if not org:
+            return
+        try:
+            plan = self._org_plan(org, self.collect())
+        except (Exception, SystemExit):      # noqa: BLE001
+            plan = None
+        if not plan:
+            return
+        self._trait_order = [item["token"] for item in plan["log"]]
+        self.chosen_traits = set(self._trait_order)
+        _dbg("操作：按满级最优路线勾选 %d 项" % len(self._trait_order))
+        self._fill_traits()
+        self.on_preview()
 
     def _on_trait_click(self, event):
         token = self.tree_traits.identify_row(event.y)
@@ -1267,15 +1336,26 @@ class App(tk.Tk):
                  % (zh(self.loc, token),
                     "→".join(zh(self.loc, x) for x in getattr(self, "_trait_order", [])) or "无"))
         else:
+            trait = next((t for t in ((self._org() or {}).get("traits") or [])
+                          if t.get("token") == token), None)
+            ok, why = self._trait_state(trait)
+            if not ok:                       # 前置没满足 / 与已选互斥 → 点不进去
+                self.lbl_traits_hint.configure(
+                    text="不能勾「%s」：%s" % (zh(self.loc, token), why))
+                _dbg("操作：拒绝勾选特质「%s」（%s）" % (zh(self.loc, token), why))
+                return
             self.chosen_traits.add(token)
             order = getattr(self, "_trait_order", [])
             order.append(token)
             self._trait_order = order
             _dbg("操作：勾选特质「%s」，依次为 %s"
                  % (zh(self.loc, token), "→".join(zh(self.loc, x) for x in order)))
+        if getattr(self, "_traits_hint_base", None):
+            self.lbl_traits_hint.configure(text=self._traits_hint_base)
         vals = list(self.tree_traits.item(token)["values"])
         vals[0] = "☑" if token in self.chosen_traits else "☐"
         self.tree_traits.item(token, values=vals)
+        self._refresh_trait_states()         # 勾/取消之后，解锁与互斥要跟着变
         self._refresh_totals()
 
     def _sync_alloc(self):
@@ -1283,6 +1363,9 @@ class App(tk.Tk):
             self.tree_mio.grid_remove()
             self.frm_traits.grid()
             self.spin_level.configure(state="disabled")
+            if not self.chosen_traits:       # 默认起点 = 满级最优路线（可用"全不选"清空）
+                self._seed_traits_from_route()
+                return                       # _seed 里已经刷新过预览
         else:
             self.frm_traits.grid_remove()
             self.tree_mio.grid()
@@ -1576,15 +1659,7 @@ class App(tk.Tk):
         v = (row or {}).get("values") or {}
         if v:
             lines.extend(engine.score_breakdown(row["role"], v, row.get("effective_cost")))
-            ev = row.get("enemy_values") or {}
-            if ev:
-                lines.append(
-                    "战斗比值 %s 由双方机动/速度合成：我方 机动 %s / 速度 %s，"
-                    "对手 %s 机动 %s / 速度 %s"
-                    % (engine.fmt_num(v.get("combat_ratio")),
-                       engine.fmt_num(v.get("agility")), engine.fmt_num(v.get("speed")),
-                       (row.get("enemy") or {}).get("name") or "对手",
-                       engine.fmt_num(ev.get("agility")), engine.fmt_num(ev.get("speed"))))
+            lines.extend(engine.combat_breakdown(row["role"], v, row.get("enemy_values")))
         self.lbl_design.configure(text="\n".join(lines))
 
     def _render_rows(self):
