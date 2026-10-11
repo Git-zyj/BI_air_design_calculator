@@ -3,14 +3,15 @@
 给 **BIX（BlackICE 子模组）** 用的飞机选型计算器：输入年份、国家、用途、军工组织与已解锁的前置，
 输出「该造哪一型飞机、怎么改装、为什么」。
 
-> **本分支 = `beta`**，适配 **黑冰测试版**：`Blackice HOI IV TEST`
-> （workshop id **1851181613**）**v12.3.0**（游戏本体 1.19.2.0，仅参考）。
-> 正式版（BlackICE Historical Immersion Mod，workshop id 1137372539 / v12.1.0）看 **`main`** 分支。
-> 两个版本的数据**不通用**，别混用 exe。
+**对应模组**：BlackICE Historical Immersion Mod（黑冰）**正式版**（workshop id 1137372539）
+**v12.1.0**（游戏本体 1.19.2.0，仅参考）。数据是这个组合的固定快照——
+黑冰更新后需重跑 `extract_game_data.py` / `extract_loc_zh.py` 并重新打包，
+打出来的 exe 名字里会带**模组版本**（如 `飞机设计计算器_黑冰正式版v12.1.0.exe`）。
 
-数据是这套组合的固定快照——黑冰更新后需重跑
-`extract_game_data.py --game-dir <测试版模组目录>` / `extract_loc_zh.py` 并重新打包，
-打出来的 exe 名字里会带**模组版本**（如 `飞机设计计算器_黑冰测试版v12.3.0.exe`）。
+> **本分支 = `main`，适配正式版。** 黑冰**测试版**（`Blackice HOI IV TEST`，
+> workshop id 1851181613 / v12.3.0）在 **`beta` 分支**，配套 Release 是
+> [v12.3.0-test](https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.3.0-test)（Pre-release）。
+> **两个版本的数据不通用，别混用 exe。**
 
 ## 快速开始
 
@@ -85,3 +86,17 @@ build_exe_debug.bat  → dist\飞机设计计算器_黑冰正式版v12.1.0_调�
 ## 说明
 
 这是一个**工具模组**，本身不包含游戏内容；`descriptor.mod` 里把 BIX 标为依赖只是为了记录它服务于哪个模组。
+
+## 版权与第三方
+
+- **代码**：**MIT**（见 [`LICENSE`](LICENSE)）——随便用、随便改、可商用，保留版权声明即可。
+- **数据**：`data/*.json`、`BI_SOV.xlsx` 是从**第三方模组**抽取的数值快照，版权不属于本仓库：
+  - **BlackICE Historical Immersion Mod**（黑冰正式版 workshop id `1137372539`；
+    测试版 `Blackice HOI IV TEST` `1851181613`）——数值与定义归 BlackICE 作者团队；
+  - 汉化名称（`data/loc_zh.json`）来自黑冰内核汉化与 HOI4 官方简中，归各自作者。
+  本仓库只是把这些数值**聚合起来做计算与对照**，不主张对它们的所有权；
+  原作者如对收录有异议，可移除对应数据。
+- **依赖**：`openpyxl`（MIT）；打包用的 **PyInstaller 是 GPL-2.0 + 特别例外**，
+  该例外明确允许用它打包并分发自己的程序（含闭源、商用），所以与上面的 MIT 不冲突。
+- 本工具与 Paradox Interactive、BlackICE 作者团队**没有隶属关系**；
+  《钢铁雄心 4》及其素材版权归 Paradox Interactive。
