@@ -382,14 +382,20 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
     manual = cfg.get("manual_traits")
     if manual is not None:
         tech_set = set(inputs.get("unlocked_techs") or [])
-        for trait in org.get("traits", []):
+        # 按**界面钉进来的顺序**取（以前是按组织文件里的顺序遍历，于是"预览的路线"
+        # 和"计算列出来的路线"顺序不同 —— 同一套特质、但顺序看着不一样）。
+        by_token = {t.get("token"): t for t in org.get("traits", [])}
+        for token in manual:
+            trait = by_token.get(token)
+            if trait is None:
+                continue
             # 科技没解锁的特质游戏里点不了，手工清单同样跳过
             if any(t not in tech_set for t in (trait.get("requires_techs") or [])):
                 continue
-            if trait.get("token") in manual:
-                mods = engine.combine_modifiers(mods, trait.get("bonuses") or {})
-                prod = engine.combine_modifiers(prod, trait.get("production") or {})
-                info["traits"].append({"token": trait.get("token"), "bonuses": trait.get("bonuses")})
+            mods = engine.combine_modifiers(mods, trait.get("bonuses") or {})
+            prod = engine.combine_modifiers(prod, trait.get("production") or {})
+            info["traits"].append({"token": token, "bonuses": trait.get("bonuses"),
+                                   "production": trait.get("production")})
         info["manual"] = True
     else:
         level = int(cfg.get("level") or 0)
@@ -426,42 +432,26 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
                 prod = engine.combine_modifiers(prod, item.get("production") or {})
             info["traits"] = log
             info["level"] = level
-            # 「兼顾 / 分离」两种口径（默认 design = 纯设计最优）
-            mode = inputs.get("alloc_mode") or "design"
-            if mode in ("balanced", "split") and ref is not None:
-                role = inputs["roles"][0]
-                enemy_values = engine.pick_enemy_values(
-                    data["airframes_all"], inputs.get("enemy") or {}, role,
-                    inputs["current_year"])[1]
-                cap = inputs.get("efficiency_cap_now", 100)
-                ca = inputs.get("capacity_bonus_now", 200)
-                alt_tokens, alt_gain = engine.production_route(
-                    org, ref, inputs.get("unlocked_techs") or [], cap, ca)
-                if mode == "balanced":
-                    # 兼顾 = 同一条路线里最大化"折算后总分数"（生产特质 + 设计链并存）
-                    if alt_gain > 1.0 + 1e-9:
-                        _c, mods2, log2 = engine.mio_route_folded(
-                            org, level, ref, upgrade_map, base_mods, enemy_values,
-                            inputs["roles"], inputs.get("range_cap"),
-                            inputs.get("experience"), techs=inputs.get("unlocked_techs") or [],
-                            cap_now=cap, capacity_now=ca, available=avail)
-                        log, mods = log2, mods2
-                        info["traits"] = log
-                        info["alloc_mode"] = "balanced（兼顾）"
-                        prod = {}
-                        for item in log:
-                            prod = engine.combine_modifiers(prod, item.get("production") or {})
-                elif mode == "split":
-                    partner = best_production_plan(inputs, data, ref)
-                    own_gain = engine.production_gain(prod, cap, ca)[0]
-                    if (partner and partner["gain"] > own_gain + 1e-9
-                            and partner["organization"] != org["organization"]):
-                        info["production_partner"] = partner
-                        info["production_gain_override"] = partner["gain"]
-                        prod = {}          # 本 MIO 只做设计，生产不算它的
-                        info["alloc_mode"] = "split→生产换家"
-                    else:
-                        info["alloc_mode"] = "split→本 MIO 顺手做生产"
+            if _fold:
+                info["alloc_mode"] = "balanced（兼顾）"
+
+    # 「分离」口径：生产交给更优的那家 MIO（本 MIO 只做设计）。
+    # 注意：**界面会把预览的那条路线钉进来**（manual_traits），所以这一步必须在
+    # 分支之外执行 —— 以前它挂在"自动搜路线"分支里，界面路径（已钉路线）就漏算了
+    # 生产伙伴的折算，实测德国 1944 分离：界面 50.6734 vs 命令行 51.5179（差 1.67%）。
+    if (inputs.get("alloc_mode") or "split") == "split" and ref is not None:
+        cap = inputs.get("efficiency_cap_now", 100)
+        ca = inputs.get("capacity_bonus_now", 200)
+        partner = best_production_plan(inputs, data, ref)
+        own_gain = engine.production_gain(prod, cap, ca)[0]
+        if (partner and partner["gain"] > own_gain + 1e-9
+                and partner["organization"] != org["organization"]):
+            info["production_partner"] = partner
+            info["production_gain_override"] = partner["gain"]
+            prod = {}                  # 本 MIO 只做设计，生产不算它的
+            info["alloc_mode"] = "split→生产换家"
+        else:
+            info["alloc_mode"] = "split→本 MIO 顺手做生产"
 
     # MIO 方针（6 级起可选）：只计入"设计侧"的装备修正
     policy = cfg.get("policy")

@@ -1219,6 +1219,10 @@ def mio_route_folded(org, level, base, upgrade_map, mods, enemy, roles, range_ca
                      cap_now=100.0, capacity_now=200.0, available=None, top_k=15, fold=True):
     """「兼顾」口径：在一条路线里最大化 **折算后总分数**（设计分 × 生产倍率）。
 
+    ⚠️ 2026-10-11 起**已不再被调用**（统一走 `route_best` 的全枚举真实管线）——
+    这里保留作"快速代理"备用。它是**近似**：先用不含改装的廉价分粗筛 top_k，
+    只对前 top_k 个跑完整管线；实测 6 个场景与 route_best 答案相同，但不保证。
+
     两步走，兼顾"准"与"快"：
       ① 用**不含改装**的廉价设计分把所有可行集粗筛一遍，取前 `top_k` 个；
       ② 只对这 `top_k` 个跑**完整管线**（含最优改装 + 生产折算）算真实值，取最高。
