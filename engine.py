@@ -751,17 +751,53 @@ def is_air_mio(org, by_name):
     return any(tok in joined for tok in AIR_EQ_TOKENS)
 
 
+_COUNTRY_ALIASES = None
+
+
+def country_aliases():
+    """机型"国家"→真国家 tag 的别名表（data/country_aliases.json，懒加载）。
+
+    BI 的 `equipment_l_english_Commonwealth.yml` 里其实是英国的装备（key 全是 ENG_*），
+    所以 136 型英国飞机在数据里记成 "Commonwealth"；找 MIO 时要按 ENG 找。
+    """
+    global _COUNTRY_ALIASES
+    if _COUNTRY_ALIASES is None:
+        path = os.path.join(DATA_DIR, "country_aliases.json")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                _COUNTRY_ALIASES = (json.load(fh).get("by_country") or {})
+        else:
+            _COUNTRY_ALIASES = {}
+    return _COUNTRY_ALIASES
+
+
+def mio_owner_tags(org):
+    """这个 MIO 归哪些国家用（组织定义里的 `allowed = { tag = … }`，权威来源）。"""
+    return list(org.get("allowed") or [])
+
+
 def country_air_mios(mio_orgs, country, plane=None, by_name=None, fallback=False):
     """该国的空军 MIO；给了 plane 就只留"覆盖该机型装备组"的（全被滤掉时退回全部）。
 
-    fallback=True 时，该国**没有自己独特 MIO**（例如"英联邦"这种没有 organizations
-    文件的 tag）就退回**通用 MIO**（00_generic_organization.txt 里做飞机的那几个）——
-    游戏里这类国家用的就是通用设计局，不能直接判成"没有设计商加成"。
+    归属判定按 MIO 组织里的 `allowed` 列表（游戏里的权威声明，
+    例如 ENG 的维克斯组织同时允许 ENG 与 BEL）；没写 allowed 的退回"文件名前缀"。
+    `00_generic_organization.txt` 里的通用组织不算"本国独特 MIO"，只在没有独特 MIO
+    时（fallback=True）作为兜底 —— 例如机型数据里的 "Commonwealth" 会先按别名找 ENG。
     """
     by_name = by_name if by_name is not None else {o["organization"]: o for o in mio_orgs}
-    own = [o for o in mio_orgs
-           if os.path.basename(o.get("file", "")).upper().startswith((country or "") + "_")
-           and is_air_mio(o, by_name)]
+    tag = country_aliases().get(country or "", country or "")
+    own = []
+    for org in mio_orgs:
+        if not is_air_mio(org, by_name):
+            continue
+        if os.path.basename(org.get("file", "")) == "00_generic_organization.txt":
+            continue                       # 通用组织只做兜底，不算"本国 MIO"
+        allowed = mio_owner_tags(org)
+        if allowed:
+            if tag in allowed:
+                own.append(org)
+        elif os.path.basename(org.get("file", "")).upper().startswith(tag.upper() + "_"):
+            own.append(org)
     groups = plane_groups((plane or {}).get("archetype")) if plane else set()
     if groups:
         fit = [o for o in own if set(o.get("equipment_types") or []) & groups]
