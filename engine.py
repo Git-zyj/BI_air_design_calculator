@@ -481,6 +481,30 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
     return values, values["effective_cost"], scores
 
 
+def production_gain(prod, cap_now=100.0, capacity_now=200.0):
+    """把 MIO 的生产修正折算成**产量倍率**（等价于"造价 ÷ 倍率"）。
+
+    只折算三项（用户口径：效率增长 / 资源 / 转换速度 不计）：
+      效率上限 `production_efficiency_cap_factor`：**加法（百分点）** →(现上限+加成)/现上限
+      产能     `production_capacity_factor`      ：相对加成 →(1+现产能+加成)/(1+现产能)
+      生产花费 `production_cost_factor`          ：每件花费 ×(1+加成) → 产量 ×1/(1+加成)
+
+    `cap_now` / `capacity_now` 是用户填的**当前实际值**（百分比，例如 118、241）——
+    因为"+5"在 100 上限与 200 上限下含义完全不同，必须用实际堆叠来折算。
+    返回 (倍率, {项名: 分项倍率})；没有生产修正时倍率 = 1.0。
+    """
+    prod = prod or {}
+    cap = float(cap_now or 0.0) / 100.0
+    cap_add = float(prod.get("production_efficiency_cap_factor", 0.0))
+    p_cap = ((cap + cap_add) / cap) if cap > 0 else 1.0
+    ca = float(capacity_now or 0.0) / 100.0
+    ca_add = float(prod.get("production_capacity_factor", 0.0))
+    p_ca = ((1 + ca + ca_add) / (1 + ca)) if (1 + ca) else 1.0
+    cost_mod = float(prod.get("production_cost_factor", 0.0))
+    p_cost = (1.0 / (1 + cost_mod)) if (1 + cost_mod) else 1.0
+    return p_cap * p_ca * p_cost, {"效率上限": p_cap, "产能": p_ca, "生产花费": p_cost}
+
+
 def score_terms(role, values):
     """分数由哪些因子相乘而来 → [(中文名, 数值, 指数), …]（**不含** ÷ 有效造价）。
 

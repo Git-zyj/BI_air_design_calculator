@@ -501,14 +501,26 @@ class App(tk.Tk):
         # 生产侧（**不参与评分**）：设计槽吃 equipment_bonus，生产槽吃 production_bonus，
         # 但一个 MIO 只有一条特质路线 —— 所以这里把这条路线带来的生产修正如实列出来，
         # 供用户定性判断"值不值得为了生产改路线 / 换一个 MIO 来生产"。
+        # 第 4 行：生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同
+        ttk.Label(card, text="生产折算：当前效率上限").grid(
+            row=4, column=0, columnspan=2, sticky="e", padx=(PADX, 4), pady=(PADY, 0))
+        self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
+        ttk.Spinbox(card, from_=1, to=500, textvariable=self.var_cap, width=6).grid(
+            row=4, column=2, sticky="w", pady=(PADY, 0))
+        ttk.Label(card, text="%　　当前产能加成").grid(row=4, column=3, sticky="e", pady=(PADY, 0))
+        self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
+        ttk.Spinbox(card, from_=0, to=2000, textvariable=self.var_capacity, width=6).grid(
+            row=4, column=4, sticky="w", pady=(PADY, 0))
+        ttk.Label(card, text="%").grid(row=4, column=5, sticky="w", pady=(PADY, 0))
+
         self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
                                   font=(self.family, BODY - 1), justify="left")
-        self.lbl_prod.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_prod.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_prod, card)
 
         self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
                                        font=(self.family, BODY - 2), justify="left")
-        self.lbl_mio_route.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_route.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
 
         self.tree_mio = ttk.Treeview(card, columns=("lvl", "trait", "bonus"),
                                      show="headings", height=5)
@@ -516,10 +528,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=6, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=7, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=7, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=8, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -927,6 +939,21 @@ class App(tk.Tk):
             return False
         return any(v for k, v in (pol.get("equipment_bonus") or {}).items()
                    if k != "production_cost_factor")
+
+    def _with_route(self, inputs):
+        """自动配点模式下，把**界面上显示的那条路线**显式传给计算。
+
+        以前 run.py 会自己再按"不含方针"优化一遍，而 ④ 预览用的是"含方针"的优化
+        —— 两条路线可能不同（实测 1939：预览选织物覆盖、计算却用金属覆盖），
+        于是"看到的"和"算出来的"对不上。现在统一由界面把路线定下来。
+        """
+        mio = dict(inputs.get("mio") or {})
+        if mio.get("manual_traits") is None:
+            org = self._org()
+            plan = self._org_plan(org, inputs) if org else None
+            if plan and plan.get("route"):
+                mio["manual_traits"] = list(plan["route"])
+        return dict(inputs, mio=mio)
 
     def _plan_context(self, inputs):
         """(参考机型, upgrade_map, 对手机动速度, 事故系数, score_key)——算一次给多处用。"""
@@ -1507,6 +1534,8 @@ class App(tk.Tk):
             "national_spirits": [s.strip() for s in self.var_spirits.get().split(",") if s.strip()],
             "unlocked_techs": [t for t, v in self.tech_vars.items() if v.get()],
             "unlocked_flags": [f for f, v in getattr(self, "flag_vars", {}).items() if v.get()],
+            "efficiency_cap_now": int(self.var_cap.get()),
+            "capacity_bonus_now": int(self.var_capacity.get()),
             "mio": {"organization": self._org_key(),
                     "level": int(self.var_level.get()),
                     "policy": (self._selected_policy_token() if policy is _UNSET else policy),
@@ -1527,7 +1556,7 @@ class App(tk.Tk):
 
     def _refresh_totals(self):
         try:
-            inputs = self.collect()
+            inputs = self._with_route(self.collect())
             upgrade_map = engine.upgrades_by_key(self.data["upgrades"])
             cands = run.candidate_pool(inputs, self.data)
             mfr_mods, _info = run.resolve_manufacturer(inputs, self.data, upgrade_map, cands)
@@ -1568,7 +1597,13 @@ class App(tk.Tk):
         if pol:
             bonus = self._policy_bonus(pol)
             mods = engine.combine_modifiers(mods, bonus)
-            prod = engine.combine_modifiers(prod, pol.get("production_bonus") or {})
+            # 方针的生产侧有两处：production_bonus，以及 equipment_bonus 里的
+            # production_cost_factor（生产产出花费——设计不计、生产要算）
+            pol_prod = dict(pol.get("production_bonus") or {})
+            pol_cost = (pol.get("equipment_bonus") or {}).get("production_cost_factor")
+            if pol_cost:
+                pol_prod = engine.combine_modifiers(pol_prod, {"production_cost_factor": pol_cost})
+            prod = engine.combine_modifiers(prod, pol_prod)
             self.tree_mio.insert("", "end", values=("方针", zh(self.loc, pol["token"]),
                                                     fmt_mods(bonus)))
         if self.var_alloc.get() == "pick":
@@ -1594,22 +1629,31 @@ class App(tk.Tk):
                     text="满级最优路线共 %d 级，当前按前 %d 级分配（低级时是满级路线的前缀）"
                          % (len(plan["log"]), len(shown)))
         self.lbl_mio_total.configure(text=fmt_mods(mods))
-        self.lbl_prod.configure(text=self._prod_text(prod))
+        gain, parts = engine.production_gain(prod, inputs.get("efficiency_cap_now", 100),
+                                            inputs.get("capacity_bonus_now", 200))
+        self.lbl_prod.configure(text=self._prod_text(prod, gain, parts))
 
     @staticmethod
-    def _prod_text(prod):
-        """生产侧清单（不参与评分）。相对提升取决于用户现有的修正堆叠，所以只列、不算。"""
-        head = "生产侧（仅定性、不参与评分；相对提升取决于你现有修正堆叠）："
+    def _prod_text(prod, gain=1.0, parts=None):
+        """生产侧清单 + 折算结果：把生产修正换成"等效造价折扣"（产量 ×gain ⇔ 造价 ÷gain）。"""
+        head = "生产侧："
         if not prod:
             return head + "这条路线没有任何生产修正"
-        parts = ["%s %+g%%" % (PROD_ZH.get(k, k), round(v * 100, 2))
+        items = ["%s %+g%%" % (PROD_ZH.get(k, k), round(v * 100, 2))
                  for k, v in sorted(prod.items()) if v]
-        return head + "　".join(parts)
+        text = head + "　".join(items)
+        if gain and abs(gain - 1.0) > 1e-9:
+            shown = "、".join("%s ×%.4f" % (k, v) for k, v in (parts or {}).items()
+                              if abs(v - 1.0) > 1e-9)
+            text += "　⇒ 产量 ×%.4f（等效造价 ×%.4f）" % (gain, 1.0 / gain)
+            if shown:
+                text += "　［%s］" % shown
+        return text
 
     def on_calculate(self):
         """只计算并在界面里展示（不写文件）。"""
         try:
-            inputs = self.collect()
+            inputs = self._with_route(self.collect())
             _dbg("计算：年份 %s/%s｜国家 %s｜用途 %s｜距离 %s｜来源 %s"
                  % (inputs["current_year"], inputs["tech_year"], inputs["country"],
                     ",".join(inputs["roles"]), inputs["range_cap"],
@@ -1727,6 +1771,21 @@ class App(tk.Tk):
 
         self.var_year.trace_add("write", on_year)
 
+        # 生产折算的两个输入：改了要立刻重算（Spinbox 的 command 只在按箭头时触发）
+        def on_prod(*_a):
+            try:
+                int(self.var_cap.get())
+                int(self.var_capacity.get())
+            except (tk.TclError, ValueError):
+                return
+            self._refresh_totals()
+            self.on_preview()
+            if getattr(self, "rows", None):      # 已经算过结果表就顺手刷新分数
+                self.on_calculate()
+
+        for var in (self.var_cap, self.var_capacity):
+            var.trace_add("write", on_prod)
+
     def _sort_by(self, cid):
         if getattr(self, "_sort_key", None) == cid:
             self._sort_desc = not getattr(self, "_sort_desc", True)
@@ -1754,6 +1813,12 @@ class App(tk.Tk):
             lines = engine.score_breakdown(row["role"], v, row.get("effective_cost"))
             blocks.append(("性能分数", lines[0].replace("性能分数 ", "", 1), "formula"))
             blocks.extend(("", text.lstrip("　"), "note") for text in lines[1:])
+            if row.get("production_gain") and abs(row["production_gain"] - 1.0) > 1e-9:
+                blocks.append(("生产折算", "×%.4f　⇒　总分数 %.2f → %.2f（= 性能 ÷ 等效造价 %.2f）"
+                               % (row["production_gain"], row.get("score_raw", 0.0),
+                                  row["score"],
+                                  row.get("effective_cost", 0.0) / row["production_gain"]),
+                               "formula"))
             combat = engine.combat_breakdown(row["role"], v, row.get("enemy_values"))
             if combat:
                 blocks.append(("", "", "sep"))

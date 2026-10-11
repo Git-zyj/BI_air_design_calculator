@@ -30,6 +30,8 @@
   },
   "mio": { "organization": "", "level": 14, "manual_traits": null },
   "range_cap": 900,
+  "efficiency_cap_now": 100,
+  "capacity_bonus_now": 200,
   "pareto_x": "cost",
   "pareto_y": "effect",
   "overwrite": true
