@@ -893,7 +893,8 @@ def pick_mio_traits_exact(org, level, base, upgrade_map, mods, enemy, roles, ran
         remaining.remove(pick)
         picked.append(pick)
         log.append({"token": order[pick]["token"], "score": round(pick_value, 8),
-                    "bonuses": order[pick].get("bonuses") or {}})
+                    "bonuses": order[pick].get("bonuses") or {},
+                    "production": order[pick].get("production") or {}})
     log = log[:max(0, int(level))]
     mods_now = dict(mods)
     for item in log:

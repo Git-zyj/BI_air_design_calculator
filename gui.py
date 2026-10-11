@@ -69,6 +69,14 @@ RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_yea
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
 DISTANCES = list(range(600, 3601, 300))
 DEFAULT_DISTANCE = 900
+# 生产侧修正的中文名（**不参与评分**，只列出来给用户定性比较）
+PROD_ZH = {"production_capacity_factor": "产能",
+           "production_cost_factor": "生产产出花费",
+           "production_efficiency_cap_factor": "效率上限",
+           "production_efficiency_gain_factor": "效率增长",
+           "production_resource_need_factor": "资源需求",
+           "production_resource_penalty_factor": "资源短缺惩罚",
+           "production_conversion_speed_factor": "转换速度"}
 # 明细行里"设计数值"要展示的属性（顺序即显示顺序）
 DESIGN_SHOW = ("air_attack", "air_defence", "air_agility", "maximum_speed", "air_range",
                "reliability", "build_cost_ic", "air_ground_attack",
@@ -490,9 +498,17 @@ class App(tk.Tk):
         self.lbl_mio_total.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_mio_total, card)
 
+        # 生产侧（**不参与评分**）：设计槽吃 equipment_bonus，生产槽吃 production_bonus，
+        # 但一个 MIO 只有一条特质路线 —— 所以这里把这条路线带来的生产修正如实列出来，
+        # 供用户定性判断"值不值得为了生产改路线 / 换一个 MIO 来生产"。
+        self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
+                                  font=(self.family, BODY - 1), justify="left")
+        self.lbl_prod.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
+        self._wrap_to_card(self.lbl_prod, card)
+
         self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
                                        font=(self.family, BODY - 2), justify="left")
-        self.lbl_mio_route.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_route.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX)
 
         self.tree_mio = ttk.Treeview(card, columns=("lvl", "trait", "bonus"),
                                      show="headings", height=5)
@@ -500,10 +516,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=5, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=6, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=6, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=7, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -1324,7 +1340,7 @@ class App(tk.Tk):
         self._trait_order = []
         _dbg("操作：清空手动勾选的特质")
         self._fill_traits()
-        self.on_preview()
+        self._refresh_after_trait_change()
 
     def _seed_traits_from_route(self):
         """按"满级最优路线"把所有条目预勾上（手动配点的默认起点，也是清空后的还原按钮）。"""
@@ -1341,6 +1357,14 @@ class App(tk.Tk):
         self.chosen_traits = set(self._trait_order)
         _dbg("操作：按满级最优路线勾选 %d 项" % len(self._trait_order))
         self._fill_traits()
+        self._refresh_after_trait_change()
+
+    def _refresh_after_trait_change(self):
+        """勾/清特质之后：④ 的总加成与生产侧清单、⑥ 的总体累计都要重算。
+
+        （以前只调了 `_refresh_totals()`，于是手动勾选后 ④ 那块的"总加成 / 生产侧"不刷新。）
+        """
+        self._refresh_totals()
         self.on_preview()
 
     def _on_trait_click(self, event):
@@ -1378,7 +1402,7 @@ class App(tk.Tk):
         vals[0] = "☑" if token in self.chosen_traits else "☐"
         self.tree_traits.item(token, values=vals)
         self._refresh_trait_states()         # 勾/取消之后，解锁与互斥要跟着变
-        self._refresh_totals()
+        self._refresh_after_trait_change()
 
     def _sync_alloc(self):
         if self.var_alloc.get() == "pick":
@@ -1533,21 +1557,25 @@ class App(tk.Tk):
         if not org:
             return
         mods = {}
+        prod = {}
         ini = org.get("initial_trait")
         if ini:
             mods = engine.combine_modifiers(mods, ini.get("bonuses") or {})
+            prod = engine.combine_modifiers(prod, ini.get("production") or {})
             self.tree_mio.insert("", "end", values=("初始", zh(self.loc, ini.get("token")),
                                                     fmt_mods(ini.get("bonuses") or {})))
         pol = getattr(self, "_policy_map", {}).get(self.var_policy.get())
         if pol:
             bonus = self._policy_bonus(pol)
             mods = engine.combine_modifiers(mods, bonus)
+            prod = engine.combine_modifiers(prod, pol.get("production_bonus") or {})
             self.tree_mio.insert("", "end", values=("方针", zh(self.loc, pol["token"]),
                                                     fmt_mods(bonus)))
         if self.var_alloc.get() == "pick":
             for trait in org.get("traits", []):
                 if trait.get("token") in self.chosen_traits:
                     mods = engine.combine_modifiers(mods, trait.get("bonuses") or {})
+                    prod = engine.combine_modifiers(prod, trait.get("production") or {})
                     self.tree_mio.insert("", "end", values=(
                         "勾选", zh(self.loc, trait.get("token")),
                         fmt_mods(trait.get("bonuses") or {})))
@@ -1559,12 +1587,24 @@ class App(tk.Tk):
                 shown = plan["log"][:level]
                 for i, item in enumerate(shown, 1):
                     mods = engine.combine_modifiers(mods, item.get("bonuses") or {})
+                    prod = engine.combine_modifiers(prod, item.get("production") or {})
                     self.tree_mio.insert("", "end", values=("%d 级" % i, zh(self.loc, item["token"]),
                                                             fmt_mods(item.get("bonuses") or {})))
                 self.lbl_mio_route.configure(
                     text="满级最优路线共 %d 级，当前按前 %d 级分配（低级时是满级路线的前缀）"
                          % (len(plan["log"]), len(shown)))
         self.lbl_mio_total.configure(text=fmt_mods(mods))
+        self.lbl_prod.configure(text=self._prod_text(prod))
+
+    @staticmethod
+    def _prod_text(prod):
+        """生产侧清单（不参与评分）。相对提升取决于用户现有的修正堆叠，所以只列、不算。"""
+        head = "生产侧（仅定性、不参与评分；相对提升取决于你现有修正堆叠）："
+        if not prod:
+            return head + "这条路线没有任何生产修正"
+        parts = ["%s %+g%%" % (PROD_ZH.get(k, k), round(v * 100, 2))
+                 for k, v in sorted(prod.items()) if v]
+        return head + "　".join(parts)
 
     def on_calculate(self):
         """只计算并在界面里展示（不写文件）。"""
