@@ -27,6 +27,7 @@
    "air_agility": 0.01,
    "production_cost_factor": 0.02
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -53,6 +54,7 @@
    "improved_turbine_engines"
   ],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {
    "military_industrial_organization_research_bonus": 0.05
   }
@@ -83,6 +85,7 @@
   "equipment_bonus": {
    "maximum_speed": 0.015
   },
+  "production_bonus": {},
   "organization_modifier": {
    "military_industrial_organization_funds_gain": -0.05,
    "military_industrial_organization_research_bonus": 0.02
@@ -114,6 +117,7 @@
   "equipment_bonus": {
    "production_cost_factor": -0.03
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -124,6 +128,7 @@
   "min_size": 6,
   "requires_techs": [],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {
    "military_industrial_organization_funds_gain": 0.1
   }
@@ -157,6 +162,7 @@
    "assembly_line_production"
   ],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -169,6 +175,7 @@
    "worker_training"
   ],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -181,6 +188,7 @@
   "equipment_bonus": {
    "reliability": 0.04
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -191,6 +199,7 @@
   "min_size": 6,
   "requires_techs": [],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {
    "military_industrial_organization_research_bonus": 0.03
   }
@@ -203,6 +212,7 @@
   "min_size": 6,
   "requires_techs": [],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {
    "military_industrial_organization_research_bonus": 0.02
   }
@@ -231,6 +241,7 @@
    "armor_value": 0.03,
    "maximum_speed": 0.01
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -272,6 +283,7 @@
    "hardness": 0.01,
    "build_cost_ic": -0.03
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -296,6 +308,7 @@
    "electric_hoist"
   ],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -326,6 +339,7 @@
    "defense": 0.03,
    "breakthrough": 0.03
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -361,6 +375,7 @@
    "breakthrough": -0.02,
    "armor_value": -0.03
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -381,6 +396,7 @@
    "submerged_arc_weld"
   ],
   "equipment_bonus": {},
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -403,6 +419,7 @@
    "naval_speed": 0.01,
    "production_cost_factor": -0.02
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -423,6 +440,7 @@
    "naval_light_gun_hit_chance_factor": 0.05,
    "naval_heavy_gun_hit_chance_factor": 0.05
   },
+  "production_bonus": {},
   "organization_modifier": {}
  },
  {
@@ -439,6 +457,7 @@
   "equipment_bonus": {
    "naval_weather_penalty_factor": -0.1
   },
+  "production_bonus": {},
   "organization_modifier": {}
  }
 ]
