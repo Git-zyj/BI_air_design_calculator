@@ -67,7 +67,10 @@ def plan_key(inputs, org_name, ref_key):
         ",".join(inputs.get("roles") or []),
         ",".join(sorted(inputs.get("unlocked_techs") or [])),
         ",".join(sorted(inputs.get("unlocked_flags") or [])),
-        json.dumps(inputs.get("enemy") or {}, sort_keys=True),
+        # 只有"要和对手交互"的用途才把对手放进键：对地/对海/侦察/对海（舰载）
+        # 的分数只用自身属性（打分公式里没有战斗比值）→ 换对手不该让它们的方案作废。
+        (json.dumps(inputs.get("enemy") or {}, sort_keys=True)
+         if set(inputs.get("roles") or []) & {"air_near", "air_far", "air_cv"} else "-"),
         json.dumps(inputs.get("experience") or {}, sort_keys=True),
         str(inputs.get("range_cap") or ""),
         str(inputs.get("alloc_mode") or "split"),

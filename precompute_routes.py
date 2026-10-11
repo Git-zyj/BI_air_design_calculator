@@ -93,26 +93,26 @@ def main():
                 app._on_enemy_change()
                 for tech_year in tech_years:
                     app.var_tech.set(tech_year)
-                app._on_tech_year_changed()
-                for year in years:
-                    app.var_year.set(year)
-                    for alloc in allocs:
-                        app.var_alloc_mode.set(alloc_label[alloc])
-                        app._on_alloc_mode_change()
-                        if getattr(app, "_plan_job", None):
-                            app.after_cancel(app._plan_job)
-                            app._plan_job = None
-                        inputs = app.collect()
-                        orgs = app._air_orgs()[0]
-                        t0 = time.time()
-                        for org in orgs:
-                            app._org_plan(org, inputs)
-                        done += 1
-                        if args.progress and (done % max(1, args.progress) == 0):
-                            print("  [%d] %-4s %-8s 科技%d 当前%d %-8s %.1fs（累计 %d 组，已用时 %.1f 分）"
-                                  % (done, country, role, tech_year, year, alloc,
-                                     time.time() - t0, done, (time.time() - t_all) / 60.0))
-                            sys.stdout.flush()
+                    app._on_tech_year_changed()
+                    for year in years:
+                        app.var_year.set(year)
+                        for alloc in allocs:
+                            app.var_alloc_mode.set(alloc_label[alloc])
+                            app._on_alloc_mode_change()
+                            if getattr(app, "_plan_job", None):
+                                app.after_cancel(app._plan_job)
+                                app._plan_job = None
+                            inputs = app.collect()
+                            orgs = app._air_orgs()[0]
+                            t0 = time.time()
+                            for org in orgs:
+                                app._org_plan(org, inputs)
+                            done += 1
+                            if args.progress and (done % max(1, args.progress) == 0):
+                                print("  [%d] %-4s %-8s 科技%d 当前%d %-8s %.1fs（累计 %d 组，已用时 %.1f 分）"
+                                      % (done, country, role, tech_year, year, alloc,
+                                         time.time() - t0, done, (time.time() - t_all) / 60.0))
+                                sys.stdout.flush()
             # 一个 (国家, 用途) 存一个分片（只挑属于本片的键），下次运行自动续算
             shard = {} if args.force else run._load_plan_file(run.plan_shard_path(country, role))
             for key, rec in app._plan_runtime.items():
