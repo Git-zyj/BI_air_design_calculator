@@ -94,9 +94,10 @@ DEFAULT_INPUTS = {
     "experience": {"air_agility": 0.20, "maximum_speed": 0.05, "air_attack": 0.10,
                    "air_defence": 0.10, "air_ground_attack": 0.10,
                    "naval_strike_attack": 0.10, "naval_strike_targetting": 0.15},
+    # 对手（AI）的"设计商修正 + 经验"按国别取，预设见 data/enemy_presets.json；
+    # 界面手填的值存在 by_country[该国]（优先级高于预设文件）。
     "enemy": {"country": "GER", "rule": "previous_year", "override_key": None,
-              "modifiers": {"air_agility": 0.04, "maximum_speed": 0.015},
-              "experience": {"air_agility": 0.20, "maximum_speed": 0.05}},
+              "by_country": {}},
     "range_cap": 900.0,                     # 距离目标（航程上限）默认 900；600 起每 300 一档
     "efficiency_cap_now": 100,              # 当前生产效率上限（%）——生产折算用
     "capacity_bonus_now": 200,              # 当前产能加成（%）——生产折算用
@@ -509,6 +510,34 @@ def _enemy_summary(rows):
     return "；".join(seen.values())
 
 
+def _enemy_mod_line(inputs, field):
+    """对手的「设计商修正 / 经验加成」，按用途取值（各用途一致时只写一条）。"""
+    cfg = inputs.get("enemy") or {}
+    roles = inputs.get("roles") or ["air_far"]
+    seen = {}
+    for role in roles:
+        _cats, exp, mods = engine.enemy_spec(role, cfg)
+        src = exp if field == "experience" else mods
+        txt = "机动 %+g%% / 速度 %+g%%" % (
+            round(src.get("air_agility", 0.0) * 100, 2),
+            round(src.get("maximum_speed", 0.0) * 100, 2))
+        seen.setdefault(txt, []).append(engine.ROLES.get(role, role))
+    return "；".join("%s（%s）" % (t, "、".join(rs)) for t, rs in seen.items())
+
+
+def _enemy_source_line(inputs):
+    """对手数值是手填的还是吃预设的（预设会写明来源，便于日后按实测校准）。"""
+    cfg = inputs.get("enemy") or {}
+    country = cfg.get("country") or ""
+    hand = (cfg.get("by_country") or {}).get(country) or {}
+    pre = engine.enemy_preset(country)
+    if hand:
+        return "界面手填（优先于预设）；对手国别 = %s" % country
+    src = pre.get("source") or "无国别预设：按默认（无设计商加成 + 满经验）"
+    mio = pre.get("mio")
+    return "%s；对手国别 = %s%s" % (src, country, "；预设 MIO = %s" % mio if mio else "")
+
+
 def write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_info=None):
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
@@ -609,6 +638,9 @@ def write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_inf
         ("对手选取规则", (inputs.get("enemy") or {}).get("rule", "previous_year")),
         ("对手", (enemy or {}).get("name", "（无）")),
         ("对手最终机动/速度", "" if not enemy_values else "%.2f / %.2f" % (enemy_values["agility"], enemy_values["speed"])),
+        ("对手设计商修正（机动/速度）", _enemy_mod_line(inputs, "modifiers")),
+        ("对手经验加成（机动/速度）", _enemy_mod_line(inputs, "experience")),
+        ("对手修正来源", _enemy_source_line(inputs)),
         ("航程上限", inputs.get("range_cap")),
         ("事故年损失率 f", engine.ACCIDENT_FACTOR),
         ("事故年损失率 f（舰载，× ACCIDENT_CHANCE_CARRIER_MULT）",

@@ -437,7 +437,7 @@ class App(tk.Tk):
         rb.bind("<<ComboboxSelected>>", lambda e: self._sync_rule())
 
         self.frm_manual_plane = ttk.Frame(box)
-        self.frm_manual_plane.grid(row=2, column=0, columnspan=6, sticky="w")
+        self.frm_manual_plane.grid(row=3, column=0, columnspan=6, sticky="w")
         ttk.Label(self.frm_manual_plane, text="手动指定机型 key").grid(row=0, column=0, sticky="e",
                                                                       padx=(PADX, 4))
         self.var_override = tk.StringVar(value=enemy.get("override_key") or "")
@@ -445,8 +445,35 @@ class App(tk.Tk):
         ov.grid(row=0, column=1, sticky="w")
         ov.bind("<FocusOut>", lambda e: self._refresh_enemy())
 
+        # 对手（AI）的「设计商修正 + 满经验」：按对手国别取预设（data/enemy_presets.json），
+        # 也可在这里手填覆盖（手填值存 inputs.enemy.by_country[该国]，优先于预设文件）。
+        # 以前这套值是写死的德国（阿拉多）数值，换成苏联当对手也照样套，分数自然不对。
+        self.frm_enemy_mods = ttk.Frame(box)
+        self.frm_enemy_mods.grid(row=2, column=0, columnspan=6, sticky="w")
+        ttk.Label(self.frm_enemy_mods, text="对手设计商（机动/速度，%）").grid(
+            row=0, column=0, sticky="e", padx=(PADX, 4))
+        self.var_enemy_mod_agi = tk.StringVar()
+        self.var_enemy_mod_spd = tk.StringVar()
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_agi, width=6,
+                  justify="right").grid(row=0, column=1, sticky="w")
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_spd, width=6,
+                  justify="right").grid(row=0, column=2, sticky="w", padx=(2, PADX))
+        ttk.Label(self.frm_enemy_mods, text="对手满经验（机动/速度，%）").grid(
+            row=0, column=3, sticky="e", padx=(PADX, 4))
+        self.var_enemy_exp_agi = tk.StringVar()
+        self.var_enemy_exp_spd = tk.StringVar()
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_agi, width=6,
+                  justify="right").grid(row=0, column=4, sticky="w")
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_spd, width=6,
+                  justify="right").grid(row=0, column=5, sticky="w", padx=(2, 4))
+        ttk.Button(self.frm_enemy_mods, text="恢复该国预设",
+                   command=self._reset_enemy_mods).grid(row=0, column=6, sticky="w", padx=PADX)
+        self.lbl_enemy_src = ttk.Label(self.frm_enemy_mods, text="", foreground="#44506B")
+        self.lbl_enemy_src.grid(row=1, column=0, columnspan=7, sticky="w", padx=PADX)
+        self._wrap_to_card(self.lbl_enemy_src, self.frm_enemy_mods)
+
         self.lbl_enemy = ttk.Label(box, text="", foreground=ACCENT, font=(self.family, BODY, "bold"))
-        self.lbl_enemy.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX, pady=(0, PADY))
+        self.lbl_enemy.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX, pady=(0, PADY))
         self._wrap_to_card(self.lbl_enemy, box)
         row += 1
 
@@ -1563,11 +1590,86 @@ class App(tk.Tk):
                                     if rule == "manual" else None})
         return cfg
 
+    # ---------- 对手（AI）的设计商修正 / 经验 ----------
+    def _enemy_preset_for(self, country=None):
+        """该对手国别的预设（data/enemy_presets.json；没有国别条目时是 default）。"""
+        return engine.enemy_preset(country or self._enemy_tag())
+
+    def _fill_enemy_mods(self):
+        """把当前对手国别的『手填值』或『预设』填进 ② 的输入框。"""
+        country = self._enemy_tag()
+        hand = ((self.inputs.get("enemy") or {}).get("by_country") or {}).get(country) or {}
+        pre = self._enemy_preset_for(country)
+        src = hand or pre
+        mods = src.get("modifiers") or {}
+        exp = src.get("experience") or {}
+
+        def pct(d, key):
+            return "%g" % round(float(d.get(key, 0.0) or 0.0) * 100, 4)
+
+        self._filling_enemy_mods = True       # 填值不算"用户改过"，别写回 by_country
+        self.var_enemy_mod_agi.set(pct(mods, "air_agility"))
+        self.var_enemy_mod_spd.set(pct(mods, "maximum_speed"))
+        self.var_enemy_exp_agi.set(pct(exp, "air_agility"))
+        self.var_enemy_exp_spd.set(pct(exp, "maximum_speed"))
+        self._filling_enemy_mods = False
+        mio = pre.get("mio")
+        if hand:
+            note = "数值来源：界面手填（优先于预设）"
+        else:
+            note = "数值来源：该国预设%s%s" % (
+                "（%s）" % (zh(self.loc, mio) if mio else "") if mio else "",
+                "｜" + pre.get("source") if pre.get("source") else
+                "｜该对手国别没有预设，按默认（无设计商加成）")
+        self.lbl_enemy_src.configure(text=note)
+        self._enemy_mods_country = country
+
+    def _apply_enemy_mods(self):
+        """把 ② 输入框里的百分数写回 inputs.enemy.by_country[该国]。"""
+        def num(var):
+            try:
+                return float((var.get() or "0").strip()) / 100.0
+            except ValueError:
+                return None                       # 还在输入中（例如只敲了 "-"）
+
+        vals = [num(v) for v in (self.var_enemy_mod_agi, self.var_enemy_mod_spd,
+                                 self.var_enemy_exp_agi, self.var_enemy_exp_spd)]
+        if any(v is None for v in vals):
+            return False
+        country = self._enemy_tag()
+        enemy = dict(self.inputs.get("enemy") or {})
+        by_country = dict(enemy.get("by_country") or {})
+        by_country[country] = {
+            "modifiers": {"air_agility": vals[0], "maximum_speed": vals[1]},
+            "experience": {"air_agility": vals[2], "maximum_speed": vals[3]},
+        }
+        enemy["by_country"] = by_country
+        self.inputs["enemy"] = enemy
+        self.lbl_enemy_src.configure(
+            text="数值来源：界面手填（优先于预设）｜点『恢复该国预设』可回到 %s 的预设值" % country)
+        return True
+
+    def _reset_enemy_mods(self):
+        """丢掉该国的手填值，回到预设文件里的值。"""
+        country = self._enemy_tag()
+        enemy = dict(self.inputs.get("enemy") or {})
+        by_country = dict(enemy.get("by_country") or {})
+        by_country.pop(country, None)
+        enemy["by_country"] = by_country
+        self.inputs["enemy"] = enemy
+        self._fill_enemy_mods()
+        self._refresh_enemy()
+        self._refresh_totals()
+        if getattr(self, "rows", None):
+            self.on_calculate()
+
     def _refresh_enemy(self):
         """对手按用途分别取：舰载用途是舰载对手（无经验加成），其余是陆基战斗机。"""
         cfg = self._enemy_cfg()
         year = int(self.var_year.get())
         roles = [k for k, v in self.role_vars.items() if v.get()] or ["air_far"]
+        if getattr(self, "_enemy_mods_country", None) != self._enemy_tag():
+            self._fill_enemy_mods()          # 换对手国别 → 换成该国的修正/经验预设
         picked = {r: engine.pick_enemy_values(self.data["airframes_all"], cfg, r, year)
                   for r in roles}
         keys = {e["key"] for e, _v in picked.values() if e}
@@ -1584,7 +1686,7 @@ class App(tk.Tk):
         def pct(source, key):
             return "%+g%%" % round((source or {}).get(key, 0.0) * 100, 2)
 
-        note = ("　数值口径：对手 = 该国设计商【满级特质、无方针】的修正"
+        note = ("　数值口径：对手 = 该国设计商修正"
                 "（机动 %s / 速度 %s）%s"
                 % (pct(mods, "air_agility"), pct(mods, "maximum_speed"),
                    "＋ 满经验（机动 %s / 速度 %s）；「（舰载）」用途不计经验"
@@ -1852,6 +1954,8 @@ class App(tk.Tk):
 
         def watch(var, label):
             def on_change(*_a):
+                if getattr(self, "_filling_enemy_mods", False):
+                    return          # 预设填值不是用户操作，别记成"操作"
                 val = var.get()
                 if last.get(label) == val:
                     return          # Tk 写入同值也会触发，这里去重
@@ -1867,7 +1971,11 @@ class App(tk.Tk):
                            (self.var_level, "改 MIO 等级"), (self.var_org, "改军工组织"),
                            (self.var_policy, "改方针"), (self.var_source, "改修正来源"),
                            (self.var_alloc, "改配点方式"), (self.var_spirits, "改国家精神"),
-                           (self.var_override, "改手动机型")):
+                           (self.var_override, "改手动机型"),
+                           (self.var_enemy_mod_agi, "改对手设计商机动"),
+                           (self.var_enemy_mod_spd, "改对手设计商速度"),
+                           (self.var_enemy_exp_agi, "改对手经验机动"),
+                           (self.var_enemy_exp_spd, "改对手经验速度")):
             watch(var, label)
         for key, rv in self.role_vars.items():
             watch(rv, "勾选用途 %s" % ROLE_SHORT.get(key, key))
@@ -1905,6 +2013,19 @@ class App(tk.Tk):
 
         for var in (self.var_cap, self.var_capacity):
             var.trace_add("write", on_prod)
+
+        # 对手修正/经验：改了立刻写回 by_country 并重算对手（写不进去 = 还在输入中）
+        def on_enemy_mods(*_a):
+            if getattr(self, "_filling_enemy_mods", False):
+                return
+            if self._apply_enemy_mods():
+                self._refresh_enemy()
+                if getattr(self, "rows", None):
+                    self.on_calculate()
+
+        for var in (self.var_enemy_mod_agi, self.var_enemy_mod_spd,
+                    self.var_enemy_exp_agi, self.var_enemy_exp_spd):
+            var.trace_add("write", on_enemy_mods)
 
     def _sort_by(self, cid):
         if getattr(self, "_sort_key", None) == cid:
