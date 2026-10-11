@@ -212,7 +212,7 @@ class App(tk.Tk):
         self._sort_key, self._sort_desc = "pure", True      # 默认按总分数从高到低
         self._plans = {}             # 满级+方针的配点路线缓存（供推荐与展示只读）
         # 离线表（随包发布）+ 本机缓存（新算的写这里），键相同
-        self._plan_table = run.load_plan_table()
+        self._plan_table = {}        # 离线表按 (国家, 用途) 分片，用到哪片读哪片
         self._plan_runtime = run.load_plan_cache()
         self._plan_cache_saved = len(self._plan_runtime)
         self._org_keys = {}          # 中文显示名 → MIO key
@@ -835,10 +835,10 @@ class App(tk.Tk):
         for child in self.frm_tech.winfo_children():
             child.destroy()
         self.tech_vars, self.flag_vars, self.group_vars = {}, {}, {}
-        # 默认 = "到年份为止已完成"：取 当前年份 与 飞机科技年份 里**较晚**的那个
-        # （换年份/科技年份都会跟着刷新；之后手动改的勾选不再保留 —— 用户明确要这个默认）
+        # 默认 = "到**当前年份**为止已完成"（用户口径：只看当前年份，与飞机科技年份无关）；
+        # 换年份会刷新；之后手动改的勾选不再保留。
         years = self.data.get("tech_years") or {}
-        year = max(int(self.var_year.get() or 1939), int(self.var_tech.get() or 1939))
+        year = int(self.var_year.get() or 1939)
         unlocked = {t for t in self._relevant_techs() if (years.get(t) or 9999) <= year}
         flags_on = set(self.inputs.get("unlocked_flags") or [])
         self._group_items = {}
@@ -1152,6 +1152,13 @@ class App(tk.Tk):
         """先查本机缓存，再查随包发布的离线表。"""
         if dkey in self._plan_runtime:
             return self._plan_runtime[dkey]
+        plan = None
+        if dkey not in self._plan_table:
+            # 按当前 (国家, 用途) 读对应的分片（带缓存，只读一次）
+            inputs = self.collect()
+            role = (inputs.get("roles") or ["air_far"])[0]
+            self._plan_table = run.load_plan_table(inputs.get("country"), role)
+            self._plan_table.update(run.load_plan_table())      # 兼容旧单文件
         plan = self._plan_table.get(dkey)
         if plan is not None:
             self._plan_runtime[dkey] = plan

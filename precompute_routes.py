@@ -49,6 +49,7 @@ def main():
     ap.add_argument("--roles", default="air_far", help="用途，逗号分隔")
     ap.add_argument("--allocs", default="split,balanced", help="配点口径：split/balanced")
     ap.add_argument("--out", default=run.PLAN_TABLE)
+    ap.add_argument("--enemies", default="", help="对手国别（逗号分隔）；默认每个玩家国配默认对手")
     ap.add_argument("--force", action="store_true", help="忽略已有条目，全部重算")
     ap.add_argument("--progress", type=int, default=10, help="每多少组打印一次进度")
     args = ap.parse_args()
@@ -81,14 +82,17 @@ def main():
         app.var_tag.set(label)
         app._refresh_country()
         # 默认对手：苏→德、德→苏，其余用德国
-        enemy = "GER" if country != "GER" else "SOV"
-        app.var_enemy_tag.set(app._tag_labels.get(enemy, enemy))
+        enemies = ([e.strip() for e in args.enemies.split(",") if e.strip()]
+                   if args.enemies else [("GER" if country != "GER" else "SOV")])
         for role in roles:
             for k, v in app.role_vars.items():
                 v.set(k == role)
             app._on_roles_changed()
-            for tech_year in tech_years:
-                app.var_tech.set(tech_year)
+            for enemy in enemies:
+                app.var_enemy_tag.set(app._tag_labels.get(enemy, enemy))
+                app._on_enemy_change()
+                for tech_year in tech_years:
+                    app.var_tech.set(tech_year)
                 app._on_tech_year_changed()
                 for year in years:
                     app.var_year.set(year)
@@ -109,14 +113,17 @@ def main():
                                   % (done, country, role, tech_year, year, alloc,
                                      time.time() - t0, done, (time.time() - t_all) / 60.0))
                             sys.stdout.flush()
+            # 一个 (国家, 用途) 存一个分片（只挑属于本片的键），下次运行自动续算
+            shard = {} if args.force else run._load_plan_file(run.plan_shard_path(country, role))
+            for key, rec in app._plan_runtime.items():
+                parts = key.split("|")
+                if parts[3] == country and parts[6] == role:
+                    shard[key] = rec
+            run.save_plan_shard(country, role, shard)
+            print("  分片 %s_%s：%d 条" % (country, role, len(shard)))
+            sys.stdout.flush()
 
-    table.update(app._plan_runtime)
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    with open(args.out, "w", encoding="utf-8") as fh:
-        json.dump(table, fh, ensure_ascii=False)
-    size = os.path.getsize(args.out) / 1024.0
-    print("\n写出 %s：%d 条，%.1f KB，用时 %.1f 分钟"
-          % (args.out, len(table), size, (time.time() - t_all) / 60.0))
+    print("\n完成：分片目录 %s，用时 %.1f 分钟" % (run.PLAN_TABLE_DIR, (time.time() - t_all) / 60.0))
     app.destroy()
 
 
