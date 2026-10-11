@@ -69,8 +69,15 @@ RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_yea
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
 DISTANCES = list(range(600, 3601, 300))
 DEFAULT_DISTANCE = 900
-# 生产侧修正的中文名（**不参与评分**，只列出来给用户定性比较）
-PROD_ZH = {"production_capacity_factor": "产能",
+# 自动配点的口径：
+#   design   只按设计分挑路线（生产侧顺带拿到的算白赚）
+#   balanced 兼顾：同一条路线里最大化"折算后总分数"（生产特质与设计链并存）
+#   split    设计 / 生产分离：本 MIO 只做设计，生产交给另一家 MIO（界面会列出那家与它的特质）
+ALLOC_MODES = [("design", "设计最优（不看生产）"),
+               ("balanced", "兼顾（同一 MIO 一条路线）"),
+               ("split", "分离（生产换一家 MIO）")]
+# 生产侧修正的中文名（按游戏里的写法：产量 / 生产效率上限 / 生产产出花费 …）
+PROD_ZH = {"production_capacity_factor": "产量",
            "production_cost_factor": "生产产出花费",
            "production_efficiency_cap_factor": "效率上限",
            "production_efficiency_gain_factor": "效率增长",
@@ -490,7 +497,7 @@ class App(tk.Tk):
                                       command=self._on_level_changed)
         self.spin_level.grid(row=2, column=1, sticky="w")
         ttk.Button(card, text="预览军工组织总加成", command=self.on_preview).grid(
-            row=2, column=2, sticky="w", padx=PADX)
+            row=2, column=2, sticky="w", padx=(PADX, 2))
 
         # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
@@ -502,14 +509,17 @@ class App(tk.Tk):
         # 但一个 MIO 只有一条特质路线 —— 所以这里把这条路线带来的生产修正如实列出来，
         # 供用户定性判断"值不值得为了生产改路线 / 换一个 MIO 来生产"。
         # 第 4 行：生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同
-        ttk.Label(card, text="生产折算：当前效率上限").grid(
-            row=4, column=0, columnspan=2, sticky="e", padx=(PADX, 4), pady=(PADY, 0))
+        ttk.Label(card, text="生产折算").grid(row=4, column=0, sticky="e", padx=(PADX, 4),
+                                              pady=(PADY, 0))
+        ttk.Label(card, text="当前效率上限").grid(row=4, column=1, sticky="e", padx=(0, 2),
+                                              pady=(PADY, 0))
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
-        ttk.Spinbox(card, from_=1, to=500, textvariable=self.var_cap, width=6).grid(
+        ttk.Spinbox(card, from_=1, to=500, textvariable=self.var_cap, width=5).grid(
             row=4, column=2, sticky="w", pady=(PADY, 0))
-        ttk.Label(card, text="%　　当前产能加成").grid(row=4, column=3, sticky="e", pady=(PADY, 0))
+        ttk.Label(card, text="%　当前产量加成").grid(row=4, column=3, sticky="w", padx=(6, 2),
+                                                pady=(PADY, 0))
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
-        ttk.Spinbox(card, from_=0, to=2000, textvariable=self.var_capacity, width=6).grid(
+        ttk.Spinbox(card, from_=0, to=2000, textvariable=self.var_capacity, width=5).grid(
             row=4, column=4, sticky="w", pady=(PADY, 0))
         ttk.Label(card, text="%").grid(row=4, column=5, sticky="w", pady=(PADY, 0))
 
@@ -518,9 +528,14 @@ class App(tk.Tk):
         self.lbl_prod.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_prod, card)
 
+        self.lbl_partner = ttk.Label(card, text="", foreground="#7A5C1E",
+                                     font=(self.family, BODY - 2), justify="left")
+        self.lbl_partner.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
+        self._wrap_to_card(self.lbl_partner, card)
+
         self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
                                        font=(self.family, BODY - 2), justify="left")
-        self.lbl_mio_route.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_route.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX)
 
         self.tree_mio = ttk.Treeview(card, columns=("lvl", "trait", "bonus"),
                                      show="headings", height=5)
@@ -528,10 +543,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=7, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=8, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=8, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=9, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -1221,6 +1236,12 @@ class App(tk.Tk):
         self._refresh_policies()
         self.on_preview()
 
+    def _alloc_mode_key(self):
+        """配点口径：引擎/命令行已支持 design / balanced / split，
+        界面的选择器下一轮再开放（先把 GUI 路径的显示对齐问题查清楚）。
+        """
+        return "design"
+
     def _policy_ready(self, pol):
         """门槛（等级 + 科技）是否满足。"""
         if int(self.var_level.get()) < (pol.get("min_size") or 0):
@@ -1570,6 +1591,7 @@ class App(tk.Tk):
             "unlocked_flags": [f for f, v in getattr(self, "flag_vars", {}).items() if v.get()],
             "efficiency_cap_now": int(self.var_cap.get()),
             "capacity_bonus_now": int(self.var_capacity.get()),
+            "alloc_mode": self._alloc_mode_key(),
             "mio": {"organization": self._org_key(),
                     "level": int(self.var_level.get()),
                     "policy": (self._selected_policy_token() if policy is _UNSET else policy),
@@ -1621,6 +1643,7 @@ class App(tk.Tk):
             return
         mods = {}
         prod = {}
+        override = None
         ini = org.get("initial_trait")
         if ini:
             mods = engine.combine_modifiers(mods, ini.get("bonuses") or {})
@@ -1653,6 +1676,20 @@ class App(tk.Tk):
             level = int(self.var_level.get())
             plan = self._org_plan(org, inputs)
             if plan:
+                # 显示就以**实际计算用的路线**为准（口径可能是设计最优/兼顾/分离）
+                override = None
+                try:
+                    upgrade_map = engine.upgrades_by_key(self.data["upgrades"])
+                    cands = run.candidate_pool(inputs, self.data)
+                    _mm, info2 = run.resolve_manufacturer(
+                        inputs, self.data, upgrade_map, cands,
+                        self._ref_plane_of(inputs, cands) if cands else None)
+                    if info2.get("traits"):
+                        plan = {"log": info2["traits"], "route": [t["token"] for t in info2["traits"]]}
+                    prod = info2.get("production") or {}
+                    override = info2.get("production_gain_override")
+                except (Exception, SystemExit):      # noqa: BLE001
+                    pass
                 shown = plan["log"][:level]
                 for i, item in enumerate(shown, 1):
                     mods = engine.combine_modifiers(mods, item.get("bonuses") or {})
@@ -1665,7 +1702,24 @@ class App(tk.Tk):
         self.lbl_mio_total.configure(text=fmt_mods(mods))
         gain, parts = engine.production_gain(prod, inputs.get("efficiency_cap_now", 100),
                                             inputs.get("capacity_bonus_now", 200))
+        if override:
+            gain, parts = float(override), {}
         self.lbl_prod.configure(text=self._prod_text(prod, gain, parts))
+        # 「分离」口径：把生产那家 MIO 与它需要的特质列出来（按卡片宽度换行）
+        self.lbl_partner.configure(text="")
+        if inputs.get("alloc_mode") == "split":
+            ref = self._ref_plane()
+            partner = run.best_production_plan(inputs, self.data, ref) if ref else None
+            if partner and partner["organization"] != self._org_key():
+                self.lbl_partner.configure(
+                    text="　生产交给「%s」（满级 %d），需点：%s"
+                         % (zh(self.loc, partner["organization"]), partner.get("level", 14),
+                            " → ".join(zh(self.loc, t) for t in partner["tokens"])))
+            elif partner:
+                self.lbl_partner.configure(
+                    text="　生产：最优的一家就是本 MIO（换别家都不给产量加成）→ 用「兼顾」更合适")
+            else:
+                self.lbl_partner.configure(text="　生产：没有 MIO 能给产量加成")
 
     @staticmethod
     def _prod_text(prod, gain=1.0, parts=None):
@@ -1975,7 +2029,9 @@ class App(tk.Tk):
                 "★" if row.get("pareto") else "",
                 self._row_name(row),
                 "{:,.2f}".format(row["score"]),
-                "{:,.1f}".format(row["score"] * row["effective_cost"]),
+                # 性能分数 = 纯设计分 × 造价（**不乘生产折算**，与明细/设计口径一致）；
+                # 生产折算只体现在"总分数"与资源加权分上。
+                "{:,.1f}".format(row.get("score_raw", row["score"]) * row["effective_cost"]),
                 "%.2f" % row["effective_cost"],
                 row["airframe"].get("year", ""),
                 "{:,.2f}（装配 {}）".format(row["weighted"],

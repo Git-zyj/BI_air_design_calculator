@@ -967,6 +967,142 @@ def pick_mio_traits_exact(org, level, base, upgrade_map, mods, enemy, roles, ran
     return [item["token"] for item in log], mods_now, log
 
 
+def production_route(org, base, techs=(), cap_now=100.0, capacity_now=200.0,
+                     max_level=MIO_MAX_LEVEL):
+    """只求**生产（产量）最优**的特质子集：直接最大化 `production_gain()`。
+
+    用在两种口径里：
+      设计/生产分离 → 生产那家 MIO 就按它点这些特质；
+      兼顾         → 拿它和"设计向路线"比折算后的总分数，谁高用谁。
+    返回 (token 列表, 该子集的生产折算倍率)；没有任何生产修正时返回 ([], 1.0)。
+    """
+    groups = plane_groups((base or {}).get("archetype"))
+    arche = (base or {}).get("archetype")
+    order, masks = mio_feasible_sets(org, max_level, techs, groups, arche)
+    best, best_gain, best_n = [], 1.0, 10 ** 9
+    for mask in masks:
+        picked, prod = [], {}
+        for i, trait in enumerate(order):
+            if (mask >> i) & 1:
+                picked.append(i)
+                prod = combine_modifiers(prod, trait.get("production") or {})
+        gain = production_gain(prod, cap_now, capacity_now)[0]
+        if gain > best_gain + 1e-9 or (abs(gain - best_gain) <= 1e-9 and len(picked) < best_n):
+            best, best_gain, best_n = picked, gain, len(picked)
+    return [order[i]["token"] for i in best], best_gain
+
+
+def _mods_of(order, picked, mods0):
+    """把一组特质索引的加成并进 mods0（小工具函数）。"""
+    out = dict(mods0)
+    for i in picked:
+        out = combine_modifiers(out, order[i].get("bonuses") or {})
+    return out
+
+
+def mio_route_folded(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
+                     experience=None, max_level=MIO_MAX_LEVEL, techs=(),
+                     cap_now=100.0, capacity_now=200.0, available=None, top_k=15, fold=True):
+    """「兼顾」口径：在一条路线里最大化 **折算后总分数**（设计分 × 生产倍率）。
+
+    两步走，兼顾"准"与"快"：
+      ① 用**不含改装**的廉价设计分把所有可行集粗筛一遍，取前 `top_k` 个；
+      ② 只对这 `top_k` 个跑**完整管线**（含最优改装 + 生产折算）算真实值，取最高。
+
+    这样"生产特质 + 设计链"能在同一路线里并存（例如 织物覆盖 + 截击机链），
+    而不是二选一。返回 (选中 token 列表, 修正合计, log)。
+    """
+    groups = plane_groups((base or {}).get("archetype"))
+    arche = (base or {}).get("archetype")
+    order, masks = mio_feasible_sets(org, max_level, techs, groups, arche)
+    role_keys = [score_role(r) for r in (roles or ["air_far"])]
+    base_scores = {}
+    for role in role_keys:
+        base_scores[role] = evaluate(base, {}, upgrade_map, mods, enemy, range_cap, experience,
+                                     accident_factor=accident_factor(role in CARRIER_ROLES))[2][role] or 1.0
+
+    def cheap(picked):
+        chosen = dict(mods)
+        for i in picked:
+            chosen = combine_modifiers(chosen, order[i].get("bonuses") or {})
+        total = 0.0
+        for role in role_keys:
+            value = evaluate(base, {}, upgrade_map, chosen, enemy, range_cap, experience,
+                             accident_factor=accident_factor(role in CARRIER_ROLES))[2][role]
+            total += value / base_scores[role]
+        return total
+
+    def full(picked):
+        chosen, prod = dict(mods), {}
+        for i in picked:
+            chosen = combine_modifiers(chosen, order[i].get("bonuses") or {})
+            prod = combine_modifiers(prod, order[i].get("production") or {})
+        gain = production_gain(prod, cap_now, capacity_now)[0] if fold else 1.0
+        total = 0.0
+        for role in role_keys:
+            result = optimize(base, upgrade_map, chosen, enemy, role, available=available,
+                              range_cap=range_cap, experience=experience,
+                              accident_f=accident_factor(role in CARRIER_ROLES))
+            total += result["scores"].get(role, 0.0) / base_scores[role]
+        return total * gain
+
+    # 先用廉价代理挑一条路线 → 用它优化出"代表性改装" → 用这组固定改装重新排序
+    # （固定改装下 evaluate 依旧廉价，但排序质量比"不含改装"准得多）
+    proxy = max(((cheap(p), p) for p in
+                 ([i for i in range(len(order)) if (m >> i) & 1] for m in masks)),
+                key=lambda item: item[0])[1]
+    rep = optimize(base, upgrade_map, _mods_of(order, proxy, mods), enemy, role_keys[0],
+                   available=available, range_cap=range_cap, experience=experience,
+                   accident_f=accident_factor(False))
+    rep_levels = rep["levels"]
+
+    def good(picked):
+        chosen = dict(mods)
+        for i in picked:
+            chosen = combine_modifiers(chosen, order[i].get("bonuses") or {})
+        prod = {}
+        for i in picked:
+            prod = combine_modifiers(prod, order[i].get("production") or {})
+        gain = production_gain(prod, cap_now, capacity_now)[0] if fold else 1.0
+        total = 0.0
+        for role in role_keys:
+            value = evaluate(base, rep_levels, upgrade_map, chosen, enemy, range_cap, experience,
+                             accident_factor=accident_factor(role in CARRIER_ROLES))[2][role]
+            total += value / base_scores[role]
+        return total * gain
+
+    scored = []
+    for mask in masks:
+        picked = [i for i in range(len(order)) if (mask >> i) & 1]
+        scored.append((good(picked), picked))
+    scored.sort(key=lambda item: -item[0])
+    best_picked, best_val = [], None
+    for _proxy, picked in scored[:top_k] + [([], [])]:
+        val = full(picked)
+        if best_val is None or val > best_val + 1e-12:
+            best_picked, best_val = picked, val
+
+    _o, req_all, req_any, _excl = _trait_tree(org, techs, groups, arche)
+    remaining, picked_order, log = list(best_picked), [], []
+    while remaining:
+        avail = [i for i in remaining
+                 if all(p in picked_order for p in req_all[i])
+                 and (not req_any[i] or any(p in picked_order for p in req_any[i]))]
+        if not avail:
+            avail = list(remaining)
+        pick = max(avail, key=lambda i: full(picked_order + [i]))
+        picked_order.append(pick)
+        remaining.remove(pick)
+        log.append({"token": order[pick]["token"], "score": 0.0,
+                    "bonuses": order[pick].get("bonuses") or {},
+                    "production": order[pick].get("production") or {}})
+    log = log[:max(0, int(level))]
+    mods_now = dict(mods)
+    for item in log:
+        mods_now = combine_modifiers(mods_now, item["bonuses"])
+    return [item["token"] for item in log], mods_now, log
+
+
 def mio_route(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
               experience=None, max_level=MIO_MAX_LEVEL, techs=()):
     """先按**满级**用穷举求出全局最优配点，再按边际收益排成路线、取前 `level` 步。
