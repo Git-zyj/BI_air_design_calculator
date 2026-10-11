@@ -493,9 +493,12 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
 def production_gain(prod, cap_now=100.0, capacity_now=200.0):
     """把 MIO 的生产修正折算成**产能倍率**（等价于"造价 ÷ 倍率"）。
 
+    术语（以游戏官方汉化为准）：**产量** = 修正 `production_capacity_factor`；
+    **产能** = 这三项乘起来的"等效产出倍率"，即本函数的返回值。
+
     只折算三项（用户口径：效率增长 / 资源 / 转换速度 不计）：
       效率上限 `production_efficiency_cap_factor`：**加法（百分点）** →(现上限+加成)/现上限
-      产能     `production_capacity_factor`      ：相对加成 →(1+现产能+加成)/(1+现产能)
+      产量     `production_capacity_factor`      ：相对加成 →(1+现产量+加成)/(1+现产量)
       生产花费 `production_cost_factor`          ：每件花费 ×(1+加成) → 产能 ×1/(1+加成)
 
     `cap_now` / `capacity_now` 是用户填的**当前实际值**（百分比，例如 118、241）——
@@ -511,7 +514,7 @@ def production_gain(prod, cap_now=100.0, capacity_now=200.0):
     p_ca = ((1 + ca + ca_add) / (1 + ca)) if (1 + ca) else 1.0
     cost_mod = float(prod.get("production_cost_factor", 0.0))
     p_cost = (1.0 / (1 + cost_mod)) if (1 + cost_mod) else 1.0
-    return p_cap * p_ca * p_cost, {"效率上限": p_cap, "产能": p_ca, "生产花费": p_cost}
+    return p_cap * p_ca * p_cost, {"效率上限": p_cap, "产量": p_ca, "生产花费": p_cost}
 
 
 def score_terms(role, values):

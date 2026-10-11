@@ -20,15 +20,7 @@
   "extra_modifiers": {},
   "unlocked_techs": ["advanced_machine_tools", "computing_machine"],
   "unlocked_flags": [],
-  "experience": {
-    "air_agility": 0.2,
-    "maximum_speed": 0.05,
-    "air_attack": 0.1,
-    "air_defence": 0.1,
-    "air_ground_attack": 0.1,
-    "naval_strike_attack": 0.1,
-    "naval_strike_targetting": 0.15
-  },
+  "experience": {},
   "enemy": {
     "country": "GER",
     "rule": "previous_year",
