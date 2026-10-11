@@ -751,8 +751,13 @@ def is_air_mio(org, by_name):
     return any(tok in joined for tok in AIR_EQ_TOKENS)
 
 
-def country_air_mios(mio_orgs, country, plane=None, by_name=None):
-    """该国的空军 MIO；给了 plane 就只留"覆盖该机型装备组"的（全被滤掉时退回全部）。"""
+def country_air_mios(mio_orgs, country, plane=None, by_name=None, fallback=False):
+    """该国的空军 MIO；给了 plane 就只留"覆盖该机型装备组"的（全被滤掉时退回全部）。
+
+    fallback=True 时，该国**没有自己独特 MIO**（例如"英联邦"这种没有 organizations
+    文件的 tag）就退回**通用 MIO**（00_generic_organization.txt 里做飞机的那几个）——
+    游戏里这类国家用的就是通用设计局，不能直接判成"没有设计商加成"。
+    """
     by_name = by_name if by_name is not None else {o["organization"]: o for o in mio_orgs}
     own = [o for o in mio_orgs
            if os.path.basename(o.get("file", "")).upper().startswith((country or "") + "_")
@@ -761,6 +766,14 @@ def country_air_mios(mio_orgs, country, plane=None, by_name=None):
     if groups:
         fit = [o for o in own if set(o.get("equipment_types") or []) & groups]
         own = fit or own
+    if not own and fallback:
+        generic = [o for o in mio_orgs
+                   if os.path.basename(o.get("file", "")) == "00_generic_organization.txt"
+                   and is_air_mio(o, by_name)]
+        if groups:
+            fit = [o for o in generic if set(o.get("equipment_types") or []) & groups]
+            generic = fit or generic
+        return generic
     return own
 
 
@@ -815,12 +828,15 @@ def enemy_design(country, role, year, data=None, plane=None, level=MIO_MAX_LEVEL
         return _AI_DESIGN_CACHE[key]
     weights = (ai_bonus_weights() or {}).get("default") or {}
     best = None
-    for org in country_air_mios(data["mio"], country, plane):
+    own = country_air_mios(data["mio"], country, plane)
+    fallback = not own                       # 没有独特 MIO → 用通用 MIO（游戏里也是这么用的）
+    for org in (own or country_air_mios(data["mio"], country, plane, fallback=True)):
         tokens, mods, score = ai_route(org, plane, weights, level)
         if best is None or score > best["score"]:
             best = {"organization": org["organization"], "traits": tokens,
                     "modifiers": {k: v for k, v in mods.items() if v},
-                    "score": score, "plane": plane["key"], "level": level}
+                    "score": score, "plane": plane["key"], "level": level,
+                    "fallback": fallback}
     _AI_DESIGN_CACHE[key] = best
     return best
 

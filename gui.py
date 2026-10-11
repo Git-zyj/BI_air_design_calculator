@@ -387,45 +387,51 @@ class App(tk.Tk):
 
         # ② 年份 + 所选国家与主要对手（先定国家和年份，后面才谈前置科技）
         box = self._card(row, "② 年份 + 所选国家与主要对手")
+        # 上半段（年份/国家/对手/规则）单独放一个子框：整张卡片只有一列，
+        # 下面那些**长文本行**就不会把这里的列宽撑开、把前两行整体推右。
+        # （以前 4 行共用一套 grid 列，换对手时说明文字一变长，前几行就跟着位移。）
+        fields = ttk.Frame(box)
+        fields.grid(row=0, column=0, sticky="w")
+        self.frm_fields = fields          # 供后续核对布局（前两行的列宽只看它自己）
         self.var_year = tk.IntVar(value=self.inputs["current_year"])
         self.var_tech = tk.IntVar(value=self.inputs["tech_year"])
-        ttk.Label(box, text="当前年份").grid(row=0, column=0, sticky="e", padx=PADX, pady=PADY)
-        ttk.Spinbox(box, from_=1936, to=1948, textvariable=self.var_year, width=6,
+        ttk.Label(fields, text="当前年份").grid(row=0, column=0, sticky="e", padx=PADX, pady=PADY)
+        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_year, width=6,
                     command=self._refresh_enemy).grid(row=0, column=1, sticky="w")
-        ttk.Label(box, text="（决定对手机型）").grid(row=0, column=2, sticky="w")
-        ttk.Label(box, text="飞机科技年份").grid(row=0, column=3, sticky="e", padx=PADX)
-        ttk.Spinbox(box, from_=1936, to=1948, textvariable=self.var_tech, width=6,
+        ttk.Label(fields, text="（决定对手机型）").grid(row=0, column=2, sticky="w")
+        ttk.Label(fields, text="飞机科技年份").grid(row=0, column=3, sticky="e", padx=PADX)
+        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_tech, width=6,
                     command=self._on_tech_year_changed).grid(row=0, column=4, sticky="w")
-        ttk.Label(box, text="（决定我方可用机身，可超前研究）").grid(row=0, column=5, sticky="w")
+        ttk.Label(fields, text="（决定我方可用机身，可超前研究）").grid(row=0, column=5, sticky="w")
 
-        ttk.Label(box, text="所选国家 tag").grid(row=1, column=0, sticky="e",
+        ttk.Label(fields, text="所选国家 tag").grid(row=1, column=0, sticky="e",
                                                padx=(PADX, 4), pady=PADY)
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
-        cb = ttk.Combobox(box, textvariable=self.var_tag, width=10,
+        cb = ttk.Combobox(fields, textvariable=self.var_tag, width=10,
                           state="readonly")
         cb.grid(row=1, column=1, sticky="w")
         cb.bind("<<ComboboxSelected>>", lambda e: self._refresh_country())
         cb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_tag.set(self._tag_labels.get(self.inputs.get("country") or "SOV", "苏联"))
-        ttk.Label(box, text="对手国别").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
+        ttk.Label(fields, text="对手国别").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
         enemy = self.inputs.get("enemy") or {}
         self.var_enemy_tag = tk.StringVar(value=enemy.get("country", "GER"))
-        eb = ttk.Combobox(box, textvariable=self.var_enemy_tag, width=10,
+        eb = ttk.Combobox(fields, textvariable=self.var_enemy_tag, width=10,
                           state="readonly")
         eb.grid(row=1, column=3, sticky="w")
         eb.bind("<<ComboboxSelected>>", lambda e: self._on_enemy_change())
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
-        ttk.Label(box, text="选取规则").grid(row=1, column=4, sticky="e", padx=(PADX, 4))
+        ttk.Label(fields, text="选取规则").grid(row=1, column=4, sticky="e", padx=(PADX, 4))
         cur_rule = dict(RULE_LABELS).get(enemy.get("rule", "previous_year"), "当前年份−1")
         self.var_rule = tk.StringVar(value=cur_rule)
-        rb = ttk.Combobox(box, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
+        rb = ttk.Combobox(fields, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
                           width=12, state="readonly")
         rb.grid(row=1, column=5, sticky="w")
         rb.bind("<<ComboboxSelected>>", lambda e: self._on_rule_change())
 
         self.frm_manual_plane = ttk.Frame(box)
-        self.frm_manual_plane.grid(row=3, column=0, columnspan=6, sticky="w")
+        self.frm_manual_plane.grid(row=3, column=0, sticky="w")
         ttk.Label(self.frm_manual_plane, text="手动指定机型 key").grid(row=0, column=0, sticky="e",
                                                                       padx=(PADX, 4))
         self.var_override = tk.StringVar(value=enemy.get("override_key") or "")
@@ -438,7 +444,7 @@ class App(tk.Tk):
         # （手填值存 inputs.enemy.by_country[该国]，优先于自动判定）。
         # 以前这套值是写死的德国（阿拉多）数值，换成苏联当对手也照样套，分数自然不对。
         self.frm_enemy_mods = ttk.Frame(box)
-        self.frm_enemy_mods.grid(row=2, column=0, columnspan=6, sticky="w")
+        self.frm_enemy_mods.grid(row=2, column=0, sticky="w")
         ttk.Label(self.frm_enemy_mods, text="对手设计商加成（机动/速度，%）").grid(
             row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_enemy_mod_agi = tk.StringVar()
@@ -462,7 +468,7 @@ class App(tk.Tk):
         self._wrap_to_card(self.lbl_enemy_src, self.frm_enemy_mods)
 
         self.lbl_enemy = ttk.Label(box, text="", foreground=ACCENT, font=(self.family, BODY, "bold"))
-        self.lbl_enemy.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX, pady=(0, PADY))
+        self.lbl_enemy.grid(row=4, column=0, sticky="w", padx=PADX, pady=(0, PADY))
         self._wrap_to_card(self.lbl_enemy, box)
         row += 1
 
@@ -945,9 +951,12 @@ class App(tk.Tk):
     def _plan_key(self, inputs):
         return (tuple(inputs["roles"]), inputs["tech_year"], inputs["current_year"],
                 tuple(sorted(inputs.get("unlocked_techs") or [])),
+                tuple(sorted(inputs.get("unlocked_flags") or [])),
                 float(inputs.get("range_cap") or 0),
                 json.dumps(inputs.get("experience") or {}, sort_keys=True),
                 inputs.get("country"),
+                # 对手也进键：对手机动/速度直接参与评分，换对手必须重算路线
+                json.dumps(inputs.get("enemy") or {}, sort_keys=True),
                 # 口径与生产堆叠也要进键：换了它们，路线与折算都会变
                 inputs.get("alloc_mode") or "split",
                 int(inputs.get("efficiency_cap_now") or 100),
@@ -1095,8 +1104,13 @@ class App(tk.Tk):
         cache[org["organization"]] = plan
         return plan
 
-    def _recommend_org(self):
-        """"满级 + 方针"下比较各军工组织，把最优的设为默认。"""
+    def _recommend_org(self, apply_org=True):
+        """"满级 + 方针"下比较各军工组织；apply_org=True 时把最优的设为默认。
+
+        `apply_org=False` 用于"输入变了、只把那行推荐重算一遍"：
+        以前换对手/年份只刷新了方针下拉，**推荐那行还是旧状态的**（例如写着"完美抛光"，
+        下拉却是"风洞先驱"），因为推荐行只在换国家等少数时机重算。
+        """
         try:
             inputs = self.collect()
         except (Exception, SystemExit):  # noqa: BLE001
@@ -1109,14 +1123,14 @@ class App(tk.Tk):
         scored = []
         for org in orgs:
             plan = self._org_plan(org, inputs)
-            if plan:
+            if plan and plan.get("score"):
                 scored.append((org, plan))
         scored.sort(key=lambda item: -item[1]["score"])
         spent = _t.time() - _t0
         if scored:
             best, best_plan = scored[0]
             label = next((l for l, k in self._org_keys.items() if k == best["organization"]), None)
-            if label:
+            if label and apply_org:
                 self.var_org.set(label)
             pol = next((p for p in self.data.get("policies") or []
                         if p["token"] == best_plan.get("policy")), None)
@@ -1140,7 +1154,8 @@ class App(tk.Tk):
         else:
             self.lbl_org_rec.configure(text="推荐：（暂无可比较的军工组织）")
             _dbg("MIO 路线：比较 %d 个组织 → 无可比较结果（用时 %.2fs）" % (len(orgs), spent))
-        self._on_org_change()
+        if apply_org:
+            self._on_org_change()
 
     def _air_orgs(self):
         """能用于战斗机的军工组织：优先本国独特 MIO；本国没有才回退默认 MIO。"""
@@ -1573,18 +1588,28 @@ class App(tk.Tk):
         self._on_inputs_affecting_plan()
 
     def _on_inputs_affecting_plan(self, recalc=False):
-        """年份 / 距离 / 对手 / 国家精神这类输入变了：路线与方针缓存作废、重挑方针。
+        """年份 / 距离 / 对手 / 国家精神这类输入变了：重挑方针 + 重算"推荐"那行。
 
-        以前只有"换国家 / 改等级 / 改科技"才会重推方针，改**当前年份**不会 ——
-        于是 ④ 预览（内部为当前输入重挑方针）和计算（用下拉里那个旧方针）会用
-        不同方针：实测苏联 1944 拉沃契金，预览选风洞先驱、计算用完美抛光，
-        机动 8% vs 9%、速度 7% vs 6.5%。现在这几类输入一动就同步。
+        以前只有"换国家 / 改等级 / 改科技"才会重推，改**当前年份**或**对手**都不会 ——
+        于是 ④ 的"推荐：…完美抛光"停在旧状态、下拉/计算却用另一套（实测都对不上）。
+        这里做 400ms 防抖：连敲年份（1→19→194→1944）时只算最后一次。
+        （计划缓存按输入做键，所以不需要清缓存。）
         """
-        self._plans.clear()
+        job = getattr(self, "_plan_job", None)
+        if job:
+            try:
+                self.after_cancel(job)
+            except Exception:                 # noqa: BLE001
+                pass
+        self._plan_job = self.after(400, lambda: self._apply_inputs_affecting_plan(recalc))
+
+    def _apply_inputs_affecting_plan(self, recalc=False):
+        self._plan_job = None
         try:
             self._refresh_policies()
         except (Exception, SystemExit):       # noqa: BLE001
             pass
+        self._recommend_org(apply_org=False)
         self._refresh_totals()
         if recalc and getattr(self, "rows", None):
             self.on_calculate()
@@ -1648,7 +1673,7 @@ class App(tk.Tk):
             plane = picked.get(role, (None, None))[0]
             design = engine.enemy_design(country, role, year, data=self.data, plane=plane)
             key = None if not design else (design["organization"], design["plane"],
-                                           len(design["traits"]))
+                                           len(design["traits"]), design.get("fallback"))
             seen.setdefault(key, []).append(role)
         parts = []
         for key, rs in seen.items():
@@ -1656,9 +1681,10 @@ class App(tk.Tk):
             if key is None:
                 parts.append("（%s）找不到该国空军 MIO" % label)
                 continue
-            org, plane_key, n = key
-            parts.append("%s对手用 %s（%s，满级 %d 项特质）"
+            org, plane_key, n, fallback = key
+            parts.append("%s对手用 %s%s（%s，满级 %d 项特质）"
                          % ("" if len(roles) == 1 else "（%s）" % label,
+                            "通用 " if fallback else "",
                             zh(self.loc, org) or org, zh(self.loc, plane_key) or plane_key, n))
         return ("数值来源：按模组 AI 权重自动判定（AI 按「加成总和最大」点特质，不是战斗力最优）｜"
                 + "；".join(parts))
