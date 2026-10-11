@@ -7,3 +7,5 @@ build/
 dist/
 release/
 *.spec
+# 运行时方案缓存（本机生成，随包发布的离线表是 data/route_table.json）
+route_cache.json
