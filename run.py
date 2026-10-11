@@ -154,6 +154,42 @@ def pareto_front(rows, x_key="cost", y_key="score"):
     return rows
 
 
+# 舰载机 archetype：陆基用途挑"参考机型"时优先排除它们
+CARRIER_ARCHETYPES = ("cv_fighter_equipment", "cv_mr_fighter_equipment",
+                      "cv_nav_bomber_equipment", "cv_CAS_equipment")
+
+
+def pick_reference_plane(pool, inputs, data, upgrade_map, enemy_by_role):
+    """路线优化 / 装备类型过滤用的"参考机型"：
+    **该用途下"空修正"分数最高的候选**（陆基用途优先非舰载机型）。
+
+    以前直接取 `max(pool, key=year)`：1939 会挑到舰载机 I-153k、1944 会挑到重型战斗机 MiG-5
+    —— 按它们的装备组去过滤 MIO，下拉和特质表都会带偏（雅科夫列夫就被误删过）。
+    用"谁分最高"当代表，和工具自己的口径一致。
+    """
+    if not pool:
+        return None
+    carrier_role = any(r in engine.CARRIER_ROLES for r in (inputs.get("roles") or ()))
+    cands = pool if carrier_role else (
+        [a for a in pool if a.get("archetype") not in CARRIER_ARCHETYPES] or pool)
+    role = (inputs.get("roles") or ["air_far"])[0]
+    _enemy, enemy_values = enemy_by_role.get(role, (None, None))
+    score_key = engine.score_role(role)
+    acc_f = engine.accident_factor(role in engine.CARRIER_ROLES)
+    best, best_score = cands[0], None
+    for airframe in cands:
+        tokens = engine.available_upgrades(
+            airframe["category"], data, techs=inputs.get("unlocked_techs") or [],
+            flags=inputs.get("unlocked_flags") or [], archetype=airframe.get("archetype"))[0]
+        result = engine.optimize(airframe, upgrade_map, {}, enemy_values, score_key,
+                                 available=tokens, range_cap=inputs.get("range_cap"),
+                                 experience=inputs.get("experience"), accident_f=acc_f)
+        value = result["scores"].get(score_key, 0.0)
+        if best_score is None or value > best_score:
+            best, best_score = airframe, value
+    return best
+
+
 def candidate_pool(inputs, data):
     """候选机身 = 当前国家 + 科技年份以内 + 本次用途对应的机种（archetype）。
 
@@ -174,7 +210,16 @@ def build_rows(inputs, data):
         inputs["manufacturer_mode"] = "manual"
     upgrade_map = engine.upgrades_by_key(data["upgrades"])
     candidates = candidate_pool(inputs, data)
-    mfr_mods, mfr_info = resolve_manufacturer(inputs, data, upgrade_map, candidates)
+    # 对手按用途分别取（参考机型与每行都要用，所以先算）
+    enemy_cfg = inputs.get("enemy") or {}
+    enemy_by_role = {}
+    for role in inputs["roles"]:
+        enemy_by_role[role] = engine.pick_enemy_values(
+            data["airframes_all"], enemy_cfg, role, inputs["current_year"])
+    primary_role = inputs["roles"][0]
+    enemy, enemy_values = enemy_by_role.get(primary_role, (None, None))
+    ref = pick_reference_plane(candidates, inputs, data, upgrade_map, enemy_by_role)
+    mfr_mods, mfr_info = resolve_manufacturer(inputs, data, upgrade_map, candidates, ref)
     # 生产侧折算：把 MIO 的生产修正换成"等效造价折扣"（产量倍率 gain ⇒ 造价 ÷ gain）。
     # 用户填的"当前效率上限 / 产能加成"决定这些加成值多少（+5 在 100 与 200 上完全不同）。
     gain, gain_parts = engine.production_gain(mfr_info.get("production"),
@@ -191,15 +236,6 @@ def build_rows(inputs, data):
                                            categories=cats))
     player_mods = engine.combine_modifiers(
         mfr_mods, spirit_mods, inputs.get("extra_modifiers") or {})
-    # 对手按用途分别取：舰载用途用舰载对手且不吃经验加成，其余用陆基战斗机
-    enemy_cfg = inputs.get("enemy") or {}
-    enemy_by_role = {}
-    for role in inputs["roles"]:
-        enemy_by_role[role] = engine.pick_enemy_values(
-            data["airframes_all"], enemy_cfg, role, inputs["current_year"])
-    primary_role = inputs["roles"][0]
-    enemy, enemy_values = enemy_by_role.get(primary_role, (None, None))
-
     rows = []
     role_arch = {r: set(engine.MISSION_ARCHETYPES.get(engine.ROLE_MISSION.get(r, ""), ()))
                  for r in inputs["roles"]}
@@ -261,7 +297,7 @@ def mio_organizations(data):
     return out
 
 
-def resolve_manufacturer(inputs, data, upgrade_map, candidates):
+def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
     """按 manufacturer_mode 解析制造商修正。
 
     mode = "manual"：直接用 manufacturer_modifiers
@@ -302,7 +338,13 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates):
     else:
         level = int(cfg.get("level") or 0)
         if level and candidates:
-            ref = max(candidates, key=lambda a: (a.get("year") or 0))
+            if ref is None:
+                enemy_by_role = {
+                    r: engine.pick_enemy_values(data["airframes_all"],
+                                                inputs.get("enemy") or {}, r,
+                                                inputs["current_year"])
+                    for r in inputs["roles"]}
+                ref = pick_reference_plane(candidates, inputs, data, upgrade_map, enemy_by_role)
             # 按"满级最优路线"取前 level 步，而不是每级单独跑一遍贪心
             _chosen, mods, log = engine.mio_route(
                 org, level, ref, upgrade_map, mods, None, inputs["roles"],
