@@ -244,6 +244,30 @@
    "production_efficiency_gain_factor": 0.03,
    "production_resource_need_factor": -0.05
   },
+  "allowed": [
+   "AST",
+   "BEL",
+   "CAN",
+   "CZE",
+   "ENG",
+   "FIN",
+   "FRA",
+   "GER",
+   "HUN",
+   "ITA",
+   "JAP",
+   "MAN",
+   "MEX",
+   "NOR",
+   "NZL",
+   "POL",
+   "ROM",
+   "SAF",
+   "SOV",
+   "SWE",
+   "USA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_standardized_production",
    "bonuses": {
@@ -544,6 +568,7 @@
   "production": {
    "production_efficiency_gain_factor": 0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_tanks_designer",
    "bonuses": {
@@ -810,6 +835,7 @@
    "production_resource_need_factor": -0.05,
    "production_resource_penalty_factor": -0.1
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -1071,6 +1097,7 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_medium_tank_designer",
    "bonuses": {},
@@ -1346,6 +1373,7 @@
   "production": {
    "production_efficiency_cap_factor": 0.02
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_tank_designer",
    "bonuses": {
@@ -1628,6 +1656,7 @@
    "production_conversion_speed_factor": 0.15,
    "production_cost_factor": -0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_tank_refurbishment_plant",
    "bonuses": {},
@@ -1917,6 +1946,7 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -2233,6 +2263,7 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -2468,6 +2499,39 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "AST",
+   "BEL",
+   "CAN",
+   "CZE",
+   "DEN",
+   "ENG",
+   "EST",
+   "FIN",
+   "FRA",
+   "GER",
+   "GRE",
+   "HUN",
+   "ITA",
+   "JAP",
+   "LAT",
+   "MEX",
+   "NOR",
+   "NZL",
+   "POL",
+   "POR",
+   "RAJ",
+   "ROM",
+   "SIA",
+   "SOV",
+   "SPA",
+   "SPR",
+   "SWE",
+   "TUR",
+   "USA",
+   "VIC",
+   "YUG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -2789,6 +2853,7 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -3176,6 +3241,7 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_submarine_designer",
    "bonuses": {},
@@ -3518,6 +3584,7 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_black_sea_fleet_designer",
    "bonuses": {},
@@ -3834,6 +3901,7 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_refurbishment_repair_organization",
    "bonuses": {},
@@ -4165,6 +4233,47 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "AST",
+   "BEL",
+   "BUL",
+   "CAN",
+   "CHI",
+   "CZE",
+   "DEN",
+   "ENG",
+   "FIN",
+   "FRA",
+   "GER",
+   "GRE",
+   "GXC",
+   "HOL",
+   "HUN",
+   "ITA",
+   "JAP",
+   "LAT",
+   "LIT",
+   "MAN",
+   "MEX",
+   "NOR",
+   "POL",
+   "POR",
+   "PRC",
+   "RAJ",
+   "ROM",
+   "SHX",
+   "SIK",
+   "SOV",
+   "SPA",
+   "SPR",
+   "SWE",
+   "TUR",
+   "USA",
+   "VIC",
+   "XSM",
+   "YUG",
+   "YUN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_general_aircraft_designer",
    "bonuses": {},
@@ -4543,6 +4652,7 @@
   "production": {
    "production_efficiency_gain_factor": 0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -4888,6 +4998,7 @@
   "production": {
    "production_efficiency_gain_factor": 0.03
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -5229,6 +5340,7 @@
    "production_efficiency_gain_factor": 0.05,
    "production_resource_penalty_factor": -0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -5500,6 +5612,7 @@
   "production": {
    "production_efficiency_gain_factor": 0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_cas_aircraft_designer",
    "bonuses": {
@@ -5801,6 +5914,7 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -6209,6 +6323,7 @@
   "production": {
    "production_efficiency_gain_factor": 0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -6482,6 +6597,7 @@
    "production_resource_penalty_factor": -0.05,
    "production_capacity_factor": 0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_high_agility_fighters_designer",
    "bonuses": {
@@ -6810,6 +6926,7 @@
   "production": {
    "production_capacity_factor": 0.1
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_range_focused_aircraft_designer",
    "bonuses": {
@@ -7101,6 +7218,7 @@
   "production": {
    "production_efficiency_cap_factor": 0.01
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -7432,6 +7550,7 @@
   "production": {
    "production_efficiency_cap_factor": 0.01
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -7814,6 +7933,7 @@
   "production": {
    "production_efficiency_gain_factor": 0.01
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -8166,6 +8286,7 @@
   "production": {
    "production_resource_need_factor": 0.05
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -8335,6 +8456,7 @@
   "production": {
    "production_efficiency_gain_factor": 0.01
   },
+  "allowed": [],
   "initial_trait": {
    "token": "generic_horsey_organization",
    "bonuses": {},
@@ -8598,6 +8720,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "AST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -8832,6 +8957,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "AST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -9114,6 +9242,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "AST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -9490,6 +9621,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "AST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -9868,6 +10002,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "AST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -10196,6 +10333,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "AST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -10428,6 +10568,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BEL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -10804,6 +10947,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BEL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -11146,6 +11292,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BEL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -11478,6 +11627,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BEL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -11825,6 +11977,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BEL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -12203,6 +12358,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BRA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -12579,6 +12737,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BUL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -12846,6 +13007,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BUL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_cas_aircraft_designer",
    "bonuses": {
@@ -13175,6 +13339,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BUL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -13458,6 +13625,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BUL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -13805,6 +13975,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BUL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -14065,6 +14238,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -14324,6 +14500,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_medium_tank_designer",
    "bonuses": {},
@@ -14620,6 +14799,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_tanks_designer",
    "bonuses": {
@@ -14905,6 +15087,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -15137,6 +15322,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -15518,6 +15706,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "ENG_de_havilland_organization_initial",
    "bonuses": {
@@ -15842,6 +16033,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_general_aircraft_designer",
    "bonuses": {},
@@ -16139,6 +16333,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -16472,6 +16669,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -16852,6 +17052,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -17180,6 +17383,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -17463,6 +17669,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -17723,6 +17932,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -18021,6 +18234,11 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN",
+   "SIK"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_tanks_designer",
    "bonuses": {
@@ -18306,6 +18524,9 @@
    "production_conversion_speed_factor": 0.15,
    "production_cost_factor": -0.05
   },
+  "allowed": [
+   "CHI"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_tank_refurbishment_plant",
    "bonuses": {},
@@ -18541,6 +18762,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RGR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -18857,6 +19081,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RGR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -19124,6 +19351,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_cas_aircraft_designer",
    "bonuses": {
@@ -19501,6 +19732,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -19843,6 +20078,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -20130,6 +20369,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -20477,6 +20720,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -20805,6 +21052,11 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN",
+   "RGR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -21133,6 +21385,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN",
+   "MEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -21393,6 +21649,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -21652,6 +21911,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_medium_tank_designer",
    "bonuses": {},
@@ -21925,6 +22187,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_tank_designer",
    "bonuses": {
@@ -22158,6 +22423,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -22455,6 +22723,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -22797,6 +23068,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -23134,6 +23408,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -23512,6 +23789,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -23840,6 +24120,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -24123,6 +24406,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -24470,6 +24756,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -24817,6 +25106,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CZE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -25192,6 +25484,9 @@
    "production_capacity_factor": 0.05,
    "production_resource_penalty_factor": -0.05
   },
+  "allowed": [
+   "DEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -25550,6 +25845,9 @@
   "production": {
    "production_conversion_speed_factor": 0.1
   },
+  "allowed": [
+   "DEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -25954,6 +26252,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "DEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -26257,6 +26558,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "DEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -26585,6 +26889,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "DEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -26868,6 +27175,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "DEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -27215,6 +27525,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "DEN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -27648,6 +27961,10 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "BEL",
+   "ENG"
+  ],
   "initial_trait": null
  },
  {
@@ -27999,6 +28316,9 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": null
  },
  {
@@ -28343,6 +28663,9 @@
   "production": {
    "production_cost_factor": -0.01
   },
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "ENG_mio_nuffield",
    "bonuses": {},
@@ -28666,6 +28989,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -29024,6 +29350,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -29256,6 +29585,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -29572,6 +29904,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -29893,6 +30228,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_high_agility_fighters_designer",
    "bonuses": {
@@ -30303,6 +30641,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -30690,6 +31031,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "ENG_de_havilland_organization_initial",
    "bonuses": {
@@ -30992,6 +31336,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -31329,6 +31676,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -31677,6 +32027,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -32035,6 +32388,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -32382,6 +32738,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -32665,6 +33024,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ENG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -32947,6 +33309,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "EST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -33275,6 +33640,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "EST"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -33571,6 +33939,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FIN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_tanks_designer",
    "bonuses": {
@@ -33890,6 +34261,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FIN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -34294,6 +34668,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FIN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -34628,6 +35005,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FIN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -34911,6 +35291,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FIN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -35258,6 +35641,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FIN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -35593,6 +35979,11 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "BEL",
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_tanks_designer",
    "bonuses": {
@@ -35876,6 +36267,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -36135,6 +36530,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_medium_tank_designer",
    "bonuses": {},
@@ -36367,6 +36766,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -36649,6 +37052,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -36962,6 +37369,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -37278,6 +37689,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -37657,6 +38072,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -38003,6 +38422,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -38344,6 +38767,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -38647,6 +39074,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -38975,6 +39406,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_general_aircraft_designer",
    "bonuses": {},
@@ -39322,6 +39757,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -39650,6 +40089,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -39935,6 +40378,10 @@
   "production": {
    "production_efficiency_cap_factor": 0.01
   },
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {
@@ -40315,6 +40762,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "FRA",
+   "VIC"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -40751,6 +41202,9 @@
   "production": {
    "production_capacity_factor": 0.01
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "GER_man_chassis_builder",
    "bonuses": {
@@ -41182,6 +41636,9 @@
   "production": {
    "production_efficiency_cap_factor": 0.03
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "GER_db_sophisticated_designs",
    "bonuses": {
@@ -41733,6 +42190,9 @@
   "production": {
    "production_resource_penalty_factor": -0.1
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "GER_mio_improvisor",
    "bonuses": {},
@@ -42118,6 +42578,9 @@
   "production": {
    "production_capacity_factor": 0.01
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "GER_mio_krupp_steel_specialist",
    "bonuses": {
@@ -42739,6 +43202,9 @@
    "production_capacity_factor": 0.06,
    "production_resource_need_factor": 0.05
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "GER_porsche_mio_fuhrer_friend",
    "bonuses": {
@@ -43106,6 +43572,9 @@
    "production_efficiency_cap_factor": 0.01,
    "production_efficiency_gain_factor": 0.01
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "GER_henschel_kessel_factory",
    "bonuses": {
@@ -43395,6 +43864,9 @@
   "production": {
    "production_capacity_factor": 0.025
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -43758,6 +44230,9 @@
   "production": {
    "production_capacity_factor": 0.035
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_refurbishment_repair_organization",
    "bonuses": {},
@@ -44134,6 +44609,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -44540,6 +45018,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -45021,6 +45502,9 @@
   "production": {
    "production_capacity_factor": 0.025
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_submarine_designer",
    "bonuses": {},
@@ -45385,6 +45869,9 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -45810,6 +46297,9 @@
   "production": {
    "production_efficiency_gain_factor": 0.025
   },
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -46111,6 +46601,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_cas_aircraft_designer",
    "bonuses": {
@@ -46539,6 +47032,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_range_focused_aircraft_designer",
    "bonuses": {
@@ -46931,6 +47427,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -47322,6 +47821,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -47749,6 +48251,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -48056,6 +48561,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -48434,6 +48942,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "CHI",
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -48836,6 +49348,10 @@
    "production_efficiency_cap_factor": 0.03,
    "production_cost_factor": -0.03
   },
+  "allowed": [
+   "CHI",
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -49253,6 +49769,10 @@
   "production": {
    "production_resource_need_factor": -0.05
   },
+  "allowed": [
+   "GER",
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -49671,6 +50191,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GER"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -49953,6 +50476,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GRE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -50329,6 +50855,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GRE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -50657,6 +51186,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "GRE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -50973,6 +51505,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HOL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -51286,6 +51821,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HOL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -51550,6 +52088,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HOL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_high_agility_fighters_designer",
    "bonuses": {
@@ -51893,6 +52434,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HOL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -52244,6 +52788,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HOL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -52572,6 +53119,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HOL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -52855,6 +53405,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HOL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -53112,6 +53665,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HUN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_standardized_production",
    "bonuses": {
@@ -53427,6 +53983,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HUN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -53803,6 +54362,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HUN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -54131,6 +54693,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HUN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -54414,6 +54979,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HUN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -54761,6 +55329,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "HUN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -54993,6 +55564,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "IRE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -55519,6 +56093,9 @@
   "production": {
    "production_resource_need_factor": -0.1
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "ITA_fiat_initial",
    "bonuses": {},
@@ -55846,6 +56423,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -56092,6 +56672,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -56415,6 +56998,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_refurbishment_repair_organization",
    "bonuses": {},
@@ -56749,6 +57335,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -57148,6 +57737,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_submarine_designer",
    "bonuses": {},
@@ -57541,6 +58133,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -57930,6 +58525,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -58218,6 +58816,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_cas_aircraft_designer",
    "bonuses": {
@@ -58500,6 +59101,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_high_agility_fighters_designer",
    "bonuses": {
@@ -58852,6 +59456,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -59277,6 +59884,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -59598,6 +60208,9 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -59962,6 +60575,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_range_focused_aircraft_designer",
    "bonuses": {
@@ -60309,6 +60925,10 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [
+   "ETH",
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -60670,6 +61290,9 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -60967,6 +61590,9 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -61359,6 +61985,10 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [
+   "ETH",
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -61756,6 +62386,9 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [
+   "ITA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -61952,6 +62585,9 @@
   "production": {
    "production_conversion_speed_factor": 0.33
   },
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "JAP_hitachi_organization_initial",
    "bonuses": {},
@@ -62395,6 +63031,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "JAP_mitsubishi_tank_organization_initial",
    "bonuses": {
@@ -62614,6 +63253,9 @@
   "production": {
    "production_capacity_factor": 0.01
   },
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "JAP_mio_osaka_initial",
    "bonuses": {},
@@ -62966,6 +63608,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -63337,6 +63982,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -63658,6 +64306,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "JAP_kawasaki_dockyards_org_name",
    "bonuses": {},
@@ -63953,6 +64604,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -64316,6 +64970,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -64701,6 +65358,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_submarine_designer",
    "bonuses": {},
@@ -64993,6 +65653,9 @@
   "production": {
    "production_resource_need_factor": -0.05
   },
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_high_agility_fighters_designer",
    "bonuses": {
@@ -65322,6 +65985,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_range_focused_aircraft_designer",
    "bonuses": {
@@ -65662,6 +66328,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -66010,6 +66679,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -66423,6 +67095,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -66750,6 +67425,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -67022,6 +67700,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "JAP_mio_trait_army_aircraft_manufacturer",
    "bonuses": {
@@ -67352,6 +68033,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -67635,6 +68319,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -67982,6 +68669,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -68360,6 +69050,10 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "JAP",
+   "MAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -68642,6 +69336,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "LAT"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -69018,6 +69715,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "LAT"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -69394,6 +70094,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "LIT"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -69717,6 +70420,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_general_aircraft_designer",
    "bonuses": {},
@@ -70093,6 +70799,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -70435,6 +71144,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MAN"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -70693,6 +71405,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MEX"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_standardized_production",
    "bonuses": {
@@ -71008,6 +71723,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MEX"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -71290,6 +72008,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MEX"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -71613,6 +72334,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MEX"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_general_aircraft_designer",
    "bonuses": {},
@@ -71941,6 +72665,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MEX"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -72224,6 +72951,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "MEX"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -72523,6 +73253,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "NOR_mio_initial_trait_mechanical_workshop",
    "bonuses": {
@@ -72712,6 +73445,9 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "NOR_mio_initial_trait_convoy_and_escort_fleet",
    "bonuses": {},
@@ -73025,6 +73761,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -73340,6 +74079,9 @@
    "production_efficiency_cap_factor": 0.02,
    "production_efficiency_gain_factor": 0.02
   },
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -73623,6 +74365,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -73951,6 +74696,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -74329,6 +75077,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -74676,6 +75427,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NOR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -74939,6 +75693,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NZL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -75214,6 +75971,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NZL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_tank_designer",
    "bonuses": {
@@ -75447,6 +76207,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NZL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -75729,6 +76492,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NZL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -76076,6 +76842,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "NZL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -76398,6 +77167,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POL"
+  ],
   "initial_trait": {
    "token": "POL_mio_trait_multi_role_tank_designer",
    "bonuses": {
@@ -76684,6 +77456,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -77060,6 +77835,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -77402,6 +78180,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -77734,6 +78515,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -78081,6 +78865,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -78364,6 +79151,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POL"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -78646,6 +79436,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -79022,6 +79815,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -79350,6 +80146,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -79728,6 +80527,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -80075,6 +80877,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -80358,6 +81163,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "POR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -80590,6 +81398,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RAJ"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -80872,6 +81683,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RAJ"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -81185,6 +81999,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RAJ"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -81561,6 +82378,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RAJ"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -81889,6 +82709,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RAJ"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -82172,6 +82995,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RAJ"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -82523,6 +83349,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "RAJ"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -82547,6 +83376,9 @@
   "production": {
    "production_capacity_factor": -1.0
   },
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "ROM_mio_trait_mobile_tank_destroyers",
    "bonuses": {
@@ -82785,6 +83617,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -83105,6 +83940,9 @@
   "production": {
    "production_cost_factor": -0.05
   },
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "ROM_mio_trait_coastal_defense_production",
    "bonuses": {
@@ -83423,6 +84261,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -83840,6 +84681,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -84169,6 +85013,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_general_aircraft_designer",
    "bonuses": {},
@@ -84466,6 +85313,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -84794,6 +85644,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -85077,6 +85930,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -85430,6 +86286,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -85808,6 +86667,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "ROM"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -86068,6 +86930,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SAF"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -86304,6 +87169,9 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "SIA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -86684,6 +87552,9 @@
   "production": {
    "production_efficiency_gain_factor": 0.01
   },
+  "allowed": [
+   "SIA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -86820,6 +87691,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_mio_gaz_initial",
    "bonuses": {},
@@ -86986,6 +87860,9 @@
    "production_capacity_factor": 0.05,
    "production_resource_need_factor": 0.05
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_Plant37_organization_initial",
    "bonuses": {},
@@ -87098,6 +87975,9 @@
    "production_capacity_factor": 0.05,
    "production_resource_need_factor": 0.05
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_mytishchy_machine_building_plant_initial",
    "bonuses": {},
@@ -87258,6 +88138,9 @@
    "production_capacity_factor": 0.05,
    "production_resource_need_factor": 0.05
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_kirov_plant_organization_initial",
    "bonuses": {},
@@ -87444,6 +88327,9 @@
   "production": {
    "production_efficiency_gain_factor": 0.1
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_kharkov_locomotive_plant_initial",
    "bonuses": {},
@@ -87673,6 +88559,9 @@
   "production": {
    "production_capacity_factor": -1.0
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_morozov_initial",
    "bonuses": {
@@ -87952,6 +88841,9 @@
   "production": {
    "production_capacity_factor": -1.0
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_mio_astrov_intial",
    "bonuses": {},
@@ -88187,6 +89079,9 @@
   "production": {
    "production_capacity_factor": -1.0
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_mio_kirov_initial",
    "bonuses": {},
@@ -88466,6 +89361,9 @@
   "production": {
    "production_capacity_factor": -1.0
   },
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "SOV_mio_okmo_initial",
    "bonuses": {
@@ -88781,6 +89679,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -89097,6 +89998,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -89434,6 +90338,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_black_sea_fleet_designer",
    "bonuses": {},
@@ -89747,6 +90654,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_refurbishment_repair_organization",
    "bonuses": {},
@@ -90130,6 +91040,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -90397,6 +91310,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_high_agility_fighters_designer",
    "bonuses": {
@@ -90668,6 +91584,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_cas_aircraft_designer",
    "bonuses": {
@@ -91078,6 +91997,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_aircraft_designer",
    "bonuses": {
@@ -91461,6 +92383,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -91746,6 +92671,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -92074,6 +93002,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -92421,6 +93352,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SOV"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -92703,6 +93637,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -93019,6 +93956,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -93361,6 +94301,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -93741,6 +94684,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -94069,6 +95015,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -94352,6 +95301,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -94730,6 +95682,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_support_equipment_manufacturer",
    "bonuses": {},
@@ -95077,6 +96032,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SPR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -95358,6 +96316,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "SWE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_fast_tanks_designer",
    "bonuses": {
@@ -95676,6 +96637,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_raiding_fleet",
    "bonuses": {},
@@ -96012,6 +96976,9 @@
   "production": {
    "production_capacity_factor": 0.03
   },
+  "allowed": [
+   "SWE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -96415,6 +97382,9 @@
   "production": {
    "production_cost_factor": -0.03
   },
+  "allowed": [
+   "SWE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_standardized_production",
    "bonuses": {},
@@ -96743,6 +97713,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -97090,6 +98063,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -97373,6 +98349,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWE"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -97656,6 +98635,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWI"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -97984,6 +98966,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWI"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -98331,6 +99316,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWI"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -98614,6 +99602,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "SWI"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -98896,6 +99887,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "TUR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -99272,6 +100266,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "TUR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -99614,6 +100611,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "TUR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -99946,6 +100946,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "TUR"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -100299,6 +101302,9 @@
    "production_cost_factor": -0.03,
    "production_efficiency_gain_factor": 0.04
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "USA_marmon_herrington_organization",
    "bonuses": {
@@ -100680,6 +101686,9 @@
   "production": {
    "production_capacity_factor": 0.01
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "USA_mio_trait_medium_tank_manufacturer",
    "bonuses": {
@@ -101116,6 +102125,9 @@
    "production_capacity_factor": 0.03,
    "production_resource_need_factor": 0.05
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "USA_mio_trait_large_scale_organisation",
    "bonuses": {},
@@ -101396,6 +102408,9 @@
   "production": {
    "production_efficiency_gain_factor": 0.1
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "USA_mio_trait_dedicated_tank_factory",
    "bonuses": {
@@ -101662,6 +102677,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "ROM_mio_trait_mobile_tank_destroyers",
    "bonuses": {
@@ -101931,6 +102949,9 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_escort_fleet",
    "bonuses": {},
@@ -102358,6 +103379,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_submarine_designer",
    "bonuses": {},
@@ -102713,6 +103737,9 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_battle_line_ship_builders",
    "bonuses": {},
@@ -103019,6 +104046,9 @@
   "production": {
    "production_capacity_factor": 0.05
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "USA_mio_trait_carrier_specialists",
    "bonuses": {},
@@ -103317,6 +104347,9 @@
   "production": {
    "production_capacity_factor": 0.02
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -103689,6 +104722,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "USA_mio_trait_light_long_range_aircraft",
    "bonuses": {},
@@ -104056,6 +105092,9 @@
   "production": {
    "production_efficiency_cap_factor": 0.05
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "USA_mio_trait_medium_long_range_aircraft",
    "bonuses": {
@@ -104415,6 +105454,9 @@
   "production": {
    "production_capacity_factor": 0.1
   },
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_cas_aircraft_designer",
    "bonuses": {
@@ -104778,6 +105820,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -105126,6 +106171,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_naval_aircraft_designer",
    "bonuses": {},
@@ -105454,6 +106502,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},
@@ -105801,6 +106852,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_motorized_mechanized_manufacturer",
    "bonuses": {
@@ -106084,6 +107138,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "USA"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_artillery_manufacturer",
    "bonuses": {},
@@ -106366,6 +107423,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "YUG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_task_force_ship_builders",
    "bonuses": {},
@@ -106742,6 +107802,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "YUG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_light_aircraft_designer",
    "bonuses": {
@@ -107084,6 +108147,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "YUG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_multi_role_tactical_aircraft",
    "bonuses": {
@@ -107421,6 +108487,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "YUG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_heavy_aircraft_designer",
    "bonuses": {
@@ -107751,6 +108820,9 @@
    }
   ],
   "production": {},
+  "allowed": [
+   "YUG"
+  ],
   "initial_trait": {
    "token": "generic_mio_initial_trait_infantry_manufacturer",
    "bonuses": {},

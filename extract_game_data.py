@@ -614,6 +614,21 @@ def parse_mio(game_dir):
                 "traits": [],
                 "production": _production_bonus(block),   # 组织级生产修正（若有）
             }
+            # 这个 MIO 归哪些国家用（`allowed = { OR = { tag = ENG; tag = BEL } }`）
+            # —— 权威来源。以前只看"文件名前缀是不是 TAG_"，像 BEL 这种
+            # 共用 ENG 组织的国家就完全找不到 MIO。
+            m_allowed = re.search(r"allowed\s*=\s*\{", block)
+            if m_allowed:
+                depth, i = 1, m_allowed.end()
+                while i < len(block) and depth:
+                    if block[i] == "{":
+                        depth += 1
+                    elif block[i] == "}":
+                        depth -= 1
+                    i += 1
+                segment = block[m_allowed.end():i - 1]
+                tags = re.findall(r"(?<![\w])(?:original_)?tag\s*=\s*([A-Z][A-Z0-9]{2})\b", segment)
+                organization["allowed"] = sorted(set(tags))
             for key, value in re.findall(r"([A-Za-z_0-9]+)\s*=\s*([^\{}\n]+)", block):
                 pass
             m = re.search(r"equipment_type\s*=\s*\{([^}]*)\}", block)

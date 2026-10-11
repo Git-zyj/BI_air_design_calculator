@@ -1,0 +1,7 @@
+{
+  "_note": "机型数据里的『国家』来自 BI 的本地化文件名 equipment_l_english_<X>.yml，不一定是真国家 tag。这里把对不上的映射到真 tag —— **只用于找 MIO**，不动机型本身的归属。",
+  "_why": "BI 把英国的装备本地化文件命名为 equipment_l_english_Commonwealth.yml（文件里 key 是 ENG_*、文案是 United Kingdom / Royal Air Force），所以 136 型英国飞机在数据里记成了『Commonwealth』；真 tag 是 ENG，AI 用的也是英国那几家设计局（超马林、霍克、德哈维兰、费尔雷）。",
+  "by_country": {
+    "Commonwealth": "ENG"
+  }
+}
