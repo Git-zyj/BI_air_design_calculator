@@ -86,3 +86,17 @@ build_exe_debug.bat  → dist\飞机设计计算器_黑冰正式版v12.1.0_调�
 ## 说明
 
 这是一个**工具模组**，本身不包含游戏内容；`descriptor.mod` 里把 BIX 标为依赖只是为了记录它服务于哪个模组。
+
+## 版权与第三方
+
+- **代码**：**MIT**（见 [`LICENSE`](LICENSE)）——随便用、随便改、可商用，保留版权声明即可。
+- **数据**：`data/*.json`、`BI_SOV.xlsx` 是从**第三方模组**抽取的数值快照，版权不属于本仓库：
+  - **BlackICE Historical Immersion Mod**（黑冰正式版 workshop id `1137372539`；
+    测试版 `Blackice HOI IV TEST` `1851181613`）——数值与定义归 BlackICE 作者团队；
+  - 汉化名称（`data/loc_zh.json`）来自黑冰内核汉化与 HOI4 官方简中，归各自作者。
+  本仓库只是把这些数值**聚合起来做计算与对照**，不主张对它们的所有权；
+  原作者如对收录有异议，可移除对应数据。
+- **依赖**：`openpyxl`（MIT）；打包用的 **PyInstaller 是 GPL-2.0 + 特别例外**，
+  该例外明确允许用它打包并分发自己的程序（含闭源、商用），所以与上面的 MIT 不冲突。
+- 本工具与 Paradox Interactive、BlackICE 作者团队**没有隶属关系**；
+  《钢铁雄心 4》及其素材版权归 Paradox Interactive。
