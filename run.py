@@ -43,7 +43,9 @@ INPUTS = os.path.join(app_dir(), "inputs.json")
 # ---------- 路线方案（方针 × 特质）的表与缓存 ----------
 # 离线预计算表随工具发布（只读）；运行时新算出来的方案写进用户机器上的缓存文件。
 # 两者**同一套键**，所以"离线算过"和"现算过"的命中效果一样。
-PLAN_TABLE = os.path.join(engine.DATA_DIR, "route_table.json")   # 离线表（随包发布）
+# 离线表**分片**存放：一个 (国家, 用途) 一个文件 —— 全量表上百 MB，不能再整表读入内存。
+PLAN_TABLE_DIR = os.path.join(engine.DATA_DIR, "route_table")
+PLAN_TABLE = os.path.join(engine.DATA_DIR, "route_table.json")   # 旧版单文件（兼容，可不存在）
 PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓存（本地生成）
 # 算法/口径/方针数据变了就改这里，旧的离线表与本机缓存自动作废：
 #   v3 = 方针的 production_bonus 抽全（same_as_mio 嵌套）→ 「不断的工业革命」等
@@ -93,9 +95,35 @@ def _load_plan_file(path):
     return {}
 
 
-def load_plan_table():
-    """离线预计算表（data/route_table.json）。"""
-    return _load_plan_file(PLAN_TABLE)
+_TABLE_SHARD_CACHE = {}
+
+
+def plan_shard_path(country, role):
+    return os.path.join(PLAN_TABLE_DIR, "%s_%s.json" % (country, role))
+
+
+def load_plan_table(country=None, role=None):
+    """离线预计算表：按 (国家, 用途) 分片读（带缓存）；不给参数时读旧单文件。"""
+    if not country:
+        return _load_plan_file(PLAN_TABLE)
+    out = {}
+    key = (country, role)
+    if key in _TABLE_SHARD_CACHE:
+        return _TABLE_SHARD_CACHE[key]
+    paths = [plan_shard_path(country, role)] if role else []
+    if not paths and os.path.isdir(PLAN_TABLE_DIR):
+        paths = [os.path.join(PLAN_TABLE_DIR, f) for f in os.listdir(PLAN_TABLE_DIR)
+                 if f.startswith(str(country) + "_") and f.endswith(".json")]
+    for path in paths:
+        out.update(_load_plan_file(path))
+    _TABLE_SHARD_CACHE[key] = out
+    return out
+
+
+def save_plan_shard(country, role, table):
+    os.makedirs(PLAN_TABLE_DIR, exist_ok=True)
+    with open(plan_shard_path(country, role), "w", encoding="utf-8") as fh:
+        json.dump(table, fh, ensure_ascii=False)
 
 
 def load_plan_cache():
