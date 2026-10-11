@@ -301,6 +301,15 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates):
     policy = cfg.get("policy")
     if policy:
         pol = next((p for p in (data.get("policies") or []) if p["token"] == policy), None)
+        # 门槛：等级不够（方针都是 6 级起）或前置科技没解锁 → 游戏里根本选不了，一律不计入。
+        # 界面那边也已经不列它了，这里再兜一道，防止 inputs.json / 命令行 / 旧配置绕过。
+        level_now = int(cfg.get("level") or 0)
+        tech_set = set(inputs.get("unlocked_techs") or [])
+        if pol and (level_now < (pol.get("min_size") or 0)
+                    or any(t not in tech_set for t in (pol.get("requires_techs") or []))):
+            info["policy_rejected"] = {"token": policy, "level": level_now,
+                                       "need_level": pol.get("min_size")}
+            pol = None
         if pol:
             bonuses = dict(pol.get("equipment_bonus") or {})
             # production_cost_factor = **生产产出花费**（只作用于生产、可在生产中规避），
