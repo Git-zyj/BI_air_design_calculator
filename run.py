@@ -98,6 +98,8 @@ DEFAULT_INPUTS = {
               "modifiers": {"air_agility": 0.04, "maximum_speed": 0.015},
               "experience": {"air_agility": 0.20, "maximum_speed": 0.05}},
     "range_cap": 900.0,                     # 距离目标（航程上限）默认 900；600 起每 300 一档
+    "efficiency_cap_now": 100,              # 当前生产效率上限（%）——生产折算用
+    "capacity_bonus_now": 200,              # 当前产能加成（%）——生产折算用
     "mio": {"organization": "", "level": 14, "manual_traits": None},   # 军工组织默认满级
     "modifier_source": "mio",               # 修正来源：mio = 军工组织+国家精神；manual = 手填
     "pareto_x": "cost",                     # 帕累托图默认 X = 造价
@@ -173,6 +175,13 @@ def build_rows(inputs, data):
     upgrade_map = engine.upgrades_by_key(data["upgrades"])
     candidates = candidate_pool(inputs, data)
     mfr_mods, mfr_info = resolve_manufacturer(inputs, data, upgrade_map, candidates)
+    # 生产侧折算：把 MIO 的生产修正换成"等效造价折扣"（产量倍率 gain ⇒ 造价 ÷ gain）。
+    # 用户填的"当前效率上限 / 产能加成"决定这些加成值多少（+5 在 100 与 200 上完全不同）。
+    gain, gain_parts = engine.production_gain(mfr_info.get("production"),
+                                             inputs.get("efficiency_cap_now", 100),
+                                             inputs.get("capacity_bonus_now", 200))
+    mfr_info["production_gain"] = gain
+    mfr_info["production_gain_parts"] = gain_parts
     # 国家精神按装备类别识别：只有落在本次用途对应类别里的条目才算数
     source = inputs.get("modifier_source", "mio")
     cats = engine.role_idea_categories(inputs["roles"])
@@ -220,8 +229,10 @@ def build_rows(inputs, data):
             rows.append({
                 "role": role,
                 "role_name": engine.ROLES[role],
-                "score": result["scores"][score_key],
-                "weighted": weighted.get(score_key, 0.0),
+                "score_raw": result["scores"][score_key],          # 纯设计分（性能÷有效造价）
+                "score": result["scores"][score_key] * gain,       # 生产折算后（÷ 等效造价）
+                "weighted": weighted.get(score_key, 0.0) * gain,
+                "production_gain": gain,
                 "enemy": role_enemy,
                 "enemy_values": role_enemy_values,
                 "airframe": airframe,
@@ -269,10 +280,12 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates):
         raise SystemExit("找不到 MIO 组织：%s（可用：%s）"
                          % (name, ", ".join(o["organization"] for o in mio_organizations(data)[:8]) + " …"))
     mods = {}
+    prod = {}                       # 生产侧修正合计（用来折算"等效造价"）
     info = {"mode": "traits", "organization": name, "initial_trait": None, "traits": []}
     ini = org.get("initial_trait")
     if ini:
         mods = engine.combine_modifiers(mods, ini.get("bonuses") or {})
+        prod = engine.combine_modifiers(prod, ini.get("production") or {})
         info["initial_trait"] = ini.get("token")
     manual = cfg.get("manual_traits")
     if manual is not None:
@@ -283,6 +296,7 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates):
                 continue
             if trait.get("token") in manual:
                 mods = engine.combine_modifiers(mods, trait.get("bonuses") or {})
+                prod = engine.combine_modifiers(prod, trait.get("production") or {})
                 info["traits"].append({"token": trait.get("token"), "bonuses": trait.get("bonuses")})
         info["manual"] = True
     else:
@@ -294,6 +308,8 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates):
                 org, level, ref, upgrade_map, mods, None, inputs["roles"],
                 inputs.get("range_cap"), inputs.get("experience"),
                 techs=inputs.get("unlocked_techs") or [])
+            for item in log:
+                prod = engine.combine_modifiers(prod, item.get("production") or {})
             info["traits"] = log
             info["level"] = level
 
@@ -314,11 +330,19 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates):
             bonuses = dict(pol.get("equipment_bonus") or {})
             # production_cost_factor = **生产产出花费**（只作用于生产、可在生产中规避），
             # 与设计无关 → 不计入造价；设计侧的花费修正是 build_cost_ic，那个会正常计入。
-            prod = bonuses.pop("production_cost_factor", None)
+            policy_cost = bonuses.pop("production_cost_factor", None)
             mods = engine.combine_modifiers(mods, bonuses)
+            if policy_cost is not None:
+                # 这条是**生产产出花费**：设计侧不计入造价，但生产折算要算进去
+                prod_mods = engine.combine_modifiers(pol.get("production_bonus") or {},
+                                                     {"production_cost_factor": policy_cost})
+            else:
+                prod_mods = pol.get("production_bonus") or {}
+            prod = engine.combine_modifiers(prod, prod_mods)
             info["policy"] = {"token": policy, "bonuses": bonuses,
-                              "production_cost_factor_ignored": prod,
+                              "production_cost_factor_ignored": policy_cost,
                               "organization_modifier": pol.get("organization_modifier") or {}}
+    info["production"] = prod
     return mods, info
 
 
