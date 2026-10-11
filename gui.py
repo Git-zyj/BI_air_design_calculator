@@ -82,7 +82,9 @@ PROD_ZH = {"production_capacity_factor": "产量",
            "production_efficiency_gain_factor": "效率增长",
            "production_resource_need_factor": "资源需求",
            "production_resource_penalty_factor": "资源短缺惩罚",
-           "production_conversion_speed_factor": "转换速度"}
+           "production_conversion_speed_factor": "转换速度",
+           # 生产侧"可靠"与设计侧同效（都是百分比修正装备当前可靠性）→ 已并进有效造价
+           "reliability": "可靠"}
 # 明细行里"设计数值"要展示的属性（顺序即显示顺序）
 DESIGN_SHOW = ("air_attack", "air_defence", "air_agility", "maximum_speed", "air_range",
                "reliability", "build_cost_ic", "air_ground_attack",

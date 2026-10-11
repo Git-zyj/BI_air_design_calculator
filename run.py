@@ -48,7 +48,9 @@ PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓�
 # 算法/口径/方针数据变了就改这里，旧的离线表与本机缓存自动作废：
 #   v3 = 方针的 production_bonus 抽全（same_as_mio 嵌套）→ 「不断的工业革命」等
 #        现在会把生产资源需求/效率算进来，方针集合与分数都可能变
-PLAN_CACHE_VERSION = 3
+#   v4 = 生产侧可靠并进有效造价（与设计侧可靠同效）+ 路线搜索改"廉价分粗筛 top-K
+#        → 分数会变（粗筛经抽样验证与全枚举结果一致）
+PLAN_CACHE_VERSION = 4
 
 
 def plan_key(inputs, org_name, ref_key):
@@ -327,7 +329,9 @@ def build_rows(inputs, data):
             result = engine.optimize(airframe, upgrade_map, player_mods, role_enemy_values,
                                      score_key,
                                      available=tokens, range_cap=inputs.get("range_cap"),
-                                     experience=inputs.get("experience"), accident_f=acc_f)
+                                     experience=inputs.get("experience"), accident_f=acc_f,
+                                     # 生产侧可靠与设计侧同效（修正装备当前可靠性）→ 进有效造价
+                                     prod_mods=mfr_info.get("production"))
             # 资源加权分：把该路线/方针的"生产资源需求"修正折算进除数
             # （需求 −5% ⇒ 等效资源开销 ×0.95 ⇒ 资源加权分变高）
             _need = (mfr_info.get("production") or {}).get("production_resource_need_factor", 0.0)
