@@ -60,6 +60,11 @@ MOD_FIELDS = [("air_attack", "对空"), ("air_defence", "防御"), ("air_agility
               ("maximum_speed", "速度"), ("reliability", "可靠"), ("build_cost_ic", "造价"),
               ("air_range", "航程"), ("air_ground_attack", "对地"),
               ("naval_strike_attack", "对海"), ("naval_strike_targetting", "瞄准")]
+# 我方联队经验（只列会进分数的项；经验和 MIO/国家精神是并列的另一层）
+EXPERIENCE_FIELDS = [("air_agility", "机动"), ("maximum_speed", "速度"),
+                     ("air_attack", "对空"), ("air_defence", "防御"),
+                     ("air_ground_attack", "对地"), ("naval_strike_attack", "对海"),
+                     ("naval_strike_targetting", "瞄准")]
 # 对手规则：界面用中文，内部映射到引擎取值
 RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_year"), ("手动", "manual")]
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
@@ -71,10 +76,11 @@ DEFAULT_DISTANCE = 900
 #   split    设计 / 生产分离：本 MIO 只做设计，生产交给另一家 MIO（界面会列出那家与它的特质）
 ALLOC_MODES = [("split", "分离（设计最优 + 生产另算）"),
                ("balanced", "兼顾（同一 MIO 一条路线）")]
-# 「分离」= 本 MIO 走**设计最优路线**，生产取"本 MIO 这条路线顺带的"与"另一家 MIO 只求产量"
+# 「分离」= 本 MIO 走**设计最优路线**，生产取"本 MIO 这条路线顺带的"与"另一家 MIO 只求产能"
 # 里更好的那个 —— 所以它把原来的「设计最优」并了进来（没有更优的生产家时就是这个行为）。
-# 生产侧修正的中文名（按游戏里的写法：产量 / 生产效率上限 / 生产产出花费 …）
-PROD_ZH = {"production_capacity_factor": "产量",
+# 生产侧修正的中文名（按游戏里的写法：产能 / 生产效率上限 / 生产产出花费 …）
+# 注：`production_capacity_factor` 叫**产能**（叫"产量"会和装备的产量属性混淆）
+PROD_ZH = {"production_capacity_factor": "产能",
            "production_cost_factor": "生产产出花费",
            "production_efficiency_cap_factor": "效率上限",
            "production_efficiency_gain_factor": "效率增长",
@@ -437,7 +443,7 @@ class App(tk.Tk):
         # 以前这套值是写死的德国（阿拉多）数值，换成苏联当对手也照样套，分数自然不对。
         self.frm_enemy_mods = ttk.Frame(box)
         self.frm_enemy_mods.grid(row=2, column=0, columnspan=6, sticky="w")
-        ttk.Label(self.frm_enemy_mods, text="对手设计商（机动/速度，%）").grid(
+        ttk.Label(self.frm_enemy_mods, text="对手设计商加成（机动/速度，%）").grid(
             row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_enemy_mod_agi = tk.StringVar()
         self.var_enemy_mod_spd = tk.StringVar()
@@ -445,7 +451,7 @@ class App(tk.Tk):
                   justify="right").grid(row=0, column=1, sticky="w")
         ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_spd, width=6,
                   justify="right").grid(row=0, column=2, sticky="w", padx=(2, PADX))
-        ttk.Label(self.frm_enemy_mods, text="对手满经验（机动/速度，%）").grid(
+        ttk.Label(self.frm_enemy_mods, text="对手联队经验加成（机动/速度，%）").grid(
             row=0, column=3, sticky="e", padx=(PADX, 4))
         self.var_enemy_exp_agi = tk.StringVar()
         self.var_enemy_exp_spd = tk.StringVar()
@@ -538,7 +544,7 @@ class App(tk.Tk):
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
         ttk.Spinbox(card, from_=1, to=500, textvariable=self.var_cap, width=5).grid(
             row=4, column=2, sticky="w", pady=(PADY, 0))
-        ttk.Label(card, text="%　当前产量加成").grid(row=4, column=3, sticky="w", padx=(6, 2),
+        ttk.Label(card, text="%　当前产能加成").grid(row=4, column=3, sticky="w", padx=(6, 2),
                                                 pady=(PADY, 0))
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
         ttk.Spinbox(card, from_=0, to=2000, textvariable=self.var_capacity, width=5).grid(
@@ -643,6 +649,26 @@ class App(tk.Tk):
         self._wrap_to_card(self.lbl_overall, card)
         ttk.Button(card, text="预览总体加成", command=self._refresh_totals).grid(
             row=2, column=2, sticky="w", padx=PADX, pady=(0, PADY))
+
+        # 我方联队经验：一直生效（和 MIO/国家精神/手填是并列的另一层），
+        # 以前只有 inputs.json / DEFAULT_INPUTS 里的隐藏值 —— exe 用它、命令行不填，
+        # 同一套输入在两边能差出一倍多（实测德国 1939：梅塞施密特比阿拉多高 15% vs 156%）。
+        exp_row = ttk.Frame(card)
+        exp_row.grid(row=3, column=0, columnspan=3, sticky="w", padx=PADX, pady=(0, PADY))
+        ttk.Label(exp_row, text="我方联队经验加成（%）").grid(row=0, column=0, sticky="e",
+                                                             padx=(0, 4))
+        cur_exp = self.inputs.get("experience") or {}
+        self.exp_vars = {}
+        for i, (key, label) in enumerate(EXPERIENCE_FIELDS):
+            ttk.Label(exp_row, text=label).grid(row=0, column=1 + i * 2, sticky="e",
+                                                padx=(PADX, 2))
+            var = tk.StringVar(value="%g" % (float(cur_exp.get(key, 0.0)) * 100))
+            self.exp_vars[key] = var
+            ttk.Entry(exp_row, textvariable=var, width=5, justify="right").grid(
+                row=0, column=2 + i * 2, sticky="w")
+        self.lbl_exp = ttk.Label(card, text="", foreground="#44506B")
+        self.lbl_exp.grid(row=4, column=0, columnspan=3, sticky="w", padx=PADX, pady=(0, PADY))
+        self._wrap_to_card(self.lbl_exp, card)
         row += 1
 
         # ⑦ 最终结果展示
@@ -1732,7 +1758,7 @@ class App(tk.Tk):
         note = ("　数值口径：对手 = 该国设计商修正"
                 "（机动 %s / 速度 %s）%s"
                 % (pct(mods, "air_agility"), pct(mods, "maximum_speed"),
-                   "＋ 满经验（机动 %s / 速度 %s）；「（舰载）」用途不计经验"
+                   "＋ 对手联队经验（机动 %s / 速度 %s）；「（舰载）」用途不计经验"
                    % (pct(exp, "air_agility"), pct(exp, "maximum_speed"))
                    if exp_used else "，且本用途（舰载）不计经验"))
         self.lbl_enemy_src.configure(text=self._enemy_source_text(picked, roles, year))
@@ -1750,6 +1776,16 @@ class App(tk.Tk):
                 mods[key] = float(raw) / 100.0
             except ValueError:
                 raise ValueError("「%s」填的不是数字：%s" % (MOD_ZH.get(key, key), raw))
+        # 我方联队经验（和 MIO/国家精神/手填并列的另一层，按经验单独乘）
+        experience = {}
+        for key, label in EXPERIENCE_FIELDS:
+            raw = (self.exp_vars[key].get() or "0").strip()
+            try:
+                value = float(raw) / 100.0
+            except ValueError:
+                raise ValueError("「我方联队经验·%s」填的不是数字：%s" % (label, raw))
+            if value:
+                experience[key] = value
         rule = self._rule_value()
         source = self.var_source.get()
         inputs = dict(self.inputs)
@@ -1767,6 +1803,7 @@ class App(tk.Tk):
             "national_spirits": [s.strip() for s in self.var_spirits.get().split(",") if s.strip()],
             "unlocked_techs": [t for t, v in self.tech_vars.items() if v.get()],
             "unlocked_flags": [f for f, v in getattr(self, "flag_vars", {}).items() if v.get()],
+            "experience": experience,
             "efficiency_cap_now": int(self.var_cap.get()),
             "capacity_bonus_now": int(self.var_capacity.get()),
             "alloc_mode": self._alloc_mode_key(),
@@ -1808,6 +1845,11 @@ class App(tk.Tk):
             total = engine.combine_modifiers(mfr_mods, spirit,
                                              inputs.get("extra_modifiers") or {})
         self.lbl_overall.configure(text=fmt_mods(total))
+        exp = inputs.get("experience") or {}
+        self.lbl_exp.configure(
+            text="我方联队经验：%s（按经验单独乘，不进上面的合计）"
+                 % ("、".join("%s %+g%%" % (dict(EXPERIENCE_FIELDS)[k], round(v * 100, 2))
+                              for k, v in sorted(exp.items())) or "无"))
 
     def on_preview(self):
         self.tree_mio.delete(*self.tree_mio.get_children())
@@ -1856,6 +1898,9 @@ class App(tk.Tk):
             if plan:
                 # 显示就以**实际计算用的路线**为准（口径可能是设计最优/兼顾/分离）
                 override = None
+                partner_prod = None
+                partner_key = None
+                prod_from_calc = False
                 try:
                     upgrade_map = engine.upgrades_by_key(self.data["upgrades"])
                     cands = run.candidate_pool(inputs, self.data)
@@ -1865,13 +1910,22 @@ class App(tk.Tk):
                     if info2.get("traits"):
                         plan = {"log": info2["traits"], "route": [t["token"] for t in info2["traits"]]}
                     prod = info2.get("production") or {}
+                    prod_from_calc = True          # prod 已经是"路线 + 方针"的合计，别再叠加
                     override = info2.get("production_gain_override")
+                    partner = info2.get("production_partner")
+                    if partner:
+                        partner_key = partner.get("organization")
+                        partner_prod = self._prod_of_tokens(partner.get("organization"),
+                                                            partner.get("tokens") or [])
                 except (Exception, SystemExit):      # noqa: BLE001
                     pass
                 shown = plan["log"][:level]
                 for i, item in enumerate(shown, 1):
                     mods = engine.combine_modifiers(mods, item.get("bonuses") or {})
-                    prod = engine.combine_modifiers(prod, item.get("production") or {})
+                    if not prod_from_calc:
+                        # 旧 bug：prod 已经含这条路线的生产修正，这里再加一遍 →
+                        # 面板会把"表层织物覆盖"的产能 +5% 显示成 +10%（gain 也跟着虚高）。
+                        prod = engine.combine_modifiers(prod, item.get("production") or {})
                     self.tree_mio.insert("", "end", values=("%d 级" % i, zh(self.loc, item["token"]),
                                                             fmt_mods(item.get("bonuses") or {})))
                 self.lbl_mio_route.configure(
@@ -1882,7 +1936,15 @@ class App(tk.Tk):
                                             inputs.get("capacity_bonus_now", 200))
         if override:
             gain, parts = float(override), {}
-        self.lbl_prod.configure(text=self._prod_text(prod, gain, parts))
+        if override and partner_prod is not None:
+            # 「分离」：本 MIO 只做设计，生产那家才是折算的来源 —— 别把本 MIO 路线的
+            # 生产修正（例如"效率增长 +15.5%"）摆在折算旁边，会让人以为它算进去了。
+            body = self._prod_text(partner_prod, gain, parts).replace("生产侧：", "", 1)
+            self.lbl_prod.configure(text="生产侧：本 MIO 只做设计；生产交给「%s」　%s"
+                                         % (zh(self.loc, partner_key) or partner_key or "生产伙伴",
+                                            body))
+        else:
+            self.lbl_prod.configure(text=self._prod_text(prod, gain, parts))
         # 「分离」口径：把生产那家 MIO 与它需要的特质列出来（按卡片宽度换行）
         self.lbl_partner.configure(text="")
         if inputs.get("alloc_mode") == "split":
@@ -1895,13 +1957,27 @@ class App(tk.Tk):
                             " → ".join(zh(self.loc, t) for t in partner["tokens"])))
             elif partner:
                 self.lbl_partner.configure(
-                    text="　生产：最优的一家就是本 MIO（换别家都不给产量加成）→ 用「兼顾」更合适")
+                    text="　生产：最优的一家就是本 MIO（换别家都不给产能加成）→ 用「兼顾」更合适")
             else:
-                self.lbl_partner.configure(text="　生产：没有 MIO 能给产量加成")
+                self.lbl_partner.configure(text="　生产：没有 MIO 能给产能加成")
+
+    def _prod_of_tokens(self, org_name, tokens):
+        """某 MIO + 指定特质列表的生产侧修正合计（分离口径下显示"生产伙伴"用）。"""
+        org = self.by_name.get(org_name or "") or {}
+        by_token = {t.get("token"): t for t in org.get("traits", [])}
+        prod = {}
+        ini = org.get("initial_trait")
+        if ini:
+            prod = engine.combine_modifiers(prod, ini.get("production") or {})
+        for token in tokens:
+            trait = by_token.get(token)
+            if trait:
+                prod = engine.combine_modifiers(prod, trait.get("production") or {})
+        return prod
 
     @staticmethod
     def _prod_text(prod, gain=1.0, parts=None):
-        """生产侧清单 + 折算结果：把生产修正换成"等效造价折扣"（产量 ×gain ⇔ 造价 ÷gain）。"""
+        """生产侧清单 + 折算结果：把生产修正换成"等效造价折扣"（产能 ×gain ⇔ 造价 ÷gain）。"""
         head = "生产侧："
         if not prod:
             return head + "这条路线没有任何生产修正"
@@ -1911,7 +1987,7 @@ class App(tk.Tk):
         if gain and abs(gain - 1.0) > 1e-9:
             shown = "、".join("%s ×%.4f" % (k, v) for k, v in (parts or {}).items()
                               if abs(v - 1.0) > 1e-9)
-            text += "　⇒ 产量 ×%.4f（等效造价 ×%.4f）" % (gain, 1.0 / gain)
+            text += "　⇒ 产能 ×%.4f（等效造价 ×%.4f）" % (gain, 1.0 / gain)
             if shown:
                 text += "　［%s］" % shown
         return text
@@ -2021,6 +2097,8 @@ class App(tk.Tk):
                            (self.var_enemy_exp_agi, "改对手经验机动"),
                            (self.var_enemy_exp_spd, "改对手经验速度")):
             watch(var, label)
+        for key, label in EXPERIENCE_FIELDS:
+            watch(self.exp_vars[key], "改我方联队经验·%s" % label)
         for key, rv in self.role_vars.items():
             watch(rv, "勾选用途 %s" % ROLE_SHORT.get(key, key))
         for var, label in ((self.var_filter, "改机型筛选"), (self.var_f_year, "改年份筛选"),
@@ -2058,6 +2136,22 @@ class App(tk.Tk):
 
         for var in (self.var_cap, self.var_capacity):
             var.trace_add("write", on_prod)
+
+        # 我方联队经验：改了立刻重算（它只进分数、不进 ⑥ 的合计）
+        def on_exp(*_a):
+            for key, _label in EXPERIENCE_FIELDS:
+                raw = (self.exp_vars[key].get() or "0").strip()
+                try:
+                    float(raw)
+                except ValueError:
+                    return                    # 还在输入中
+            self.on_preview()
+            self._refresh_totals()
+            if getattr(self, "rows", None):
+                self.on_calculate()
+
+        for var in self.exp_vars.values():
+            var.trace_add("write", on_exp)
 
         # 对手修正/经验：改了立刻写回 by_country 并重算对手（写不进去 = 还在输入中）
         def on_enemy_mods(*_a):

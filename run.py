@@ -221,7 +221,7 @@ def build_rows(inputs, data):
     enemy, enemy_values = enemy_by_role.get(primary_role, (None, None))
     ref = pick_reference_plane(candidates, inputs, data, upgrade_map, enemy_by_role)
     mfr_mods, mfr_info = resolve_manufacturer(inputs, data, upgrade_map, candidates, ref)
-    # 生产侧折算：把 MIO 的生产修正换成"等效造价折扣"（产量倍率 gain ⇒ 造价 ÷ gain）。
+    # 生产侧折算：把 MIO 的生产修正换成"等效造价折扣"（产能倍率 gain ⇒ 造价 ÷ gain）。
     # 用户填的"当前效率上限 / 产能加成"决定这些加成值多少（+5 在 100 与 200 上完全不同）。
     gain, gain_parts = engine.production_gain(mfr_info.get("production"),
                                              inputs.get("efficiency_cap_now", 100),
@@ -631,8 +631,8 @@ def write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_inf
         ("对手选取规则", (inputs.get("enemy") or {}).get("rule", "previous_year")),
         ("对手", (enemy or {}).get("name", "（无）")),
         ("对手最终机动/速度", "" if not enemy_values else "%.2f / %.2f" % (enemy_values["agility"], enemy_values["speed"])),
-        ("对手设计商修正（机动/速度）", _enemy_mod_line(inputs, "modifiers")),
-        ("对手经验加成（机动/速度）", _enemy_mod_line(inputs, "experience")),
+        ("对手设计商加成（机动/速度）", _enemy_mod_line(inputs, "modifiers")),
+        ("对手联队经验加成（机动/速度）", _enemy_mod_line(inputs, "experience")),
         ("对手修正来源", _enemy_source_line(inputs)),
         ("航程上限", inputs.get("range_cap")),
         ("事故年损失率 f", engine.ACCIDENT_FACTOR),
