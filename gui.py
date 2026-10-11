@@ -209,6 +209,10 @@ class App(tk.Tk):
         self.rows = []
         self._sort_key, self._sort_desc = "pure", True      # 默认按总分数从高到低
         self._plans = {}             # 满级+方针的配点路线缓存（供推荐与展示只读）
+        # 离线表（随包发布）+ 本机缓存（新算的写这里），键相同
+        self._plan_table = run.load_plan_table()
+        self._plan_runtime = run.load_plan_cache()
+        self._plan_cache_saved = len(self._plan_runtime)
         self._org_keys = {}          # 中文显示名 → MIO key
         self._build()
         _say("界面构建完成，正在计算推荐…")
@@ -1054,9 +1058,12 @@ class App(tk.Tk):
                                           archetype=ref.get("archetype"))[0])
 
     def _org_plan(self, org, inputs):
-        """满级 + 最佳方针下的配点路线（带缓存，界面只是读取）。
+        """满级 + 最佳方针下的配点路线（方针 × 路线 **联合穷举**，带表/缓存）。
 
-        先用"参考机型无改装"的分数挑方针（便宜），再为选中的方针跑一次贪心拿路线。
+        方针在这里被当成"等级前置、不占特质点数、彼此互斥"的伪特质，
+        和特质一起穷举（每个方针各跑一次真实管线），不再"先用廉价分挑方针"。
+        结果先查离线表（data/route_table.json），再查本机缓存（route_cache.json），
+        都没有才算一次并写进缓存。
         """
         key = self._plan_key(inputs)
         cache = self._plans.setdefault(key, {})
@@ -1066,43 +1073,78 @@ class App(tk.Tk):
         ctx = self._plan_context(inputs)
         if ctx:
             ref, upgrade_map, enemy_values, acc, score_key, tokens = ctx
-            techs = set(inputs.get("unlocked_techs") or [])
             ini = org.get("initial_trait")
             ini_mods = engine.combine_modifiers(ini.get("bonuses") if ini else {})
-            best = None
-            for pol in self._policies_for_org(org, techs):
-                start = engine.combine_modifiers(ini_mods, self._policy_bonus(pol))
-                score = engine.evaluate(ref, {t: 0 for t in tokens}, upgrade_map, start,
-                                        enemy_values, inputs.get("range_cap"),
-                                        inputs.get("experience"),
-                                        accident_factor=acc)[2][score_key]
-                if best is None or score > best[0]:
-                    best = (score, pol, start)
-            if best:
-                _proxy, pol, start = best
-                # 满级配点：用与计算路径**同一套**搜索（每个候选集跑真实管线）
-                fold = (inputs.get("alloc_mode") or "split") == "balanced"
-                cap_now = int(inputs.get("efficiency_cap_now") or 100)
-                ca_now = int(inputs.get("capacity_bonus_now") or 200)
-                _chosen, mods, log = engine.route_best(
-                    org, engine.MIO_MAX_LEVEL, ref, upgrade_map, start, enemy_values,
-                    inputs["roles"], inputs.get("range_cap"), inputs.get("experience"),
+            pols = self._plan_policies(org, inputs)
+            fold = (inputs.get("alloc_mode") or "split") == "balanced"
+            cap_now = int(inputs.get("efficiency_cap_now") or 100)
+            ca_now = int(inputs.get("capacity_bonus_now") or 200)
+            dkey = self._disk_plan_key(inputs, org, ref, pols)
+            rec = self._lookup_plan(dkey)
+            if rec is None:
+                pol, _chosen, mods, log, score, gain = engine.route_best_joint(
+                    org, engine.MIO_MAX_LEVEL, ref, upgrade_map, ini_mods, enemy_values,
+                    inputs["roles"], inputs.get("range_cap"), policies=pols,
+                    experience=inputs.get("experience"),
                     techs=inputs.get("unlocked_techs") or [], cap_now=cap_now,
                     capacity_now=ca_now, available=tokens, fold=fold,
                     cache_key=(org["organization"], "plan", fold, cap_now, ca_now,
-                               ref.get("key"), key))
-                result = engine.optimize(ref, upgrade_map, mods, enemy_values, score_key,
-                                         available=tokens, range_cap=inputs.get("range_cap"),
-                                         experience=inputs.get("experience"), accident_f=acc)
-                gain = engine.production_gain(
-                    {k: v for item in log for k, v in dict(item.get("production") or {}).items()},
-                    cap_now, ca_now)[0] if fold else 1.0
-                score = result["scores"].get(score_key, 0.0) * gain
-                plan = {"score": score, "policy": pol["token"] if pol else None,
-                        "mods": mods, "start": start, "log": log,
-                        "route": [item["token"] for item in log]}
+                               ref.get("key"), key),
+                    initial_production=dict(ini.get("production") or {}) if ini else {},
+                    score_role_key=score_key)
+                # 表里只存"最小记录"（方针 + 路线 token + 分数），读的时候按 MIO 数据重建
+                rec = {"policy": (pol.get("token") if pol else None),
+                       "route": [item["token"] for item in log],
+                       "score": score, "gain": gain}
+                self._store_plan(dkey, rec)
+            plan = self._plan_from_record(org, rec)
         cache[org["organization"]] = plan
         return plan
+
+    def _plan_from_record(self, org, rec):
+        """把表里的最小记录重建成本界面要用的完整方案（含每项特质的加成明细）。"""
+        by_token = {t.get("token"): t for t in org.get("traits", [])}
+        ini = org.get("initial_trait")
+        mods = engine.combine_modifiers(ini.get("bonuses") if ini else {})
+        pol = next((p for p in self.data.get("policies") or []
+                    if p.get("token") == rec.get("policy")), None)
+        mods = engine.combine_modifiers(mods, engine.policy_design_bonus(pol))
+        log = []
+        for token in rec.get("route") or []:
+            trait = by_token.get(token) or {}
+            log.append({"token": token, "bonuses": trait.get("bonuses") or {},
+                        "production": trait.get("production") or {}})
+            mods = engine.combine_modifiers(mods, trait.get("bonuses") or {})
+        return {"score": rec.get("score"), "policy": rec.get("policy"),
+                "gain": rec.get("gain"), "mods": mods, "log": log,
+                "route": list(rec.get("route") or [])}
+
+    def _plan_policies(self, org, inputs):
+        """该组织在**当前科技 + 当前等级**下可选的方针（不含 None）。"""
+        level = int((inputs.get("mio") or {}).get("level") or 0)
+        techs = set(inputs.get("unlocked_techs") or [])
+        return [p for p in self._policies_for_org(org, techs)
+                if p and int(p.get("min_size") or 0) <= level]
+
+    def _disk_plan_key(self, inputs, org, ref, pols):
+        """离线表/本机缓存用的键：方案的输入指纹 + 该组织当前可选的方针集合。"""
+        base = run.plan_key(inputs, org["organization"], (ref or {}).get("key"))
+        return base + "|pol:" + ",".join(sorted(p["token"] for p in pols))
+
+    def _lookup_plan(self, dkey):
+        """先查本机缓存，再查随包发布的离线表。"""
+        if dkey in self._plan_runtime:
+            return self._plan_runtime[dkey]
+        plan = self._plan_table.get(dkey)
+        if plan is not None:
+            self._plan_runtime[dkey] = plan
+        return plan
+
+    def _store_plan(self, dkey, plan):
+        """新算出来的方案写进本机缓存（立刻落盘，下次启动直接命中）。"""
+        self._plan_runtime[dkey] = plan
+        run.save_plan_cache(self._plan_runtime)
+        self._plan_cache_saved = len(self._plan_runtime)
 
     def _recommend_org(self, apply_org=True):
         """"满级 + 方针"下比较各军工组织；apply_org=True 时把最优的设为默认。

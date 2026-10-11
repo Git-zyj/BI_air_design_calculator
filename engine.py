@@ -1269,6 +1269,74 @@ def route_best(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
     return out
 
 
+def policy_design_bonus(pol):
+    """方针的**设计侧**加成（`production_cost_factor` 属生产侧，不进设计）。"""
+    if not pol:
+        return {}
+    return {k: v for k, v in (pol.get("equipment_bonus") or {}).items()
+            if k != "production_cost_factor"}
+
+
+def policy_production(pol):
+    """方针的**生产侧**修正（`production_bonus` + 设计加成里的 `production_cost_factor`）。"""
+    if not pol:
+        return {}
+    prod = dict(pol.get("production_bonus") or {})
+    cost = (pol.get("equipment_bonus") or {}).get("production_cost_factor")
+    if cost:
+        prod = combine_modifiers(prod, {"production_cost_factor": cost})
+    return prod
+
+
+def route_best_joint(org, level, base, upgrade_map, mods0, enemy, roles, range_cap,
+                     policies=(), experience=None, max_level=MIO_MAX_LEVEL, techs=(),
+                     cap_now=100.0, capacity_now=200.0, available=None, fold=True,
+                     cache_key=None, initial_production=None, score_role_key=None):
+    """**方针 × 路线 联合穷举**：把方针当成"等级前置、不占特质点数、彼此互斥"的伪特质。
+
+    对每个候选方针（含"不选"）各跑一次 `route_best`，再按**真实管线**打分：
+      设计分 = optimize(起点[初始特质+该方针] + 该路线)  → 取 roles[0]
+      fold 时再乘生产折算（方针 + 初始特质 + 路线的生产修正）
+    取分数最高的一组。返回 (方针|None, tokens, mods, log, score, gain)。
+
+    以前的近似是"先用不带改装、不计折算的廉价分挑方针，再搜路线"，
+    实测苏联 1939 会出现"代理选完美抛光 4.1218、真实最优风洞先驱 4.1329"这种反例。
+    """
+    role = score_role_key or score_role((roles or ["air_far"])[0])
+    best = None
+    for pol in [None] + list(policies):
+        start = combine_modifiers(mods0, policy_design_bonus(pol))
+        pol_key = pol.get("token") if pol else None
+        sub_key = None if cache_key is None else (tuple(cache_key) + ("policy", pol_key))
+        tokens, mods, log = route_best(
+            org, level, base, upgrade_map, start, enemy, roles, range_cap, experience,
+            max_level=max_level, techs=techs, cap_now=cap_now, capacity_now=capacity_now,
+            available=available, fold=fold, cache_key=sub_key)
+        result = optimize(base, upgrade_map, mods, enemy, role, available=available,
+                          range_cap=range_cap, experience=experience)
+        prod = combine_modifiers(dict(initial_production or {}), policy_production(pol))
+        for item in log:
+            prod = combine_modifiers(prod, item.get("production") or {})
+        gain = production_gain(prod, cap_now, capacity_now)[0] if fold else 1.0
+        score = (result["scores"].get(role, 0.0) or 0.0) * gain
+        if best is None or score > best[4]:
+            best = (pol, tokens, mods, log, score, gain)
+    return best
+
+
+def data_fingerprint():
+    """数据指纹（manifest 的生成时间）。算法/数据变了，离线表与缓存就作废。"""
+    path = os.path.join(DATA_DIR, "manifest.json")
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                m = json.load(fh)
+            return "%s|%s" % (m.get("generated_at", ""), m.get("game_dir", ""))
+        except (ValueError, OSError):
+            return ""
+    return ""
+
+
 def mio_route_folded(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
                      experience=None, max_level=MIO_MAX_LEVEL, techs=(),
                      cap_now=100.0, capacity_now=200.0, available=None, top_k=15, fold=True):

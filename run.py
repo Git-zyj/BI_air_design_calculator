@@ -40,6 +40,65 @@ def app_dir():
 DEFAULT_OUT = os.path.abspath(os.path.join(app_dir(), "output", "BI_SOV_选型输出.xlsx"))
 INPUTS = os.path.join(app_dir(), "inputs.json")
 
+# ---------- 路线方案（方针 × 特质）的表与缓存 ----------
+# 离线预计算表随工具发布（只读）；运行时新算出来的方案写进用户机器上的缓存文件。
+# 两者**同一套键**，所以"离线算过"和"现算过"的命中效果一样。
+PLAN_TABLE = os.path.join(engine.DATA_DIR, "route_table.json")   # 离线表（随包发布）
+PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓存（本地生成）
+PLAN_CACHE_VERSION = 2          # 算法/口径变了就改这里，旧条目自动作废
+
+
+def plan_key(inputs, org_name, ref_key):
+    """方案指纹：凡是影响"方针 + 路线"的输入都要进这个键。"""
+    return "|".join([
+        "v%d" % PLAN_CACHE_VERSION,
+        engine.data_fingerprint(),
+        str(inputs.get("country") or ""),
+        str(inputs.get("tech_year") or ""),
+        str(inputs.get("current_year") or ""),
+        ",".join(inputs.get("roles") or []),
+        ",".join(sorted(inputs.get("unlocked_techs") or [])),
+        ",".join(sorted(inputs.get("unlocked_flags") or [])),
+        json.dumps(inputs.get("enemy") or {}, sort_keys=True),
+        json.dumps(inputs.get("experience") or {}, sort_keys=True),
+        str(inputs.get("range_cap") or ""),
+        str(inputs.get("alloc_mode") or "split"),
+        str(inputs.get("efficiency_cap_now") or 100),
+        str(inputs.get("capacity_bonus_now") or 200),
+        str(org_name or ""),
+        str(ref_key or ""),
+    ])
+
+
+def _load_plan_file(path):
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+            if isinstance(data, dict):
+                return data
+        except (ValueError, OSError):
+            pass
+    return {}
+
+
+def load_plan_table():
+    """离线预计算表（data/route_table.json）。"""
+    return _load_plan_file(PLAN_TABLE)
+
+
+def load_plan_cache():
+    """运行时缓存（程序目录 route_cache.json）。"""
+    return _load_plan_file(PLAN_CACHE)
+
+
+def save_plan_cache(cache):
+    try:
+        with open(PLAN_CACHE, "w", encoding="utf-8") as fh:
+            json.dump(cache, fh, ensure_ascii=False)
+    except OSError:
+        pass
+
 # 改装 token → 表内短名（与 BI_SOV.xlsx 的 14 行一一对应）
 UPGRADE_NAMES = {
     "plane_gun_upgrade": "弹药",
