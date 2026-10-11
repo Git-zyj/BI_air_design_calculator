@@ -94,8 +94,8 @@ DEFAULT_INPUTS = {
     "experience": {"air_agility": 0.20, "maximum_speed": 0.05, "air_attack": 0.10,
                    "air_defence": 0.10, "air_ground_attack": 0.10,
                    "naval_strike_attack": 0.10, "naval_strike_targetting": 0.15},
-    # 对手（AI）的"设计商修正 + 经验"按国别取，预设见 data/enemy_presets.json；
-    # 界面手填的值存在 by_country[该国]（优先级高于预设文件）。
+    # 对手（AI）的"设计商修正"由 engine.enemy_design() 按模组 ai_bonus_weights 自动判定；
+    # 界面手填的值存在 by_country[该国]（优先级高于自动判定）。
     "enemy": {"country": "GER", "rule": "previous_year", "override_key": None,
               "by_country": {}},
     "range_cap": 900.0,                     # 距离目标（航程上限）默认 900；600 起每 300 一档
@@ -514,9 +514,10 @@ def _enemy_mod_line(inputs, field):
     """对手的「设计商修正 / 经验加成」，按用途取值（各用途一致时只写一条）。"""
     cfg = inputs.get("enemy") or {}
     roles = inputs.get("roles") or ["air_far"]
+    year = inputs.get("current_year")
     seen = {}
     for role in roles:
-        _cats, exp, mods = engine.enemy_spec(role, cfg)
+        _cats, exp, mods = engine.enemy_spec(role, cfg, year=year)
         src = exp if field == "experience" else mods
         txt = "机动 %+g%% / 速度 %+g%%" % (
             round(src.get("air_agility", 0.0) * 100, 2),
@@ -526,16 +527,18 @@ def _enemy_mod_line(inputs, field):
 
 
 def _enemy_source_line(inputs):
-    """对手数值是手填的还是吃预设的（预设会写明来源，便于日后按实测校准）。"""
+    """对手数值是手填的、还是工具按模组 AI 权重自动判定的（写明是哪家 MIO）。"""
     cfg = inputs.get("enemy") or {}
     country = cfg.get("country") or ""
     hand = (cfg.get("by_country") or {}).get(country) or {}
-    pre = engine.enemy_preset(country)
     if hand:
-        return "界面手填（优先于预设）；对手国别 = %s" % country
-    src = pre.get("source") or "无国别预设：按默认（无设计商加成 + 满经验）"
-    mio = pre.get("mio")
-    return "%s；对手国别 = %s%s" % (src, country, "；预设 MIO = %s" % mio if mio else "")
+        return "界面手填（优先于自动判定）；对手国别 = %s" % country
+    role = (inputs.get("roles") or ["air_far"])[0]
+    design = engine.enemy_design(country, role, inputs.get("current_year"))
+    if not design:
+        return "未找到该国空军 MIO，按「无设计商加成 + 满经验」算；对手国别 = %s" % country
+    return ("按模组 ai_bonus_weights 自动判定：%s（满级 %d 项特质）｜对手国别 = %s"
+            % (design["organization"], len(design["traits"]), country))
 
 
 def write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_info=None):
@@ -703,9 +706,9 @@ ANCHOR = {
                        "chemical_industry_iii", "improved_centimetric_radar",
                        "advanced_centimetric_radar"],
     "unlocked_flags": ["unlock_plane_anti_air_rocket_upgrade"],
-    "enemy": {"country": "GER", "rule": "previous_year", "override_key": None,
-              "modifiers": {"air_agility": 0.04, "maximum_speed": 0.015},
-              "experience": {"air_agility": 0.20, "maximum_speed": 0.05}},
+    # 对手不再手填：由 engine.enemy_design() 按模组 ai_bonus_weights 自动判定
+    # （德国 1944 战斗机 → 阿拉多，机动 +4% / 速度 +1.5%；见 §35）
+    "enemy": {"country": "GER", "rule": "previous_year", "override_key": None},
 }
 
 
@@ -716,6 +719,8 @@ def anchor_check(tol=1e-3):
       Yak-9U@1944 的对空远分数 = 15540.543552 / 900 = 17.267270613…
         （2026-10-11 前是 15540.543552＝乘实际航程；现在乘 0~1 航程效率，见 PLAN §25）
       对手 Bf 109 G-14 的最终机动/速度 = 86.112 / 708.72375
+        （对手的"设计商修正"是工具按模组 ai_bonus_weights 自动判定的：
+          德国战斗机 → 阿拉多，机动 +4% / 速度 +1.5%，见 §35）
     """
     inputs = dict(DEFAULT_INPUTS)
     inputs.update({
@@ -734,6 +739,27 @@ def anchor_check(tol=1e-3):
         "enemy": dict(ANCHOR["enemy"]),
     })
     data = engine.load_data()
+    # 附加检查：对手 AI 的设计判定（这条是把"德国实测面板"当基准反推出来的）
+    design = engine.enemy_design("GER", ANCHOR["role"], ANCHOR["year"], data=data)
+    ok = True
+    if not design:
+        print("对手 AI 判定：找不到德国空军 MIO ✗")
+        ok = False
+    else:
+        mods = design["modifiers"]
+        print("对手 AI 判定：%s → %s（满级 %d 项特质）机动 %+g%% / 速度 %+g%%"
+              % (design["plane"], design["organization"], len(design["traits"]),
+                 round(mods.get("air_agility", 0) * 100, 2),
+                 round(mods.get("maximum_speed", 0) * 100, 2)))
+        for want_org, want in (("GER_arado_flugzeugwerke_organization", (0.04, 0.015)),):
+            if design["organization"] != want_org:
+                print("  ✗ 期望阿拉多，实际 %s" % design["organization"])
+                ok = False
+            if (abs(mods.get("air_agility", 0) - want[0]) > tol
+                    or abs(mods.get("maximum_speed", 0) - want[1]) > tol):
+                print("  ✗ 期望机动 +4%% / 速度 +1.5%，实际 %+g%% / %+g%%"
+                      % (mods.get("air_agility", 0) * 100, mods.get("maximum_speed", 0) * 100))
+                ok = False
     rows, _mods, enemy, enemy_values, _info = build_rows(inputs, data)
     top = next((r for r in rows if r["role"] == ANCHOR["role"]), None)
     print("锚点校验：对空 + 距离 %.0f（当前年份/科技年份 %d）" % (ANCHOR["range_cap"], ANCHOR["year"]))
@@ -742,7 +768,6 @@ def anchor_check(tol=1e-3):
         print("  对手机动/速度  %.5f / %.5f（期望 %.5f / %.5f）"
               % (enemy_values["agility"], enemy_values["speed"],
                  ANCHOR["enemy_agility"], ANCHOR["enemy_speed"]))
-    ok = True
     if enemy_values:
         ok &= abs(enemy_values["agility"] - ANCHOR["enemy_agility"]) < tol
         ok &= abs(enemy_values["speed"] - ANCHOR["enemy_speed"]) < tol

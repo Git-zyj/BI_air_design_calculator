@@ -18,6 +18,16 @@
    "sha256": "36e28b76f2abf0c1147f11d6db46f43a6ec5aead887082ba53cfb3ac331e2753"
   },
   {
+   "file": "common/equipment_groups/mio_equipment_groups.txt",
+   "size": 49611,
+   "sha256": "60f70f318251dfda4a1abafd93338d6113aa8d1659ee7b29ea7ef3f50f55a2ac"
+  },
+  {
+   "file": "common/military_industrial_organization/ai_bonus_weights/ai_bonus_weights.txt",
+   "size": 3724,
+   "sha256": "ed423478f2f4c09cc55555f87ee97f6550c5d34a2417d25afe8c8b6307df26b8"
+  },
+  {
    "file": "common/units/equipment/_airframe_cas.txt",
    "size": 53315,
    "sha256": "6fd0389257dc6b8f41228d207bee2022cb454c8ab089c4df8e524859f849a818"

@@ -60,10 +60,6 @@ MOD_FIELDS = [("air_attack", "对空"), ("air_defence", "防御"), ("air_agility
               ("maximum_speed", "速度"), ("reliability", "可靠"), ("build_cost_ic", "造价"),
               ("air_range", "航程"), ("air_ground_attack", "对地"),
               ("naval_strike_attack", "对海"), ("naval_strike_targetting", "瞄准")]
-AIR_EQ_TOKENS = ("mio_cat_eq_all_small_plane", "mio_cat_eq_all_medium_plane",
-                 "mio_cat_eq_all_heavy_plane", "mio_cat_eq_only_light_fighter",
-                 "mio_cat_eq_all_close_air_support", "mio_cat_eq_all_cv_aircraft",
-                 "plane_equipment", "aircraft_organization")
 # 对手规则：界面用中文，内部映射到引擎取值
 RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_year"), ("手动", "manual")]
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
@@ -102,16 +98,6 @@ _UNSET = object()          # collect(policy=...) 的"未指定"哨兵（None 表
 AXIS_CHOICES = [("effect", "性能分数"), ("score", "总分数（性能/造价）"),
                 ("cost", "有效造价（IC）"), ("year", "年份")]
 AXIS_LABELS = dict(AXIS_CHOICES)
-
-
-def is_air_mio(org, by_name):
-    types = list(org.get("equipment_types") or [])
-    for inc in org.get("includes") or []:
-        src = by_name.get(inc)
-        if src:
-            types += list(src.get("equipment_types") or [])
-    joined = " ".join(types)
-    return any(tok in joined for tok in AIR_EQ_TOKENS)
 
 
 def load_loc():
@@ -445,8 +431,9 @@ class App(tk.Tk):
         ov.grid(row=0, column=1, sticky="w")
         ov.bind("<FocusOut>", lambda e: self._refresh_enemy())
 
-        # 对手（AI）的「设计商修正 + 满经验」：按对手国别取预设（data/enemy_presets.json），
-        # 也可在这里手填覆盖（手填值存 inputs.enemy.by_country[该国]，优先于预设文件）。
+        # 对手（AI）的「设计商修正 + 满经验」：默认按模组 ai_bonus_weights 自动判定
+        # （该国 AI 会挑哪家 MIO、点哪些特质），也可在这里手填覆盖
+        # （手填值存 inputs.enemy.by_country[该国]，优先于自动判定）。
         # 以前这套值是写死的德国（阿拉多）数值，换成苏联当对手也照样套，分数自然不对。
         self.frm_enemy_mods = ttk.Frame(box)
         self.frm_enemy_mods.grid(row=2, column=0, columnspan=6, sticky="w")
@@ -466,7 +453,7 @@ class App(tk.Tk):
                   justify="right").grid(row=0, column=4, sticky="w")
         ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_spd, width=6,
                   justify="right").grid(row=0, column=5, sticky="w", padx=(2, 4))
-        ttk.Button(self.frm_enemy_mods, text="恢复该国预设",
+        ttk.Button(self.frm_enemy_mods, text="恢复 AI 自动值",
                    command=self._reset_enemy_mods).grid(row=0, column=6, sticky="w", padx=PADX)
         self.lbl_enemy_src = ttk.Label(self.frm_enemy_mods, text="", foreground="#44506B")
         self.lbl_enemy_src.grid(row=1, column=0, columnspan=7, sticky="w", padx=PADX)
@@ -1149,20 +1136,14 @@ class App(tk.Tk):
     def _air_orgs(self):
         """能用于战斗机的军工组织：优先本国独特 MIO；本国没有才回退默认 MIO。"""
         tag = self._tag()
-        own = [o for o in self.data["mio"]
-               if os.path.basename(o.get("file", "")).upper().startswith(tag + "_")
-               and is_air_mio(o, self.by_name)]
+        # 过滤逻辑与"对手 AI 会用哪家 MIO"共用（engine.country_air_mios）
+        own = engine.country_air_mios(self.data["mio"], tag, self._ref_plane(), self.by_name)
         own.sort(key=lambda o: o["organization"])
-        # 再按"是否覆盖当前参考机型的装备组"过滤（伊留申只做 CAS、图波列夫只做重型/运输机 …）
-        groups = engine.plane_groups((self._ref_plane() or {}).get("archetype"))
-        if groups:
-            fit = [o for o in own if set(o.get("equipment_types") or []) & groups]
-            own = fit or own          # 全被滤掉就退回，别让下拉变空
         if own:
             return own, False
         generic = [o for o in self.data["mio"]
                    if os.path.basename(o.get("file", "")) == "00_generic_organization.txt"
-                   and is_air_mio(o, self.by_name)]
+                   and engine.is_air_mio(o, self.by_name)]
         generic.sort(key=lambda o: o["organization"])
         return generic, True
 
@@ -1591,18 +1572,25 @@ class App(tk.Tk):
         return cfg
 
     # ---------- 对手（AI）的设计商修正 / 经验 ----------
-    def _enemy_preset_for(self, country=None):
-        """该对手国别的预设（data/enemy_presets.json；没有国别条目时是 default）。"""
-        return engine.enemy_preset(country or self._enemy_tag())
+    def _enemy_auto_design(self, country=None):
+        """AI 会用哪家 MIO、点哪些特质（按模组 ai_bonus_weights 自动判定）。"""
+        country = country or self._enemy_tag()
+        role = next((k for k, v in self.role_vars.items() if v.get()), "air_far")
+        try:
+            year = int(self.var_year.get())
+        except (tk.TclError, ValueError):
+            year = self.inputs.get("current_year") or 1939
+        return engine.enemy_design(country, role, year, data=self.data)
 
     def _fill_enemy_mods(self):
-        """把当前对手国别的『手填值』或『预设』填进 ② 的输入框。"""
+        """把当前对手国别的『手填值』或『AI 自动判定值』填进 ② 的输入框。"""
         country = self._enemy_tag()
         hand = ((self.inputs.get("enemy") or {}).get("by_country") or {}).get(country) or {}
-        pre = self._enemy_preset_for(country)
-        src = hand or pre
+        design = self._enemy_auto_design(country)
+        src = hand or (design or {})
         mods = src.get("modifiers") or {}
-        exp = src.get("experience") or {}
+        exp = src.get("experience") or (
+            {} if self.var_roles_are_carrier() else engine.ENEMY_EXPERIENCE)
 
         def pct(d, key):
             return "%g" % round(float(d.get(key, 0.0) or 0.0) * 100, 4)
@@ -1613,16 +1601,37 @@ class App(tk.Tk):
         self.var_enemy_exp_agi.set(pct(exp, "air_agility"))
         self.var_enemy_exp_spd.set(pct(exp, "maximum_speed"))
         self._filling_enemy_mods = False
-        mio = pre.get("mio")
-        if hand:
-            note = "数值来源：界面手填（优先于预设）"
-        else:
-            note = "数值来源：该国预设%s%s" % (
-                "（%s）" % (zh(self.loc, mio) if mio else "") if mio else "",
-                "｜" + pre.get("source") if pre.get("source") else
-                "｜该对手国别没有预设，按默认（无设计商加成）")
-        self.lbl_enemy_src.configure(text=note)
         self._enemy_mods_country = country
+
+    def _enemy_source_text(self, picked, roles, year):
+        """对手数值是哪来的：手填 / 按模组 AI 权重自动判定（写明 MIO 与机型）。"""
+        country = self._enemy_tag()
+        if ((self.inputs.get("enemy") or {}).get("by_country") or {}).get(country):
+            return "数值来源：界面手填（优先于 AI 自动判定）｜点『恢复 AI 自动值』回到自动判定值"
+        seen = {}
+        for role in roles:
+            plane = picked.get(role, (None, None))[0]
+            design = engine.enemy_design(country, role, year, data=self.data, plane=plane)
+            key = None if not design else (design["organization"], design["plane"],
+                                           len(design["traits"]))
+            seen.setdefault(key, []).append(role)
+        parts = []
+        for key, rs in seen.items():
+            label = "、".join(ROLE_SHORT.get(r, r) for r in rs)
+            if key is None:
+                parts.append("（%s）找不到该国空军 MIO" % label)
+                continue
+            org, plane_key, n = key
+            parts.append("%s对手用 %s（%s，满级 %d 项特质）"
+                         % ("" if len(roles) == 1 else "（%s）" % label,
+                            zh(self.loc, org) or org, zh(self.loc, plane_key) or plane_key, n))
+        return ("数值来源：按模组 AI 权重自动判定（AI 按「加成总和最大」点特质，不是战斗力最优）｜"
+                + "；".join(parts))
+
+    def var_roles_are_carrier(self):
+        """当前勾的用途是不是全是舰载（舰载对手不吃经验）。"""
+        roles = [k for k, v in self.role_vars.items() if v.get()] or ["air_far"]
+        return all(r in engine.CARRIER_ROLES for r in roles)
 
     def _apply_enemy_mods(self):
         """把 ② 输入框里的百分数写回 inputs.enemy.by_country[该国]。"""
@@ -1646,11 +1655,11 @@ class App(tk.Tk):
         enemy["by_country"] = by_country
         self.inputs["enemy"] = enemy
         self.lbl_enemy_src.configure(
-            text="数值来源：界面手填（优先于预设）｜点『恢复该国预设』可回到 %s 的预设值" % country)
+            text="数值来源：界面手填（优先于自动判定）｜点『恢复 AI 自动值』可回到 %s 的自动判定值" % country)
         return True
 
     def _reset_enemy_mods(self):
-        """丢掉该国的手填值，回到预设文件里的值。"""
+        """丢掉该国的手填值，回到按模组 AI 权重自动判定的值。"""
         country = self._enemy_tag()
         enemy = dict(self.inputs.get("enemy") or {})
         by_country = dict(enemy.get("by_country") or {})
@@ -1669,8 +1678,9 @@ class App(tk.Tk):
         year = int(self.var_year.get())
         roles = [k for k, v in self.role_vars.items() if v.get()] or ["air_far"]
         if getattr(self, "_enemy_mods_country", None) != self._enemy_tag():
-            self._fill_enemy_mods()          # 换对手国别 → 换成该国的修正/经验预设
-        picked = {r: engine.pick_enemy_values(self.data["airframes_all"], cfg, r, year)
+            self._fill_enemy_mods()          # 换对手国别 → 换成该国的 AI 自动判定值
+        picked = {r: engine.pick_enemy_values(self.data["airframes_all"], cfg, r, year,
+                                              data=self.data)
                   for r in roles}
         keys = {e["key"] for e, _v in picked.values() if e}
         parts = []
@@ -1680,8 +1690,9 @@ class App(tk.Tk):
             body = name if not v else "%s 机动 %.2f 速度 %.2f" % (name, v["agility"], v["speed"])
             parts.append(body if len(keys) <= 1 else "%s：%s" % (ROLE_SHORT.get(role, role), body))
         # 对手数值是怎么来的：说清"设计商（满级特质、无方针）+ 经验"，舰载用途不计经验
-        _cats, exp, mods = engine.enemy_spec(roles[0], cfg)
-        exp_used = any((engine.enemy_spec(r, cfg)[1] or {}) for r in roles)
+        _cats, exp, mods = engine.enemy_spec(roles[0], cfg, year=year, data=self.data)
+        exp_used = any((engine.enemy_spec(r, cfg, year=year, data=self.data)[1] or {})
+                       for r in roles)
 
         def pct(source, key):
             return "%+g%%" % round((source or {}).get(key, 0.0) * 100, 2)
@@ -1692,6 +1703,7 @@ class App(tk.Tk):
                    "＋ 满经验（机动 %s / 速度 %s）；「（舰载）」用途不计经验"
                    % (pct(exp, "air_agility"), pct(exp, "maximum_speed"))
                    if exp_used else "，且本用途（舰载）不计经验"))
+        self.lbl_enemy_src.configure(text=self._enemy_source_text(picked, roles, year))
         self.lbl_enemy.configure(text="对手：" + "\u3000｜\u3000".join(parts) + "\n" + note)
 
     # ---------- 计算 ----------
