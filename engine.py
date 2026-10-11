@@ -520,14 +520,19 @@ def pure_score(role, values):
 
 
 def fmt_num(value, digits=4):
-    """界面用：大数带千分位；小因子保留 6 位，保证读者自己乘一遍也能对上。"""
+    """界面用数字格式：大数带千分位；≥1 保留 `digits` 位（默认 2）、<1 保留 4 位，末尾 0 去掉。
+
+    越读越舒服优先：明细里 18.951625 这种写 18.95 就够，公式行仍可传 digits=4。
+    """
     if value is None:
         return "—"
     if abs(value) >= 1000:
         return "{:,.2f}".format(value)
-    if abs(value) >= 100 and float(value).is_integer():
-        return "{:,.0f}".format(value)
-    return "{:,.6f}".format(value)
+    text = ("{:,.{d}f}".format(value, d=digits) if abs(value) >= 1
+            else "{:,.4f}".format(value))
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text
 
 
 def score_breakdown(role, values, effective_cost=None):
@@ -542,12 +547,12 @@ def score_breakdown(role, values, effective_cost=None):
     terms = score_terms(role, values)
     pure = pure_score(role, values)
     left = " × ".join(
-        "%s %s%s" % (label, fmt_num(value), "" if expo == 1.0 else "^%g" % expo)
+        "%s %s%s" % (label, fmt_num(value, 4), "" if expo == 1.0 else "^%g" % expo)
         for label, value, expo in terms) or "1"
     lines = ["性能分数 %s = %s" % (fmt_num(pure), left)]
     if any(label == "航程效率" for label, _v, _e in terms):
         lines.append("　航程效率 %s = 实际航程 %s ÷ 目标航程 %s（不够按比例减，够了封顶 1）"
-                     % (fmt_num(values.get("range_factor")), fmt_num(values.get("range")),
+                     % (fmt_num(values.get("range_factor"), 4), fmt_num(values.get("range")),
                         fmt_num(values.get("range_cap"))))
     return lines
 
@@ -573,21 +578,21 @@ def combat_breakdown(role, values, enemy_values=None):
         return (num / den) if den else 1e9      # 分母为 0 时按"无限优势"处理（会撞上限）
 
     line = ("战斗比值 %s = 我方伤害项 %s ÷ 对方伤害项 %s"
-            % (fmt_num(values.get("combat_ratio")), fmt_num(values.get("combat_mine")),
-               fmt_num(values.get("combat_theirs"))))
+            % (fmt_num(values.get("combat_ratio"), 4), fmt_num(values.get("combat_mine"), 4),
+               fmt_num(values.get("combat_theirs"), 4)))
     out = [line,
            "　伤害项 = MAX(1 − %.1f×(MIN(对方机动 ÷ 我方机动, %.1f) − 1)"
            " + %.1f×(MIN(我方速度 ÷ 对方速度, %.1f) − 1), %.2f)" % (a, ca, s, cs, fl),
            "　我方（机动 %s、速度 %s）：MIN(%s ÷ %s, %.1f) = %s，MIN(%s ÷ %s, %.1f) = %s → %s"
            % (fmt_num(ag), fmt_num(sp), fmt_num(eag), fmt_num(ag), ca,
-              fmt_num(min(ratio_of(eag, ag), ca)), fmt_num(sp), fmt_num(esp), cs,
-              fmt_num(min(ratio_of(sp, esp), cs)),
-              fmt_num(values.get("combat_mine"))),
+              fmt_num(min(ratio_of(eag, ag), ca), 4), fmt_num(sp), fmt_num(esp), cs,
+              fmt_num(min(ratio_of(sp, esp), cs), 4),
+              fmt_num(values.get("combat_mine"), 4)),
            "　对方（机动 %s、速度 %s）：MIN(%s ÷ %s, %.1f) = %s，MIN(%s ÷ %s, %.1f) = %s → %s"
            % (fmt_num(eag), fmt_num(esp), fmt_num(ag), fmt_num(eag), ca,
-              fmt_num(min(ratio_of(ag, eag), ca)), fmt_num(esp), fmt_num(sp), cs,
-              fmt_num(min(ratio_of(esp, sp), cs)),
-              fmt_num(values.get("combat_theirs")))]
+              fmt_num(min(ratio_of(ag, eag), ca), 4), fmt_num(esp), fmt_num(sp), cs,
+              fmt_num(min(ratio_of(esp, sp), cs), 4),
+              fmt_num(values.get("combat_theirs"), 4))]
     return out
 
 
