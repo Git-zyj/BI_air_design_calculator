@@ -288,12 +288,23 @@ class App(tk.Tk):
         （十几个修正）就是被这个坑撑爆的。这里改成：
             画布可见宽度 − 标签在画布里的横向起点 − 预留
         """
+        def abs_x(widget):
+            """标签在画布内层里的横向起点（可能嵌在子 Frame 里，要逐级往上加）。"""
+            x, node = 0, widget
+            while node is not None and node is not self.inner:
+                try:
+                    x += node.winfo_x()
+                    node = node.master
+                except Exception:                # noqa: BLE001
+                    break
+            return x
+
         def on_conf(_event=None):
             avail = self.canvas.winfo_width()
             if avail <= 1:                       # 还没完成布局
                 avail = max(self.winfo_width() - 2 * PADX, 640)
             try:
-                x = label.winfo_x() + container.winfo_x()
+                x = abs_x(label)
             except Exception:                    # noqa: BLE001
                 x = 0
             width = int(max(avail - x - WRAP_RESERVE, 240))
@@ -304,8 +315,11 @@ class App(tk.Tk):
             if cur != width:
                 label.configure(wraplength=width)
 
-        for target in (container, label):
-            target.bind("<Configure>", on_conf, add="+")
+        # 容器只绑一次（否则每次重建明细都会往同一个容器上叠一个回调）
+        if not getattr(container, "_wrap_bound", False):
+            container.bind("<Configure>", on_conf, add="+")
+            container._wrap_bound = True
+        label.bind("<Configure>", on_conf, add="+")
         on_conf()
 
     # ---------- 界面 ----------
@@ -632,11 +646,11 @@ class App(tk.Tk):
             self.tree_out.column(cid, width=w, anchor=anchor)
         self.lbl_pareto = ttk.Label(card, text="", foreground=ACCENT, font=(self.family, BODY - 1))
         self.lbl_pareto.grid(row=3, column=0, sticky="w", padx=PADX, pady=(0, PADY))
-        # 表格单元格不能换行，所以选中行时在下方用可换行标签显示完整改装
-        self.lbl_design = ttk.Label(card, text="", foreground="#333333", justify="left",
-                                    font=(self.family, BODY - 1))
-        self.lbl_design.grid(row=4, column=0, sticky="w", padx=PADX, pady=(0, 2))
-        self._wrap_to_card(self.lbl_design, card)
+        # 表格单元格不能换行，所以选中行时在下方（散点图上方）用**分块标签**显示明细：
+        # 左边一栏是块名（推荐改装 / 改装属性 / 设计数值 / 性能分数 / 战斗比值），右边是内容。
+        self.frm_design = ttk.Frame(card)
+        self.frm_design.grid(row=4, column=0, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_design.columnconfigure(1, weight=1)
         self.tree_out.bind("<<TreeviewSelect>>", lambda e: self._show_design())
         self.canvas_plot = tk.Canvas(card, height=300, background="white", highlightthickness=1,
                                      highlightbackground="#D0D7E5")
@@ -1653,28 +1667,36 @@ class App(tk.Tk):
         self._render_rows()
 
     def _show_design(self):
-        """表格下方（散点图上方）：选中行的完整推荐改装 + **性能分数怎么乘出来的**。"""
+        """表格下方（散点图上方）：选中行的明细，按【块】排版，方便扫读。"""
+        for child in self.frm_design.winfo_children():
+            child.destroy()
         sel = self.tree_out.selection()
         if not sel:
-            self.lbl_design.configure(text="")
             return
         values = self.tree_out.item(sel[0])["values"]
         if not values:
             return
-        lines = ["推荐改装（%s）：%s" % (values[3], values[-1])]
         row = getattr(self, "_row_by_iid", {}).get(sel[0])
         v = (row or {}).get("values") or {}
+        blocks = [("推荐改装", "%s：%s" % (values[3], values[-1]), "normal")]
         if v:
-            lines.extend(self._design_lines(v))
-            lines.extend(engine.score_breakdown(row["role"], v, row.get("effective_cost")))
-            lines.extend(engine.combat_breakdown(row["role"], v, row.get("enemy_values")))
-        self.lbl_design.configure(text="\n".join(lines))
+            blocks.extend(self._design_blocks(v))
+            blocks.append(("", "", "sep"))
+            lines = engine.score_breakdown(row["role"], v, row.get("effective_cost"))
+            blocks.append(("性能分数", lines[0].replace("性能分数 ", "", 1), "formula"))
+            blocks.extend(("", text.lstrip("　"), "note") for text in lines[1:])
+            combat = engine.combat_breakdown(row["role"], v, row.get("enemy_values"))
+            if combat:
+                blocks.append(("", "", "sep"))
+                blocks.append(("战斗比值", combat[0].replace("战斗比值 ", "", 1), "formula"))
+                blocks.extend(("", text.lstrip("　"), "note") for text in combat[1:])
+        self._render_design_blocks(blocks)
 
-    def _design_lines(self, v):
-        """两行：① 这些改装到底改了哪些属性；② 最终**设计数值**（对照游戏"设计"界面）。
+    def _design_blocks(self, v):
+        """明细的前两块：① 这些改装改了哪些属性；② 最终**设计数值**（对照游戏「设计」界面）。
 
         注意：设计数值 = 基础 ×(1+军工组织+国家精神+改装) + 改装增量，
-        **不含联队经验与王牌**——所以拿它和游戏"设计"界面比对是能对上的。
+        **不含联队经验与王牌**——所以拿它和游戏「设计」界面比对是能对上的。
         """
         def name(key):
             return MOD_ZH.get(key) or zh(self.loc, key) or key
@@ -1692,7 +1714,7 @@ class App(tk.Tk):
                 bits.append("%+g" % add[key])
             parts.append("%s %s" % (name(key), " 且 ".join(bits)))
         if parts:
-            out.append("　改装改了哪些属性：" + "，".join(parts))
+            out.append(("改装属性", " ｜ ".join(parts), "normal"))
 
         dv, parts = v.get("design_values") or {}, []
         cap = v.get("range_cap")
@@ -1704,15 +1726,39 @@ class App(tk.Tk):
                        "naval_strike_targetting") and not value:
                 continue                      # 这个用途用不上的属性不占地方
             if key == "air_range" and cap and value > cap:
-                parts.append("%s %s（设计值 %s，按目标截断）"
+                parts.append("%s %s（设计 %s，按目标截断）"
                              % (name(key), engine.fmt_num(cap), engine.fmt_num(value)))
                 continue
-            text = ("%.4f" % value) if key == "reliability" else engine.fmt_num(value)
+            text = engine.fmt_num(value, 4) if abs(value) < 1 else engine.fmt_num(value)
             parts.append("%s %s" % (name(key), text))
         if parts:
-            out.append("　设计数值（游戏「设计」界面可对照；都是设计加成，不含经验与王牌）："
-                       + "、".join(parts))
+            out.append(("设计数值", " ｜ ".join(parts), "normal"))
+            out.append(("", "以上都是设计加成（不含经验与王牌），与游戏「设计」界面一致", "note"))
         return out
+
+    def _render_design_blocks(self, blocks):
+        """把 (块名, 内容, 样式) 列表画成两栏小表：左列块名（加粗深蓝），右列内容。"""
+        styles = {
+            "header": dict(foreground=ACCENT, font=(self.family, BODY - 2, "bold")),
+            "normal": dict(foreground="#333333", font=(self.family, BODY - 1)),
+            "formula": dict(foreground="#1F4E79", font=(self.family, BODY - 1)),
+            "note": dict(foreground="#6B7280", font=(self.family, BODY - 2)),
+        }
+        r = 0
+        for header, text, kind in blocks:
+            if kind == "sep":
+                ttk.Separator(self.frm_design, orient="horizontal").grid(
+                    row=r, column=0, columnspan=2, sticky="ew", pady=3)
+                r += 1
+                continue
+            if header:
+                ttk.Label(self.frm_design, text=header, anchor="ne",
+                          **styles["header"]).grid(row=r, column=0, sticky="ne", padx=(0, 8))
+            label = ttk.Label(self.frm_design, text=text, justify="left", anchor="w",
+                              **styles.get(kind, styles["normal"]))
+            label.grid(row=r, column=1, sticky="w", pady=1)
+            self._wrap_to_card(label, self.frm_design)
+            r += 1
 
     def _render_rows(self):
         """按当前 X/Y 轴重算帕累托标记，套用筛选与排序后刷新表格和散点图。
