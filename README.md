@@ -54,7 +54,7 @@ python extract_loc_zh.py                                   # 汉化（含原版�
 ## 验收
 
 ```
-python run.py --anchor     # 对空 + 距离 900：Yak-9U@1944 = 15540.543552
+python run.py --anchor     # 对空 + 距离 900：Yak-9U@1944 = 17.2672706（= 旧值 15540.543552 ÷ 目标航程 900）
 ```
 
 ## 依赖

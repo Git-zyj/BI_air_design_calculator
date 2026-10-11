@@ -409,6 +409,11 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
     values["effective_cost"] = values["cost"] * (
         1 + (ACCIDENT_FACTOR if accident_factor is None else accident_factor)
         * (1 - values["reliability"]))
+    # 航程是"效率"而不是"产值"：航程不够时按 实际/目标 比例减成，够了封顶 1。
+    # 例：实际 450、目标 900 → 0.5。这样"远"用途的分数就是一个 0~1 的效率因子乘进去，
+    # 而不是乘一个 600~3600 的大数（以前那写法会让航程项主导整个分数）。
+    values["range_cap"] = range_cap
+    values["range_factor"] = (values["range"] / range_cap) if range_cap else 1.0
 
     if bice_combat:
         a, s = COMBAT_AGILITY_DAMAGE_REDUCTION, COMBAT_SPEED_DAMAGE_INCREASE
@@ -438,12 +443,12 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
                                         "defence": values["defence"]}) / cost
     scores = {
         "air_near": air_near,
-        "air_far": air_near * values["range"],
-        "recon": effect_score("recon", {"range": values["range"]}) / cost,
+        "air_far": air_near * values["range_factor"],
+        "recon": effect_score("recon", {"range": values["range_factor"]}) / cost,
         "ground_near": ground_near,
-        "ground_far": ground_near * values["range"],
+        "ground_far": ground_near * values["range_factor"],
         "naval_near": naval_near,
-        "naval_far": naval_near * values["range"],
+        "naval_far": naval_near * values["range_factor"],
     }
     return values, values["effective_cost"], scores
 
@@ -474,7 +479,7 @@ def score_terms(role, values):
     else:                                            # recon
         terms = []
     if base.endswith("_far") or base == "recon":
-        terms.append(("航程", values.get("range", 0.0), 1.0))
+        terms.append(("航程效率", values.get("range_factor", 1.0), 1.0))
     return terms
 
 
@@ -510,6 +515,10 @@ def score_breakdown(role, values, effective_cost=None):
         "%s %s%s" % (label, fmt_num(value), "" if expo == 1.0 else "^%g" % expo)
         for label, value, expo in terms) or "1"
     lines = ["性能分数 %s = %s" % (fmt_num(pure), left)]
+    if any(label == "航程效率" for label, _v, _e in terms):
+        lines.append("　航程效率 %s = 实际航程 %s ÷ 目标航程 %s（不够按比例减，够了封顶 1）"
+                     % (fmt_num(values.get("range_factor")), fmt_num(values.get("range")),
+                        fmt_num(values.get("range_cap"))))
     if cost:
         lines.append("总分数（性能 ÷ 有效造价） %s = 上面 ÷ %s"
                      % (fmt_num(pure / cost), fmt_num(cost)))
