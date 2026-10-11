@@ -405,16 +405,22 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
             avail = engine.available_upgrades(
                 ref["category"], data, techs=inputs.get("unlocked_techs") or [],
                 flags=inputs.get("unlocked_flags") or [], archetype=ref.get("archetype"))[0]
-            if (inputs.get("alloc_mode") or "split") == "balanced":
-                _chosen, mods, log = engine.mio_route_folded(
-                    org, level, ref, upgrade_map, base_mods, None, inputs["roles"],
-                    inputs.get("range_cap"), inputs.get("experience"),
-                    techs=inputs.get("unlocked_techs") or [], available=avail, fold=True)
-            else:                     # 分离：路线就是设计最优（沿用已验证的那套搜索）
-                _chosen, mods, log = engine.mio_route(
-                    org, level, ref, upgrade_map, base_mods, None, inputs["roles"],
-                    inputs.get("range_cap"), inputs.get("experience"),
-                    techs=inputs.get("unlocked_techs") or [])
+            # 统一搜索：每个候选特质集都用真实管线（自己的最优改装 + 生产折算）评分。
+            #   分离 → fold=False（纯设计最优）；兼顾 → fold=True（设计 × 生产）
+            _enemy_values = engine.pick_enemy_values(
+                data["airframes_all"], inputs.get("enemy") or {}, inputs["roles"][0],
+                inputs["current_year"])[1]
+            _cap = inputs.get("efficiency_cap_now", 100)
+            _ca = inputs.get("capacity_bonus_now", 200)
+            _fold = (inputs.get("alloc_mode") or "split") == "balanced"
+            _ckey = (org["organization"], level, ref.get("key"), _fold, _cap, _ca,
+                     tuple(sorted(inputs.get("unlocked_techs") or [])),
+                     tuple(inputs["roles"]), float(inputs.get("range_cap") or 0))
+            _chosen, mods, log = engine.route_best(
+                org, level, ref, upgrade_map, base_mods, _enemy_values, inputs["roles"],
+                inputs.get("range_cap"), inputs.get("experience"),
+                techs=inputs.get("unlocked_techs") or [], cap_now=_cap, capacity_now=_ca,
+                available=avail, fold=_fold, cache_key=_ckey)
             for item in log:
                 prod = engine.combine_modifiers(prod, item.get("production") or {})
             info["traits"] = log

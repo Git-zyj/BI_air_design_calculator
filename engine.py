@@ -1000,6 +1000,80 @@ def _mods_of(order, picked, mods0):
     return out
 
 
+_ROUTE_CACHE = {}
+
+
+def route_best(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
+               experience=None, max_level=MIO_MAX_LEVEL, techs=(), cap_now=100.0,
+               capacity_now=200.0, available=None, fold=True, cache_key=None):
+    """**统一口径**的配点路线搜索（设计/兼顾共用同一套，只是 fold 不同）。
+
+    与旧实现的区别：每个候选特质集都用**真实管线**评分 —— 该集自己的最优改装
+    （`optimize`）+ 生产折算（fold 时），不再用"不含改装"的廉价代理排序。
+    代价是每个组织约 1 秒，所以带缓存（`cache_key` 相同就直接复用）。
+
+    fold=True  → 目标 = 折算后总分数（兼顾）
+    fold=False → 目标 = 纯设计分（分离/设计最优）
+    返回 (选中 token 列表, 修正合计, log)。
+    """
+    if cache_key is not None and cache_key in _ROUTE_CACHE:
+        return _ROUTE_CACHE[cache_key]
+    groups = plane_groups((base or {}).get("archetype"))
+    arche = (base or {}).get("archetype")
+    order, masks = mio_feasible_sets(org, max_level, techs, groups, arche)
+    role_keys = [score_role(r) for r in (roles or ["air_far"])]
+    base_scores = {}
+    for role in role_keys:
+        base_scores[role] = evaluate(base, {}, upgrade_map, mods, enemy, range_cap, experience,
+                                     accident_factor=accident_factor(role in CARRIER_ROLES))[2][role] or 1.0
+
+    def value(picked):
+        chosen, prod = dict(mods), {}
+        for i in picked:
+            chosen = combine_modifiers(chosen, order[i].get("bonuses") or {})
+            prod = combine_modifiers(prod, order[i].get("production") or {})
+        gain = production_gain(prod, cap_now, capacity_now)[0] if fold else 1.0
+        total = 0.0
+        for role in role_keys:
+            result = optimize(base, upgrade_map, chosen, enemy, role, available=available,
+                              range_cap=range_cap, experience=experience,
+                              accident_f=accident_factor(role in CARRIER_ROLES))
+            total += result["scores"].get(role, 0.0) / base_scores[role]
+        return total * gain
+
+    best_picked, best_val = [], value([])
+    for mask in masks:
+        if not mask:
+            continue
+        picked = [i for i in range(len(order)) if (mask >> i) & 1]
+        val = value(picked)
+        if val > best_val:
+            best_picked, best_val = picked, val
+
+    _o, req_all, req_any, _excl = _trait_tree(org, techs, groups, arche)
+    remaining, picked_order, log = list(best_picked), [], []
+    while remaining:
+        avail = [i for i in remaining
+                 if all(p in picked_order for p in req_all[i])
+                 and (not req_any[i] or any(p in picked_order for p in req_any[i]))]
+        if not avail:
+            avail = list(remaining)
+        pick = max(avail, key=lambda i: value(picked_order + [i]))
+        picked_order.append(pick)
+        remaining.remove(pick)
+        log.append({"token": order[pick]["token"], "score": 0.0,
+                    "bonuses": order[pick].get("bonuses") or {},
+                    "production": order[pick].get("production") or {}})
+    log = log[:max(0, int(level))]
+    mods_now = dict(mods)
+    for item in log:
+        mods_now = combine_modifiers(mods_now, item["bonuses"])
+    out = ([item["token"] for item in log], mods_now, log)
+    if cache_key is not None:
+        _ROUTE_CACHE[cache_key] = out
+    return out
+
+
 def mio_route_folded(org, level, base, upgrade_map, mods, enemy, roles, range_cap,
                      experience=None, max_level=MIO_MAX_LEVEL, techs=(),
                      cap_now=100.0, capacity_now=200.0, available=None, top_k=15, fold=True):
