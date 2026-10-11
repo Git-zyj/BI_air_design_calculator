@@ -63,8 +63,13 @@ def plan_key(inputs, org_name, ref_key):
         json.dumps(inputs.get("experience") or {}, sort_keys=True),
         str(inputs.get("range_cap") or ""),
         str(inputs.get("alloc_mode") or "split"),
-        str(inputs.get("efficiency_cap_now") or 100),
-        str(inputs.get("capacity_bonus_now") or 200),
+        # 生产堆叠只影响"兼顾"（分离口径的路线与分数跟堆叠无关）→
+        # 分离时用默认值入键，这样改效率上限/产量加成不会把分离那条计划也判失效。
+        ("%s|%s" % (inputs.get("efficiency_cap_now") or 100,
+                    inputs.get("capacity_bonus_now") or 200)
+         if (inputs.get("alloc_mode") or "split") == "balanced"
+         else "%s|%s" % (DEFAULT_INPUTS.get("efficiency_cap_now", 100),
+                         DEFAULT_INPUTS.get("capacity_bonus_now", 200))),
         str(org_name or ""),
         str(ref_key or ""),
     ])
@@ -320,7 +325,10 @@ def build_rows(inputs, data):
                                      score_key,
                                      available=tokens, range_cap=inputs.get("range_cap"),
                                      experience=inputs.get("experience"), accident_f=acc_f)
-            weighted = engine.resource_weighted(result["scores"], airframe)
+            # 资源加权分：把该路线/方针的"生产资源需求"修正折算进除数
+            # （需求 −5% ⇒ 等效资源开销 ×0.95 ⇒ 资源加权分变高）
+            _need = (mfr_info.get("production") or {}).get("production_resource_need_factor", 0.0)
+            weighted = engine.resource_weighted(result["scores"], airframe, need_factor=_need)
             design = " ".join(
                 "%s×%d" % (upgrade_label(t), n)
                 for t, n in result["levels"].items() if n

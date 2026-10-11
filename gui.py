@@ -532,6 +532,9 @@ class App(tk.Tk):
                                           values=[label for _k, label in ALLOC_MODES])
         self.cb_alloc_mode.grid(row=2, column=4, columnspan=2, sticky="w")
         self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_change())
+        self.lbl_alloc_rec = ttk.Label(card, text="", foreground=ACCENT,
+                                       font=(self.family, BODY - 2, "bold"), justify="left")
+        self.lbl_alloc_rec.grid(row=2, column=6, sticky="w", padx=PADX)
 
         # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
@@ -545,17 +548,21 @@ class App(tk.Tk):
         # 第 4 行：生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同
         ttk.Label(card, text="生产折算").grid(row=4, column=0, sticky="e", padx=(PADX, 4),
                                               pady=(PADY, 0))
-        ttk.Label(card, text="当前效率上限").grid(row=4, column=1, sticky="e", padx=(0, 2),
-                                              pady=(PADY, 0))
+        # 生产折算的两个输入：**每个字段自带 %**（以前把 "%" 拼在下一个标签里，
+        # 列宽一变 "%" 就飘到离输入框很远的地方）
+        prod_row = ttk.Frame(card)
+        prod_row.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX, pady=(PADY, 0))
+        self.frm_prod = prod_row          # 供布局核对（每个字段自带 %）
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
-        ttk.Spinbox(card, from_=1, to=500, textvariable=self.var_cap, width=5).grid(
-            row=4, column=2, sticky="w", pady=(PADY, 0))
-        ttk.Label(card, text="%　当前产量加成").grid(row=4, column=3, sticky="w", padx=(6, 2),
-                                                pady=(PADY, 0))
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
-        ttk.Spinbox(card, from_=0, to=2000, textvariable=self.var_capacity, width=5).grid(
-            row=4, column=4, sticky="w", pady=(PADY, 0))
-        ttk.Label(card, text="%").grid(row=4, column=5, sticky="w", pady=(PADY, 0))
+        for col, (text, var, lo, hi) in enumerate((
+                ("当前效率上限", self.var_cap, 1, 500),
+                ("当前产量加成", self.var_capacity, 0, 2000))):
+            ttk.Label(prod_row, text=text).grid(row=0, column=col * 3, sticky="e",
+                                                padx=(0 if col == 0 else PADX, 4))
+            ttk.Spinbox(prod_row, from_=lo, to=hi, textvariable=var, width=5).grid(
+                row=0, column=col * 3 + 1, sticky="w")
+            ttk.Label(prod_row, text="%").grid(row=0, column=col * 3 + 2, sticky="w", padx=(1, 0))
 
         self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
                                   font=(self.family, BODY - 1), justify="left")
@@ -775,8 +782,8 @@ class App(tk.Tk):
             for pol in self.data.get("policies") or []:
                 if not (pol.get("allowed_all") or (set(pol.get("equipment_types") or []) & types)):
                     continue
-                if not self._has_design_bonus(pol):
-                    continue          # 只给生产加成的方针不产生设计需求，其科技也不必列
+                if not self._has_modeled_effect(pol):
+                    continue          # 只有研究加成、对数值没影响的方针不必列前置
                 techs |= set(pol.get("requires_techs") or [])
             for trait in org.get("traits", []) or []:
                 techs |= set(trait.get("requires_techs") or [])
@@ -916,8 +923,8 @@ class App(tk.Tk):
         for pol in self.data.get("policies") or []:
             if not (pol.get("allowed_all") or (set(pol.get("equipment_types") or []) & org_types)):
                 continue
-            if not self._has_design_bonus(pol):
-                continue          # 无设计侧加成的方针不进用途标注
+            if not self._has_modeled_effect(pol):
+                continue          # 只有研究加成、对数值没影响的方针不进用途标注
             for tech in pol.get("requires_techs") or []:
                 add(tech, "方针", zh(self.loc, pol["token"]) or pol["token"])
         for org in orgs:
@@ -967,12 +974,12 @@ class App(tk.Tk):
                 int(inputs.get("capacity_bonus_now") or 200))
 
     def _policies_for_org(self, org, techs):
-        """该军工组织可用且科技已满足的方针。"""
+        """该军工组织可用且科技已满足的方针（含**只有生产侧效果**的，如模块化装配）。"""
         types = self._policy_types(org)
         out = [None]                       # None = 不选方针
         for pol in self.data.get("policies") or []:
-            if not self._has_design_bonus(pol):
-                continue              # 只给生产加成的方针（如模块化装配、推进系统实验组）不列
+            if not self._has_modeled_effect(pol):
+                continue              # 只给"军工组织研究加成"之类、对分数没影响的方针不列
             if pol.get("allowed_all"):
                 pass
             elif pol.get("equipment_types"):
@@ -993,8 +1000,19 @@ class App(tk.Tk):
                 if k != "production_cost_factor"}
 
     @staticmethod
+    def _has_modeled_effect(pol):
+        """方针是否对**我们建模的东西**有影响：设计侧加成，或生产侧修正（产量/花费…）。
+
+        · 模块化装配：只有 `production_cost_factor` → **要列**（生产折算用得上）；
+        · 推进系统实验组 / 不断的工业革命：只有军工组织研究加成 → 不影响飞机数值与分数 → 不列。
+        """
+        if not pol:
+            return False
+        return bool(pol.get("equipment_bonus") or pol.get("production_bonus"))
+
+    @staticmethod
     def _has_design_bonus(pol):
-        """方针是否带"设计侧"装备加成——只有生产产出花费、或干脆没加成的方针不列。"""
+        """（用途标注用）方针是否带"设计侧"装备加成。"""
         if not pol:
             return False
         return any(v for k, v in (pol.get("equipment_bonus") or {}).items()
@@ -1152,27 +1170,51 @@ class App(tk.Tk):
         `apply_org=False` 用于"输入变了、只把那行推荐重算一遍"：
         以前换对手/年份只刷新了方针下拉，**推荐那行还是旧状态的**（例如写着"完美抛光"，
         下拉却是"风洞先驱"），因为推荐行只在换国家等少数时机重算。
+
+        **分块**：每家 MIO 算完就 `after(1)` 排下一家 —— 方针×路线联合穷举一家要
+        0.5~2.4 秒，三家一起算会让界面僵 2 秒以上；分块之后界面能喘气，
+        当前组织的方案照旧由 ④ 预览/结果表那条路径同步算出来。
         """
         try:
             inputs = self.collect()
         except (Exception, SystemExit):  # noqa: BLE001
             return
         import time as _t
+        self._rec_inputs = inputs
+        self._rec_apply = apply_org
+        self._rec_queue = list(self._air_orgs()[0])
+        self._rec_done = {}
+        self._rec_t0 = _t.time()
+        self._rec_seq = getattr(self, "_rec_seq", 0) + 1
+        self.after(1, self._recommend_step)
+
+    def _recommend_step(self, seq=None):
+        seq = getattr(self, "_rec_seq", -1) if seq is None else seq
+        if seq != getattr(self, "_rec_seq", -1):
+            return                      # 输入又变了，这一轮作废
+        queue = getattr(self, "_rec_queue", [])
+        if queue:
+            org = queue.pop(0)
+            plan = self._org_plan(org, self._rec_inputs)
+            if plan and plan.get("score"):
+                self._rec_done[org["organization"]] = (org, plan)
+            self.after(1, lambda: self._recommend_step(seq))
+            return
+        self._recommend_finish()
+
+    def _recommend_finish(self):
+        import time as _t
+        inputs = self._rec_inputs
         orgs = self._air_orgs()[0]
         cache = self._plans.get(self._plan_key(inputs)) or {}
         redo = sum(1 for org in orgs if org["organization"] not in cache)
-        _t0 = _t.time()
-        scored = []
-        for org in orgs:
-            plan = self._org_plan(org, inputs)
-            if plan and plan.get("score"):
-                scored.append((org, plan))
+        spent = _t.time() - self._rec_t0
+        scored = sorted(self._rec_done.values(), key=lambda item: -item[1]["score"])
         scored.sort(key=lambda item: -item[1]["score"])
-        spent = _t.time() - _t0
         if scored:
             best, best_plan = scored[0]
             label = next((l for l, k in self._org_keys.items() if k == best["organization"]), None)
-            if label and apply_org:
+            if label and self._rec_apply:
                 self.var_org.set(label)
             pol = next((p for p in self.data.get("policies") or []
                         if p["token"] == best_plan.get("policy")), None)
@@ -1196,7 +1238,7 @@ class App(tk.Tk):
         else:
             self.lbl_org_rec.configure(text="推荐：（暂无可比较的军工组织）")
             _dbg("MIO 路线：比较 %d 个组织 → 无可比较结果（用时 %.2fs）" % (len(orgs), spent))
-        if apply_org:
+        if self._rec_apply:
             self._on_org_change()
 
     def _air_orgs(self):
@@ -1242,6 +1284,7 @@ class App(tk.Tk):
         self._fill_traits()
         self._refresh_policies()
         self.on_preview()
+        self._refresh_alloc_recommendation()
 
     def _policy_types(self, org):
         types = set(org.get("equipment_types") or [])
@@ -1252,15 +1295,20 @@ class App(tk.Tk):
         return types
 
     def _available_policies(self):
-        """当前组织**装备类型匹配**的方针（不管等级/科技），用于列出与统计。"""
+        """当前组织**装备类型匹配**的方针（不管等级/科技），用于下拉与统计。
+
+        含**只有生产侧效果**的方针（模块化装配：生产产出花费 −3%）—— 它在"兼顾"里
+        能靠折算提升总分数，在"分离"里也能给生产方当政策；只有"军工组织研究加成"
+        （不影响飞机数值与分数）的方针才排除。
+        """
         org = self._org()
         if not org:
             return []
         types = self._policy_types(org)
         out = []
         for pol in self.data.get("policies") or []:
-            if not self._has_design_bonus(pol):
-                continue          # 只给生产加成的方针（模块化装配等）对设计无用，不列
+            if not self._has_modeled_effect(pol):
+                continue          # 研究加成类方针对飞机数值与分数没有影响 → 不列
             if pol.get("allowed_all"):
                 out.append(pol)
                 continue
@@ -1347,6 +1395,43 @@ class App(tk.Tk):
         self.on_preview()
         if getattr(self, "rows", None):
             self.on_calculate()
+
+    def _refresh_alloc_recommendation(self):
+        """比较"分离 / 兼顾"哪个更优，写在配点口径右边（分块算，不阻塞界面）。
+
+        两个口径的计划都走同一套 `_org_plan`（表/缓存命中就瞬间出）。
+        """
+        self._alloc_rec_seq = getattr(self, "_alloc_rec_seq", 0) + 1
+        self.after(1, lambda: self._alloc_rec_step(self._alloc_rec_seq))
+
+    def _alloc_rec_step(self, seq):
+        if seq != getattr(self, "_alloc_rec_seq", -1):
+            return                       # 输入又变了，这一轮作废
+        org = self._org()
+        if not org or not getattr(self, "lbl_alloc_rec", None):
+            return
+        try:
+            inputs = self.collect()
+        except (Exception, SystemExit):  # noqa: BLE001
+            return
+        scores = {}
+        for mode in ("split", "balanced"):
+            probe = dict(inputs)
+            probe["alloc_mode"] = mode
+            plan = self._org_plan(org, probe)
+            if plan and plan.get("score"):
+                scores[mode] = plan["score"]
+        if len(scores) < 2:
+            self.lbl_alloc_rec.configure(text="")
+            return
+        better = max(scores, key=scores.get)
+        worse = min(scores, key=scores.get)
+        gap = (scores[better] / scores[worse] - 1) * 100 if scores[worse] else 0.0
+        if gap < 0.05:
+            self.lbl_alloc_rec.configure(text="推荐：两者持平")
+            return
+        short = dict(ALLOC_MODES)[better].split("（")[0]
+        self.lbl_alloc_rec.configure(text="推荐：%s（高 %.1f%%）" % (short, gap))
 
     def _policy_ready(self, pol):
         """门槛（等级 + 科技）是否满足。"""
@@ -1653,6 +1738,7 @@ class App(tk.Tk):
             pass
         self._recommend_org(apply_org=False)
         self._refresh_totals()
+        self._refresh_alloc_recommendation()
         if recalc and getattr(self, "rows", None):
             self.on_calculate()
 
@@ -2153,17 +2239,15 @@ class App(tk.Tk):
 
         self.var_year.trace_add("write", on_year)
 
-        # 生产折算的两个输入：改了要立刻重算（Spinbox 的 command 只在按箭头时触发）
+        # 生产折算的两个输入：改了要重算，但**必须防抖** —— 以前每敲一个字符
+        # （例如输入 118 时先敲出 "1"）就整套重算，冷路径下要卡 2 秒以上。
         def on_prod(*_a):
             try:
                 int(self.var_cap.get())
                 int(self.var_capacity.get())
             except (tk.TclError, ValueError):
                 return
-            self._refresh_totals()
-            self.on_preview()
-            if getattr(self, "rows", None):      # 已经算过结果表就顺手刷新分数
-                self.on_calculate()
+            self._on_inputs_affecting_plan(recalc=True)   # 带 400ms 防抖
 
         for var in (self.var_cap, self.var_capacity):
             var.trace_add("write", on_prod)

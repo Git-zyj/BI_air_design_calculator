@@ -336,9 +336,13 @@ def available_upgrades(category, data, techs=(), flags=(), require_prereqs=True,
     return out, upgrade_map
 
 
-def resource_weighted(scores, airframe):
-    """资源加权分数 = 纯分数 ÷ 飞机装配资源开销（用户口径，暂不含发动机装配）。"""
-    cost = airframe.get("air_production") or 0
+def resource_weighted(scores, airframe, need_factor=0.0):
+    """资源加权分数 = 纯分数 ÷ 飞机装配资源开销（用户口径，暂不含发动机装配）。
+
+    `need_factor` = 该路线/方针的 `production_resource_need_factor` 合计：
+    需求 −5% 就等于"等效资源开销 ×0.95"，资源加权分相应变高。
+    """
+    cost = (airframe.get("air_production") or 0) * (1.0 + float(need_factor or 0.0))
     if not cost:
         return {}
     return {role: value / cost for role, value in scores.items()}
