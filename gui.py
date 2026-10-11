@@ -73,11 +73,10 @@ DEFAULT_DISTANCE = 900
 #   design   只按设计分挑路线（生产侧顺带拿到的算白赚）
 #   balanced 兼顾：同一条路线里最大化"折算后总分数"（生产特质与设计链并存）
 #   split    设计 / 生产分离：本 MIO 只做设计，生产交给另一家 MIO（界面会列出那家与它的特质）
-ALLOC_MODES = [("design", "设计最优（不看生产）"),
+ALLOC_MODES = [("split", "分离（设计最优 + 生产另算）"),
                ("balanced", "兼顾（同一 MIO 一条路线）")]
-# 「分离（生产换一家 MIO）」的引擎实现已就绪（run.best_production_plan + alloc_mode="split"），
-# 但界面切换时出现分数不一致（路线/生产明明与"设计最优"相同，总分数却更低），原因未定位，
-# 暂时不放进下拉，等修好再开放。
+# 「分离」= 本 MIO 走**设计最优路线**，生产取"本 MIO 这条路线顺带的"与"另一家 MIO 只求产量"
+# 里更好的那个 —— 所以它把原来的「设计最优」并了进来（没有更优的生产家时就是这个行为）。
 # 生产侧修正的中文名（按游戏里的写法：产量 / 生产效率上限 / 生产产出花费 …）
 PROD_ZH = {"production_capacity_factor": "产量",
            "production_cost_factor": "生产产出花费",
@@ -972,9 +971,9 @@ class App(tk.Tk):
         于是"看到的"和"算出来的"对不上。现在统一由界面把路线定下来。
         """
         mio = dict(inputs.get("mio") or {})
-        # 只有"设计最优"口径才把界面这条路线钉死传给计算；
-        # 兼顾/分离要让 run.py 自己按口径挑路线（否则会被这里钉成设计路线）。
-        if mio.get("manual_traits") is None and inputs.get("alloc_mode", "design") == "design":
+        # 分离口径：路线就用界面这条（`_org_plan` 是"含方针"优化的，比 run.py 自己那条更优）；
+        # 兼顾口径要让 run.py 自己按"设计×生产"挑路线，不能在这里钉死。
+        if mio.get("manual_traits") is None and inputs.get("alloc_mode", "split") != "balanced":
             org = self._org()
             plan = self._org_plan(org, inputs) if org else None
             if plan and plan.get("route"):
