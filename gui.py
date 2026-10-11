@@ -74,8 +74,10 @@ DEFAULT_DISTANCE = 900
 #   balanced 兼顾：同一条路线里最大化"折算后总分数"（生产特质与设计链并存）
 #   split    设计 / 生产分离：本 MIO 只做设计，生产交给另一家 MIO（界面会列出那家与它的特质）
 ALLOC_MODES = [("design", "设计最优（不看生产）"),
-               ("balanced", "兼顾（同一 MIO 一条路线）"),
-               ("split", "分离（生产换一家 MIO）")]
+               ("balanced", "兼顾（同一 MIO 一条路线）")]
+# 「分离（生产换一家 MIO）」的引擎实现已就绪（run.best_production_plan + alloc_mode="split"），
+# 但界面切换时出现分数不一致（路线/生产明明与"设计最优"相同，总分数却更低），原因未定位，
+# 暂时不放进下拉，等修好再开放。
 # 生产侧修正的中文名（按游戏里的写法：产量 / 生产效率上限 / 生产产出花费 …）
 PROD_ZH = {"production_capacity_factor": "产量",
            "production_cost_factor": "生产产出花费",
@@ -498,6 +500,13 @@ class App(tk.Tk):
         self.spin_level.grid(row=2, column=1, sticky="w")
         ttk.Button(card, text="预览军工组织总加成", command=self.on_preview).grid(
             row=2, column=2, sticky="w", padx=(PADX, 2))
+        ttk.Label(card, text="配点口径").grid(row=2, column=3, sticky="e", padx=(PADX, 4))
+        self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
+        self.cb_alloc_mode = ttk.Combobox(card, textvariable=self.var_alloc_mode, width=24,
+                                          state="readonly",
+                                          values=[label for _k, label in ALLOC_MODES])
+        self.cb_alloc_mode.grid(row=2, column=4, columnspan=2, sticky="w")
+        self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_change())
 
         # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
@@ -963,7 +972,9 @@ class App(tk.Tk):
         于是"看到的"和"算出来的"对不上。现在统一由界面把路线定下来。
         """
         mio = dict(inputs.get("mio") or {})
-        if mio.get("manual_traits") is None:
+        # 只有"设计最优"口径才把界面这条路线钉死传给计算；
+        # 兼顾/分离要让 run.py 自己按口径挑路线（否则会被这里钉成设计路线）。
+        if mio.get("manual_traits") is None and inputs.get("alloc_mode", "design") == "design":
             org = self._org()
             plan = self._org_plan(org, inputs) if org else None
             if plan and plan.get("route"):
@@ -1237,10 +1248,19 @@ class App(tk.Tk):
         self.on_preview()
 
     def _alloc_mode_key(self):
-        """配点口径：引擎/命令行已支持 design / balanced / split，
-        界面的选择器下一轮再开放（先把 GUI 路径的显示对齐问题查清楚）。
-        """
+        """界面上选的配点口径 → design / balanced / split。"""
+        for key, label in ALLOC_MODES:
+            if label == self.var_alloc_mode.get():
+                return key
         return "design"
+
+    def _on_alloc_mode_change(self):
+        """改了配点口径：路线、生产折算、结果表全部重算。"""
+        _dbg("操作：改配点口径 → %s" % self.var_alloc_mode.get())
+        self._refresh_totals()
+        self.on_preview()
+        if getattr(self, "rows", None):
+            self.on_calculate()
 
     def _policy_ready(self, pol):
         """门槛（等级 + 科技）是否满足。"""
