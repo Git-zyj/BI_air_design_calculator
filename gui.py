@@ -536,12 +536,13 @@ class App(tk.Tk):
         self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_change())
         self.lbl_alloc_rec = ttk.Label(card, text="", foreground=ACCENT,
                                        font=(self.family, BODY - 2, "bold"), justify="left")
-        self.lbl_alloc_rec.grid(row=2, column=6, sticky="w", padx=PADX)
+        # 单独占一行（以前塞在第 2 行第 6 列：左侧列宽一变它就被推着走、甚至跑出界面）
+        self.lbl_alloc_rec.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX)
 
         # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
                                        font=(self.family, BODY, "bold"), justify="left")
-        self.lbl_mio_total.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_total.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_mio_total, card)
 
         # 生产侧（**不参与评分**）：设计槽吃 equipment_bonus，生产槽吃 production_bonus，
@@ -553,10 +554,10 @@ class App(tk.Tk):
         # 生产折算的两个输入：**每个字段自带 %**（以前把 "%" 拼在下一个标签里，
         # 列宽一变 "%" 就飘到离输入框很远的地方）
         prod_row = ttk.Frame(card)
-        prod_row.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX, pady=(PADY, 0))
+        prod_row.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX, pady=(PADY, 0))
         self.frm_prod = prod_row          # 供布局核对（每个字段自带 %）
-        self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
+        self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
         for col, (text, var, lo, hi) in enumerate((
                 ("当前效率上限", self.var_cap, 1, 500),
                 ("当前产量加成", self.var_capacity, 0, 2000))):
@@ -568,17 +569,17 @@ class App(tk.Tk):
 
         self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
                                   font=(self.family, BODY - 1), justify="left")
-        self.lbl_prod.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_prod.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_prod, card)
 
         self.lbl_partner = ttk.Label(card, text="", foreground="#7A5C1E",
                                      font=(self.family, BODY - 2), justify="left")
-        self.lbl_partner.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_partner.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_partner, card)
 
         self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
                                        font=(self.family, BODY - 2), justify="left")
-        self.lbl_mio_route.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_route.grid(row=8, column=0, columnspan=6, sticky="w", padx=PADX)
 
         self.tree_mio = ttk.Treeview(card, columns=("lvl", "trait", "bonus"),
                                      show="headings", height=5)
@@ -586,10 +587,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=8, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=9, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=9, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=10, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -834,15 +835,11 @@ class App(tk.Tk):
         for child in self.frm_tech.winfo_children():
             child.destroy()
         self.tech_vars, self.flag_vars, self.group_vars = {}, {}, {}
-        saved = self.inputs.get("unlocked_techs")
-        if saved is None:
-            # 没存过就按"当前年份为止已完成"给默认（示例默认 1939 → 勾到 1939 的科技）
-            years = self.data.get("tech_years") or {}
-            year = int(self.inputs.get("current_year") or 1939)
-            unlocked = {t for t in self._relevant_techs()
-                        if (years.get(t) or 9999) <= year}
-        else:
-            unlocked = set(saved)
+        # 默认 = "到年份为止已完成"：取 当前年份 与 飞机科技年份 里**较晚**的那个
+        # （换年份/科技年份都会跟着刷新；之后手动改的勾选不再保留 —— 用户明确要这个默认）
+        years = self.data.get("tech_years") or {}
+        year = max(int(self.var_year.get() or 1939), int(self.var_tech.get() or 1939))
+        unlocked = {t for t in self._relevant_techs() if (years.get(t) or 9999) <= year}
         flags_on = set(self.inputs.get("unlocked_flags") or [])
         self._group_items = {}
         for i, (group_text, items) in enumerate(self._requirement_groups()):
@@ -1454,9 +1451,12 @@ class App(tk.Tk):
                  if k != "production_cost_factor" and v}
         parts = ["前置：" + ("、".join(need) if need else "无"),
                  "加成：" + (fmt_mods(bonus) if bonus else "无装备修正")]
-        prod = (pol.get("equipment_bonus") or {}).get("production_cost_factor")
-        if prod is not None:
-            parts.append("生产产出花费 %+.0f%%（只作用于生产，不计入）" % (prod * 100))
+        # 生产侧：把该方针的生产修正**全部**列出来（含 equipment_bonus 里的生产产出花费）
+        prod_mods = {k: v for k, v in engine.policy_production(pol).items() if v}
+        if prod_mods:
+            parts.append("生产侧（计入折算，不进设计数值）：" + "、".join(
+                "%s %+g%%" % (PROD_ZH.get(k, k), round(v * 100, 2))
+                for k, v in sorted(prod_mods.items())))
         org_mod = pol.get("organization_modifier") or {}
         if org_mod:
             # 这些是组织级修正（经费/研究），**不影响飞机属性**，说清楚免得误读
@@ -2100,15 +2100,18 @@ class App(tk.Tk):
         head = "生产侧："
         if not prod:
             return head + "这条路线没有任何生产修正"
-        items = ["%s %+g%%" % (PROD_ZH.get(k, k), round(v * 100, 2))
-                 for k, v in sorted(prod.items()) if v]
+        # 每项后面直接跟它自己的折算倍率，最后给合计 —— 以前"清单 + ［分项倍率］"两遍重说
+        items = []
+        for key, value in sorted(prod.items()):
+            if not value:
+                continue
+            label = PROD_ZH.get(key, key)
+            factor = (parts or {}).get(label, 1.0)
+            items.append("%s %+g%%%s" % (label, round(value * 100, 2),
+                                         " ⇒ ×%.4f" % factor if abs(factor - 1.0) > 1e-9 else ""))
         text = head + "　".join(items)
         if gain and abs(gain - 1.0) > 1e-9:
-            shown = "、".join("%s ×%.4f" % (k, v) for k, v in (parts or {}).items()
-                              if abs(v - 1.0) > 1e-9)
-            text += "　⇒ 产能 ×%.4f（等效造价 ×%.4f）" % (gain, 1.0 / gain)
-            if shown:
-                text += "　［%s］" % shown
+            text += "　⇒ 合计 产能 ×%.4f（等效造价 ×%.4f）" % (gain, 1.0 / gain)
         return text
 
     def on_calculate(self):

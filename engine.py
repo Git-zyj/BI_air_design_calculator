@@ -523,7 +523,7 @@ def production_gain(prod, cap_now=100.0, capacity_now=200.0):
     p_ca = ((1 + ca + ca_add) / (1 + ca)) if (1 + ca) else 1.0
     cost_mod = float(prod.get("production_cost_factor", 0.0))
     p_cost = (1.0 / (1 + cost_mod)) if (1 + cost_mod) else 1.0
-    return p_cap * p_ca * p_cost, {"效率上限": p_cap, "产量": p_ca, "生产花费": p_cost}
+    return p_cap * p_ca * p_cost, {"效率上限": p_cap, "产量": p_ca, "生产产出花费": p_cost}
 
 
 def score_terms(role, values):
@@ -728,7 +728,7 @@ def _first_not_none(*vals):
 MIO_MAX_LEVEL = 14
 # 路线搜索的粗筛规模：先用"不含改装"的廉价分取前 N 个可行集，再跑真实管线
 # （抽样验证：N=20~100 与全枚举结果完全一致；N=0 = 不粗筛/全枚举）
-ROUTE_TOP_K = 50
+ROUTE_TOP_K = 20
 # 对手（AI）的满经验加成：机动 +20% / 速度 +5%（用户实测口径；可界面手填覆盖）
 ENEMY_EXPERIENCE = {"air_agility": 0.20, "maximum_speed": 0.05}
 # 空军 MIO 的装备类型关键字（判断一个组织是不是做飞机的）

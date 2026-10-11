@@ -50,7 +50,8 @@ PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓�
 #        现在会把生产资源需求/效率算进来，方针集合与分数都可能变
 #   v4 = 生产侧可靠并进有效造价（与设计侧可靠同效）+ 路线搜索改"廉价分粗筛 top-K
 #        → 分数会变（粗筛经抽样验证与全枚举结果一致）
-PLAN_CACHE_VERSION = 4
+#   v5 = 粗筛 top-K 从 50 调到 20（用户口径；抽样验证与全枚举一致）+ 表内"生产花费"改名
+PLAN_CACHE_VERSION = 5
 
 
 def plan_key(inputs, org_name, ref_key):
