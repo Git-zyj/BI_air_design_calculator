@@ -69,6 +69,10 @@ RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_yea
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
 DISTANCES = list(range(600, 3601, 300))
 DEFAULT_DISTANCE = 900
+# 明细行里"设计数值"要展示的属性（顺序即显示顺序）
+DESIGN_SHOW = ("air_attack", "air_defence", "air_agility", "maximum_speed", "air_range",
+               "reliability", "build_cost_ic", "air_ground_attack",
+               "naval_strike_attack", "naval_strike_targetting")
 # 任务类型：不分远近，统一走各自的"远"口径
 ROLE_CHOICES = [("air_far", "对空"), ("ground_far", "对地"),
                 ("naval_far", "对海"), ("recon", "侦察/运输"),
@@ -1242,7 +1246,10 @@ class App(tk.Tk):
                 hidden += 1          # 科技没解锁的特质游戏里也点不了，直接隐藏
                 continue
             self.tree_traits.insert("", "end", iid=token, values=(
-                "☐", zh(self.loc, token), fmt_mods(trait.get("bonuses") or {}),
+                # ⚠️ 这里要按 chosen_traits 显示勾选状态：以前写死 "☐"，
+                # 于是"按满级最优勾选 / 全不选"重填表格后看起来像没勾上（属性却变了）。
+                "☑" if token in self.chosen_traits else "☐",
+                zh(self.loc, token), fmt_mods(trait.get("bonuses") or {}),
                 self._trait_req(trait)))
         base = "点击行勾选/取消（初始特质已默认计入，不需要勾）"
         self._traits_hint_base = base + ("　另有 %d 个特质需前置科技，已隐藏" % hidden
@@ -1658,9 +1665,54 @@ class App(tk.Tk):
         row = getattr(self, "_row_by_iid", {}).get(sel[0])
         v = (row or {}).get("values") or {}
         if v:
+            lines.extend(self._design_lines(v))
             lines.extend(engine.score_breakdown(row["role"], v, row.get("effective_cost")))
             lines.extend(engine.combat_breakdown(row["role"], v, row.get("enemy_values")))
         self.lbl_design.configure(text="\n".join(lines))
+
+    def _design_lines(self, v):
+        """两行：① 这些改装到底改了哪些属性；② 最终**设计数值**（对照游戏"设计"界面）。
+
+        注意：设计数值 = 基础 ×(1+军工组织+国家精神+改装) + 改装增量，
+        **不含联队经验与王牌**——所以拿它和游戏"设计"界面比对是能对上的。
+        """
+        def name(key):
+            return MOD_ZH.get(key) or zh(self.loc, key) or key
+
+        out = []
+        coef, add = v.get("upgrade_coef") or {}, v.get("upgrade_add") or {}
+        parts = []
+        for key in DESIGN_SHOW:
+            if not (coef.get(key) or add.get(key)):
+                continue
+            bits = []
+            if coef.get(key):
+                bits.append("%+.2f%%" % (coef[key] * 100))
+            if add.get(key):
+                bits.append("%+g" % add[key])
+            parts.append("%s %s" % (name(key), " 且 ".join(bits)))
+        if parts:
+            out.append("　改装改了哪些属性：" + "，".join(parts))
+
+        dv, parts = v.get("design_values") or {}, []
+        cap = v.get("range_cap")
+        for key in DESIGN_SHOW:
+            if key not in dv:
+                continue
+            value = dv[key]
+            if key in ("air_ground_attack", "naval_strike_attack",
+                       "naval_strike_targetting") and not value:
+                continue                      # 这个用途用不上的属性不占地方
+            if key == "air_range" and cap and value > cap:
+                parts.append("%s %s（设计值 %s，按目标截断）"
+                             % (name(key), engine.fmt_num(cap), engine.fmt_num(value)))
+                continue
+            text = ("%.4f" % value) if key == "reliability" else engine.fmt_num(value)
+            parts.append("%s %s" % (name(key), text))
+        if parts:
+            out.append("　设计数值（游戏「设计」界面可对照；都是设计加成，不含经验与王牌）："
+                       + "、".join(parts))
+        return out
 
     def _render_rows(self):
         """按当前 X/Y 轴重算帕累托标记，套用筛选与排序后刷新表格和散点图。

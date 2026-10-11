@@ -363,6 +363,7 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
     exp = dict(experience or {})
     coef = dict(mods)
     add = {}
+    up_coef, up_add = {}, {}          # 只统计"改装"贡献的修正（给界面显示用）
     for token, count in levels.items():
         if not count:
             continue
@@ -371,8 +372,10 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
             continue
         for key, value in up["modifiers"].items():
             coef[key] = coef.get(key, 0.0) + value * count
+            up_coef[key] = up_coef.get(key, 0.0) + value * count
         for key, value in up["add_stats"].items():
             add[key] = add.get(key, 0.0) + value * count
+            up_add[key] = up_add.get(key, 0.0) + value * count
     # 口径（已用表内与实测双重验证）：
     #   设计阶段 = 基础 × (1 + 制造商 + 国家精神 + 改装合计) + 改装数值增量
     #   最终     = 设计阶段 × (1 + 联队经验 + 王牌)      ← 经验是**独立乘算**，不与上面加算
@@ -409,6 +412,27 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
     values["effective_cost"] = values["cost"] * (
         1 + (ACCIDENT_FACTOR if accident_factor is None else accident_factor)
         * (1 - values["reliability"]))
+    # 改装本身改了哪些属性（界面显示用）
+    values["upgrade_coef"] = up_coef
+    values["upgrade_add"] = up_add
+    # **设计阶段数值**（= base ×(1+制造商+国家精神+改装) + 改装增量，**不含经验/王牌**）。
+    # 这就是游戏"设计"界面里的出厂数值，方便用户拿游戏内画面直接比对。
+    values["design_values"] = {
+        "air_attack": stage("air_attack"),
+        "air_defence": stage("air_defence"),
+        "air_agility": stage("air_agility"),
+        "maximum_speed": stage("maximum_speed"),
+        "air_range": stage("air_range"),
+        "air_ground_attack": stage("air_ground_attack"),
+        "build_cost_ic": stage("build_cost_ic"),
+        "reliability": base["reliability"] * (1 + coef.get("reliability", 0.0)),
+        "naval_strike_attack": (base.get("naval_strike_attack", 0.0)
+                                * (1 + coef.get("naval_strike_attack", 0.0))
+                                + add.get("naval_strike_attack", 0.0)),
+        "naval_strike_targetting": (base.get("naval_strike_targetting", 0.0)
+                                    * (1 + coef.get("naval_strike_targetting", 0.0))
+                                    + add.get("naval_strike_targetting", 0.0)),
+    }
     # 航程是"效率"而不是"产值"：航程不够时按 实际/目标 比例减成，够了封顶 1。
     # 例：实际 450、目标 900 → 0.5。这样"远"用途的分数就是一个 0~1 的效率因子乘进去，
     # 而不是乘一个 600~3600 的大数（以前那写法会让航程项主导整个分数）。
