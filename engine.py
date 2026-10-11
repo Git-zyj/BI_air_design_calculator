@@ -293,9 +293,10 @@ EXPERIENCE_BONUS = {
 def load_data():
     data = {}
     for name in ("airframes", "airframes_all", "upgrades", "national_ideas", "mio", "archetypes",
-                 "policies", "special_projects", "tech_years"):
+                 "policies", "special_projects", "tech_years", "mio_groups"):
         path = os.path.join(DATA_DIR, name + ".json")
-        data[name] = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else []
+        default = {} if name == "mio_groups" else []
+        data[name] = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else default
     return data
 
 
@@ -789,9 +790,45 @@ def pick_mio_traits(org, level, base, upgrade_map, mods, enemy, roles, range_cap
 
 # MIO「满级」步数上限（够覆盖任何组织的特质树；贪心会在没有正收益时提前停）
 MIO_MAX_LEVEL = 14
+# MIO 装备组缓存（懒加载 mio_groups.json）
+_MIO_GROUPS = None
 
 
-def _trait_tree(org, techs=()):
+def mio_group_map():
+    """MIO 装备组定义（懒加载 data/mio_groups.json）：{组名: [装备类型…]}。"""
+    global _MIO_GROUPS
+    if _MIO_GROUPS is None:
+        path = os.path.join(DATA_DIR, "mio_groups.json")
+        try:
+            with open(path, encoding="utf-8") as fh:
+                _MIO_GROUPS = json.load(fh)
+        except (OSError, ValueError):
+            _MIO_GROUPS = {}
+    return _MIO_GROUPS
+
+
+def plane_groups(archetype):
+    """该机型（按 archetype）属于哪些 MIO 装备组。"""
+    if not archetype:
+        return set()
+    return {g for g, members in mio_group_map().items() if archetype in members}
+
+
+def trait_fits(trait, groups, archetype=None):
+    """特质的装备类型限制是否覆盖该机型：没写 `limit_to_equipment_type` = 通用。
+
+    这是 §32 记录的那个 bug 的修复点——以前挑路线时完全没看这个限制，
+    于是把"只对运输机/中型机生效"的特质也算进来了（雅科夫列夫的设计分因此虚高）。
+    """
+    lim = set((trait or {}).get("limit_to_equipment_type") or [])
+    if not lim:
+        return True
+    if groups and (lim & set(groups)):
+        return True
+    return bool(archetype and archetype in lim)
+
+
+def _trait_tree(org, techs=(), plane_groups=None, archetype=None):
     """把组织的特质按"前置在前"排好序，并给出前提/互斥的索引关系。
 
     有科技门槛（`requires_techs`）而科技没解锁的特质直接排除。
@@ -799,7 +836,8 @@ def _trait_tree(org, techs=()):
     tech_set = set(techs or ())
     traits = [t for t in org.get("traits", [])
               if t.get("token")
-              and all(x in tech_set for x in (t.get("requires_techs") or []))]
+              and all(x in tech_set for x in (t.get("requires_techs") or []))
+              and trait_fits(t, plane_groups, archetype)]
     by_token = {t["token"]: t for t in traits}
     order, seen = [], set()
 
@@ -828,9 +866,9 @@ def _trait_tree(org, techs=()):
     return order, req_all, req_any, excl
 
 
-def mio_feasible_sets(org, max_level=MIO_MAX_LEVEL, techs=()):
+def mio_feasible_sets(org, max_level=MIO_MAX_LEVEL, techs=(), plane_groups=None, archetype=None):
     """枚举前提闭包内、大小 ≤ max_level 的所有可行特质子集（bitmask 列表）。"""
-    order, req_all, req_any, excl = _trait_tree(org, techs)
+    order, req_all, req_any, excl = _trait_tree(org, techs, plane_groups, archetype)
     n = len(order)
     out = []
 
@@ -858,7 +896,10 @@ def pick_mio_traits_exact(org, level, base, upgrade_map, mods, enemy, roles, ran
     目标函数：各用途的「该子集分数 ÷ 起始分数」之和（多用途时量级可比）。
     返回 (选中 token 列表, 修正合计, log)，log 每项 = {token, score, bonuses}。
     """
-    order, masks = mio_feasible_sets(org, max_level, techs)
+    # 装备类型过滤：只保留"对 base 这型飞机生效"的特质（没写限制的算通用）
+    groups = plane_groups((base or {}).get("archetype"))
+    arche = (base or {}).get("archetype")
+    order, masks = mio_feasible_sets(org, max_level, techs, groups, arche)
     role_list = [score_role(r) for r in (roles or [])] or ["air_far"]
 
     def score_of(chosen_mods):
@@ -897,7 +938,7 @@ def pick_mio_traits_exact(org, level, base, upgrade_map, mods, enemy, roles, ran
     # 而截击机要求 缩短机翼 → (悬臂式机翼结构 + 最低武器要求)，1 级根本点不了。
     # 现在按"前提闭合"逐步贪心：1 级只会从 5 个无前置特质里选
     # （最低武器要求 / 悬臂式机翼结构 / 大号引擎 / 表层金属覆盖 / 表层织物覆盖）。
-    _o, req_all, req_any, _excl = _trait_tree(org, techs)      # 顺序与 order 一致
+    _o, req_all, req_any, _excl = _trait_tree(org, techs, groups, arche)   # 顺序与 order 一致
     remaining = [i for i in range(len(order)) if (best_mask >> i) & 1]
     picked = []
     cur = dict(mods)

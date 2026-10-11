@@ -102,6 +102,8 @@ IDEAS_DIR = os.path.join("common", "ideas")
 # idea 的 equipment_bonus 里与飞机相关的类别关键字
 AIR_CATEGORY_HINTS = ("fighter", "interceptor", "cas", "bomber", "plane", "air_", "mr_")
 MIO_DIR = os.path.join("common", "military_industrial_organization", "organizations")
+# MIO 装备组定义（特质里的 limit_to_equipment_type 用的就是这套组名）
+MIO_GROUPS_FILE = os.path.join("common", "equipment_groups", "mio_equipment_groups.txt")
 # 需要抽取的 MIO 来源；None = 自动发现 organizations 目录下全部 *_organization 文件
 MIO_FILES = None
 AIR_ARCHETYPES = ("fighter_equipment", "fighter_alt_equipment", "interceptor_equipment",
@@ -388,6 +390,24 @@ def _production_bonus(body):
         return {}
     nested = _sub_block(inner, "same_as_mio")
     return _pairs(nested or inner)
+
+
+def parse_mio_groups(game_dir):
+    """MIO 装备组：{组名: [装备类型…]}。
+
+    特质里的 `limit_to_equipment_type` 用的就是这套组名（如 transport_plane_equipment），
+    判断"某特质能不能用在某型飞机上"必须靠它：
+    飞机 archetype → 它属于哪些组 → 特质限制与这组集合有交集才可用。
+    """
+    path = os.path.join(game_dir, MIO_GROUPS_FILE)
+    out = {}
+    if not os.path.exists(path):
+        return out
+    for name, body in parse_blocks(read_text(path)):
+        members = re.findall(r"^\s*([a-z_0-9]+)\s*$", body, re.M)
+        if members:
+            out[name] = members
+    return out
 
 
 def parse_policies(game_dir):
@@ -740,6 +760,7 @@ def main():
     policies = parse_policies(game_dir)
     projects = parse_special_projects(game_dir)
     tech_years = parse_tech_years(game_dir)
+    mio_groups = parse_mio_groups(game_dir)
 
     os.makedirs(DATA_DIR, exist_ok=True)
     manifest = {
@@ -777,6 +798,8 @@ def main():
         json.dump(projects, fh, ensure_ascii=False, indent=1)
     with open(os.path.join(DATA_DIR, "tech_years.json"), "w", encoding="utf-8") as fh:
         json.dump(tech_years, fh, ensure_ascii=False, indent=1)
+    with open(os.path.join(DATA_DIR, "mio_groups.json"), "w", encoding="utf-8") as fh:
+        json.dump(mio_groups, fh, ensure_ascii=False, indent=1)
     with open(os.path.join(DATA_DIR, "manifest.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, ensure_ascii=False, indent=1)
 

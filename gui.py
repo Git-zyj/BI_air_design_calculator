@@ -955,13 +955,33 @@ class App(tk.Tk):
                 mio["manual_traits"] = list(plan["route"])
         return dict(inputs, mio=mio)
 
+    def _ref_plane(self):
+        """当前输入下的"参考机型"（候选里年份最新的那架）——路线与装备类型过滤都按它。"""
+        try:
+            inputs = self.collect()
+            pool = run.candidate_pool(inputs, self.data)
+        except (Exception, SystemExit):      # noqa: BLE001
+            return None
+        return self._ref_plane_of(inputs, pool)
+
+    def _ref_plane_of(self, inputs, pool):
+        """参考机型 = 该用途下"空修正"分数最高的候选（与 run.build_rows 口径一致）。"""
+        enemy_by_role = {
+            r: engine.pick_enemy_values(self.data["airframes_all"],
+                                        inputs.get("enemy") or {}, r,
+                                        inputs["current_year"])
+            for r in inputs["roles"]}
+        return run.pick_reference_plane(pool, inputs, self.data,
+                                        engine.upgrades_by_key(self.data["upgrades"]),
+                                        enemy_by_role)
+
     def _plan_context(self, inputs):
         """(参考机型, upgrade_map, 对手机动速度, 事故系数, score_key)——算一次给多处用。"""
         upgrade_map = engine.upgrades_by_key(self.data["upgrades"])
         pool = run.candidate_pool(inputs, self.data)
         if not pool:
             return None
-        ref = max(pool, key=lambda a: (a.get("year") or 0))
+        ref = self._ref_plane_of(inputs, pool)
         role = inputs["roles"][0]
         _enemy, enemy_values = engine.pick_enemy_values(
             self.data["airframes_all"], inputs.get("enemy") or {}, role, inputs["current_year"])
@@ -1068,6 +1088,11 @@ class App(tk.Tk):
                if os.path.basename(o.get("file", "")).upper().startswith(tag + "_")
                and is_air_mio(o, self.by_name)]
         own.sort(key=lambda o: o["organization"])
+        # 再按"是否覆盖当前参考机型的装备组"过滤（伊留申只做 CAS、图波列夫只做重型/运输机 …）
+        groups = engine.plane_groups((self._ref_plane() or {}).get("archetype"))
+        if groups:
+            fit = [o for o in own if set(o.get("equipment_types") or []) & groups]
+            own = fit or own          # 全被滤掉就退回，别让下拉变空
         if own:
             return own, False
         generic = [o for o in self.data["mio"]
@@ -1294,7 +1319,10 @@ class App(tk.Tk):
         if not org:
             return
         unlocked = {t for t, v in self.tech_vars.items() if v.get()}
+        ref = self._ref_plane() or {}
+        groups = engine.plane_groups(ref.get("archetype"))
         hidden = 0
+        hidden_type = 0
         for trait in org.get("traits", []):
             token = trait.get("token")
             if not token:
@@ -1303,6 +1331,9 @@ class App(tk.Tk):
             if any(t not in unlocked for t in need):
                 hidden += 1          # 科技没解锁的特质游戏里也点不了，直接隐藏
                 continue
+            if groups and not engine.trait_fits(trait, groups, ref.get("archetype")):
+                hidden_type += 1     # 只对别的机型生效（如"运输职责"只对运输机）
+                continue
             self.tree_traits.insert("", "end", iid=token, values=(
                 # ⚠️ 这里要按 chosen_traits 显示勾选状态：以前写死 "☐"，
                 # 于是"按满级最优勾选 / 全不选"重填表格后看起来像没勾上（属性却变了）。
@@ -1310,8 +1341,11 @@ class App(tk.Tk):
                 zh(self.loc, token), fmt_mods(trait.get("bonuses") or {}),
                 self._trait_req(trait)))
         base = "点击行勾选/取消（初始特质已默认计入，不需要勾）"
-        self._traits_hint_base = base + ("　另有 %d 个特质需前置科技，已隐藏" % hidden
-                                         if hidden else "")
+        if hidden:
+            base += "　另有 %d 个特质需前置科技，已隐藏" % hidden
+        if hidden_type:
+            base += "　另有 %d 个特质只适用于其他机型，已隐藏" % hidden_type
+        self._traits_hint_base = base
         self.lbl_traits_hint.configure(text=self._traits_hint_base)
         self._refresh_trait_states()
 
