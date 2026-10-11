@@ -5,6 +5,7 @@
 
 | 日期 | 变更 |
 | --- | --- |
+| 2026-10-11 | 界面可读性三改：① 方针说明里的科技名与组织级修正全部翻译（`computing_machine` → 基础计算机、`military_industrial_organization_funds_gain` → 军工组织资金获取），并标注"组织（不影响飞机属性）"；② ④ 卡片行序按用户要求调换（军工组织+方针 / 等级+预览 / 累计独占一行），并修掉"卡片被长文本撑宽"的换行算法（改成按画布宽度算：累计标签右边界 1799px → 不再超出 1280px 窗口）；③ 选中机型时在散点图上方给出**性能分数的算式**（攻击×防御×战斗比值×航程；总分数 = 上面 ÷ 有效造价）与战斗比值的来源；见 §24 |
 | 2026-10-11 | 打包脚本不再依赖系统 Python：新增 **`setup_build_env.bat`**（建项目内 `.venv_build` 并装 `pyinstaller`+`openpyxl`），`build_exe.bat` / `build_exe_debug.bat` **优先用它**、找不到才退回 PATH 上的 `python`；起因是用户 PATH 上的 Python 里 PyInstaller 莫名消失（`PyInstaller not importable by this "python"`）；见 §22.4 |
 | 2026-10-11 | 修两个 MIO 真 bug（拉沃契金复现）：① **配点路线跳过前置**——1 级第一条推荐"截击机"，而它要求 缩短机翼→(悬臂式机翼结构+最低武器要求)；改成"逐步贪心 + 前提闭合"，1 级只会从 5 个无前置特质里选。② **方针 6 级前就能选且真生效**——下拉框改为只列真正能选的（等级+科技），`run.resolve_manufacturer` 同步设门槛；顺带修 `_policy_ready`/`_policy_desc` 读启动时科技（应读界面实时勾选）；见 §23 |
 | 2026-10-10 | 测试版 Release `v12.3.0-test` 发布（tag 指向 `beta` 分支，附件 `BI_air_design_calculator_beta-v12.3.0.zip` / `.exe`，SHA256 `654d283f…3219dc`）；**踩坑：不加 `--prerelease` 会顶掉正式版成为 Latest**，已用 `gh release edit --prerelease` 纠正；见 §22.3 |
