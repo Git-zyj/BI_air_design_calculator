@@ -1452,6 +1452,13 @@ python extract_game_data.py --game-dir /mnt/d/Steam/steamapps/workshop/content/3
 这台机器上的 `python` 是**商店版**（`...\WindowsApps\python.exe`），沙箱里的账号读不到它，
 所以打包用项目内的本地 venv（已加进 `.gitignore`）：
 
+> **已经脚本化（2026-10-11）**：双击 **`setup_build_env.bat`** 就会建好 `.venv_build`
+> 并装好 `pyinstaller` + `openpyxl`；`build_exe.bat` / `build_exe_debug.bat`
+> 会**自动优先用它**，只有在没有这个 venv 时才退回 PATH 上的 `python`。
+> 起因：用户 PATH 上那个 `python` 是"App 别名"型（注册表里查不到安装、`Packages` 下也没有包目录），
+> 里面之前装的 PyInstaller 不知何时没了，打包直接报
+> `[ERROR] PyInstaller not importable by this "python"`——依赖系统 Python 的状态本来就不可靠。
+
 ```powershell
 & "<任意一个 python.exe>" -m venv .venv_build
 .\.venv_build\Scripts\python.exe -m pip install pyinstaller openpyxl
