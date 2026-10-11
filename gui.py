@@ -215,6 +215,7 @@ class App(tk.Tk):
         self._refresh_enemy()
         self._refresh_totals()
         self._watch_inputs()          # 调试：输入项一变就打一行日志
+        self._bind_live_refresh()     # 年份直接键入时也要重算 ② 的对手
         _say("准备就绪，正在显示窗口…")
         self.after(80, self._pop_to_front)
 
@@ -1438,7 +1439,20 @@ class App(tk.Tk):
             name = zh(self.loc, e["key"]) or e["name"] if e else "（该规则下找不到机型）"
             body = name if not v else "%s 机动 %.2f 速度 %.2f" % (name, v["agility"], v["speed"])
             parts.append(body if len(keys) <= 1 else "%s：%s" % (ROLE_SHORT.get(role, role), body))
-        self.lbl_enemy.configure(text="对手：" + "\u3000｜\u3000".join(parts))
+        # 对手数值是怎么来的：说清"设计商（满级特质、无方针）+ 经验"，舰载用途不计经验
+        _cats, exp, mods = engine.enemy_spec(roles[0], cfg)
+        exp_used = any((engine.enemy_spec(r, cfg)[1] or {}) for r in roles)
+
+        def pct(source, key):
+            return "%+g%%" % round((source or {}).get(key, 0.0) * 100, 2)
+
+        note = ("　数值口径：对手 = 该国设计商【满级特质、无方针】的修正"
+                "（机动 %s / 速度 %s）%s"
+                % (pct(mods, "air_agility"), pct(mods, "maximum_speed"),
+                   "＋ 满经验（机动 %s / 速度 %s）；「（舰载）」用途不计经验"
+                   % (pct(exp, "air_agility"), pct(exp, "maximum_speed"))
+                   if exp_used else "，且本用途（舰载）不计经验"))
+        self.lbl_enemy.configure(text="对手：" + "\u3000｜\u3000".join(parts) + "\n" + note)
 
     # ---------- 计算 ----------
     def collect(self, policy=_UNSET):
@@ -1657,6 +1671,21 @@ class App(tk.Tk):
                            (self.var_f_role, "改用途筛选"), (self.var_f_pareto, "改帕累托筛选"),
                            (self.var_axis_x, "改 X 轴"), (self.var_axis_y, "改 Y 轴")):
             watch(var, label)
+
+    def _bind_live_refresh(self):
+        """补齐"改了就立刻生效"的输入。
+
+        Spinbox 的 `command=` 只在按上下箭头时触发，**直接键入年份不会触发**，
+        于是出现过：debug 里对手已经是 Bf 109 G-14，② 那行还写着 109 D（旧年份的对手）。
+        """
+        def on_year(*_a):
+            try:
+                int(self.var_year.get())
+            except (tk.TclError, ValueError):
+                return                     # 还在输入中（例如只敲了 "19"）
+            self._refresh_enemy()
+
+        self.var_year.trace_add("write", on_year)
 
     def _sort_by(self, cid):
         if getattr(self, "_sort_key", None) == cid:
