@@ -60,11 +60,6 @@ MOD_FIELDS = [("air_attack", "对空"), ("air_defence", "防御"), ("air_agility
               ("maximum_speed", "速度"), ("reliability", "可靠"), ("build_cost_ic", "造价"),
               ("air_range", "航程"), ("air_ground_attack", "对地"),
               ("naval_strike_attack", "对海"), ("naval_strike_targetting", "瞄准")]
-# 我方联队经验（只列会进分数的项；经验和 MIO/国家精神是并列的另一层）
-EXPERIENCE_FIELDS = [("air_agility", "机动"), ("maximum_speed", "速度"),
-                     ("air_attack", "对空"), ("air_defence", "防御"),
-                     ("air_ground_attack", "对地"), ("naval_strike_attack", "对海"),
-                     ("naval_strike_targetting", "瞄准")]
 # 对手规则：界面用中文，内部映射到引擎取值
 RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_year"), ("手动", "manual")]
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
@@ -76,11 +71,12 @@ DEFAULT_DISTANCE = 900
 #   split    设计 / 生产分离：本 MIO 只做设计，生产交给另一家 MIO（界面会列出那家与它的特质）
 ALLOC_MODES = [("split", "分离（设计最优 + 生产另算）"),
                ("balanced", "兼顾（同一 MIO 一条路线）")]
-# 「分离」= 本 MIO 走**设计最优路线**，生产取"本 MIO 这条路线顺带的"与"另一家 MIO 只求产能"
+# 「分离」= 本 MIO 走**设计最优路线**，生产取"本 MIO 这条路线顺带的"与"另一家 MIO 只求产量"
 # 里更好的那个 —— 所以它把原来的「设计最优」并了进来（没有更优的生产家时就是这个行为）。
-# 生产侧修正的中文名（按游戏里的写法：产能 / 生产效率上限 / 生产产出花费 …）
-# 注：`production_capacity_factor` 叫**产能**（叫"产量"会和装备的产量属性混淆）
-PROD_ZH = {"production_capacity_factor": "产能",
+# 生产侧修正的中文名（按游戏官方汉化：production_capacity_factor = **产量**）
+# 注意区分两个词：**产量**是修正名（= production_capacity_factor）；
+#                  **产能**是折算出来的等效产出倍率（"⇒ 产能 ×1.0167"）。
+PROD_ZH = {"production_capacity_factor": "产量",
            "production_cost_factor": "生产产出花费",
            "production_efficiency_cap_factor": "效率上限",
            "production_efficiency_gain_factor": "效率增长",
@@ -544,7 +540,7 @@ class App(tk.Tk):
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
         ttk.Spinbox(card, from_=1, to=500, textvariable=self.var_cap, width=5).grid(
             row=4, column=2, sticky="w", pady=(PADY, 0))
-        ttk.Label(card, text="%　当前产能加成").grid(row=4, column=3, sticky="w", padx=(6, 2),
+        ttk.Label(card, text="%　当前产量加成").grid(row=4, column=3, sticky="w", padx=(6, 2),
                                                 pady=(PADY, 0))
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
         ttk.Spinbox(card, from_=0, to=2000, textvariable=self.var_capacity, width=5).grid(
@@ -650,25 +646,6 @@ class App(tk.Tk):
         ttk.Button(card, text="预览总体加成", command=self._refresh_totals).grid(
             row=2, column=2, sticky="w", padx=PADX, pady=(0, PADY))
 
-        # 我方联队经验：一直生效（和 MIO/国家精神/手填是并列的另一层），
-        # 以前只有 inputs.json / DEFAULT_INPUTS 里的隐藏值 —— exe 用它、命令行不填，
-        # 同一套输入在两边能差出一倍多（实测德国 1939：梅塞施密特比阿拉多高 15% vs 156%）。
-        exp_row = ttk.Frame(card)
-        exp_row.grid(row=3, column=0, columnspan=3, sticky="w", padx=PADX, pady=(0, PADY))
-        ttk.Label(exp_row, text="我方联队经验加成（%）").grid(row=0, column=0, sticky="e",
-                                                             padx=(0, 4))
-        cur_exp = self.inputs.get("experience") or {}
-        self.exp_vars = {}
-        for i, (key, label) in enumerate(EXPERIENCE_FIELDS):
-            ttk.Label(exp_row, text=label).grid(row=0, column=1 + i * 2, sticky="e",
-                                                padx=(PADX, 2))
-            var = tk.StringVar(value="%g" % (float(cur_exp.get(key, 0.0)) * 100))
-            self.exp_vars[key] = var
-            ttk.Entry(exp_row, textvariable=var, width=5, justify="right").grid(
-                row=0, column=2 + i * 2, sticky="w")
-        self.lbl_exp = ttk.Label(card, text="", foreground="#44506B")
-        self.lbl_exp.grid(row=4, column=0, columnspan=3, sticky="w", padx=PADX, pady=(0, PADY))
-        self._wrap_to_card(self.lbl_exp, card)
         row += 1
 
         # ⑦ 最终结果展示
@@ -1776,16 +1753,6 @@ class App(tk.Tk):
                 mods[key] = float(raw) / 100.0
             except ValueError:
                 raise ValueError("「%s」填的不是数字：%s" % (MOD_ZH.get(key, key), raw))
-        # 我方联队经验（和 MIO/国家精神/手填并列的另一层，按经验单独乘）
-        experience = {}
-        for key, label in EXPERIENCE_FIELDS:
-            raw = (self.exp_vars[key].get() or "0").strip()
-            try:
-                value = float(raw) / 100.0
-            except ValueError:
-                raise ValueError("「我方联队经验·%s」填的不是数字：%s" % (label, raw))
-            if value:
-                experience[key] = value
         rule = self._rule_value()
         source = self.var_source.get()
         inputs = dict(self.inputs)
@@ -1803,7 +1770,6 @@ class App(tk.Tk):
             "national_spirits": [s.strip() for s in self.var_spirits.get().split(",") if s.strip()],
             "unlocked_techs": [t for t, v in self.tech_vars.items() if v.get()],
             "unlocked_flags": [f for f, v in getattr(self, "flag_vars", {}).items() if v.get()],
-            "experience": experience,
             "efficiency_cap_now": int(self.var_cap.get()),
             "capacity_bonus_now": int(self.var_capacity.get()),
             "alloc_mode": self._alloc_mode_key(),
@@ -1845,11 +1811,6 @@ class App(tk.Tk):
             total = engine.combine_modifiers(mfr_mods, spirit,
                                              inputs.get("extra_modifiers") or {})
         self.lbl_overall.configure(text=fmt_mods(total))
-        exp = inputs.get("experience") or {}
-        self.lbl_exp.configure(
-            text="我方联队经验：%s（按经验单独乘，不进上面的合计）"
-                 % ("、".join("%s %+g%%" % (dict(EXPERIENCE_FIELDS)[k], round(v * 100, 2))
-                              for k, v in sorted(exp.items())) or "无"))
 
     def on_preview(self):
         self.tree_mio.delete(*self.tree_mio.get_children())
@@ -1957,9 +1918,9 @@ class App(tk.Tk):
                             " → ".join(zh(self.loc, t) for t in partner["tokens"])))
             elif partner:
                 self.lbl_partner.configure(
-                    text="　生产：最优的一家就是本 MIO（换别家都不给产能加成）→ 用「兼顾」更合适")
+                    text="　生产：最优的一家就是本 MIO（换别家都不给产量加成）→ 用「兼顾」更合适")
             else:
-                self.lbl_partner.configure(text="　生产：没有 MIO 能给产能加成")
+                self.lbl_partner.configure(text="　生产：没有 MIO 能给产量加成")
 
     def _prod_of_tokens(self, org_name, tokens):
         """某 MIO + 指定特质列表的生产侧修正合计（分离口径下显示"生产伙伴"用）。"""
@@ -1977,7 +1938,11 @@ class App(tk.Tk):
 
     @staticmethod
     def _prod_text(prod, gain=1.0, parts=None):
-        """生产侧清单 + 折算结果：把生产修正换成"等效造价折扣"（产能 ×gain ⇔ 造价 ÷gain）。"""
+        """生产侧清单 + 折算结果：把生产修正换成"等效造价折扣"。
+
+        措辞：修正本身按官方汉化叫**产量**（`production_capacity_factor`），
+        折算出来的整体倍率叫**产能**（"⇒ 产能 ×gain"）。
+        """
         head = "生产侧："
         if not prod:
             return head + "这条路线没有任何生产修正"
@@ -2097,8 +2062,6 @@ class App(tk.Tk):
                            (self.var_enemy_exp_agi, "改对手经验机动"),
                            (self.var_enemy_exp_spd, "改对手经验速度")):
             watch(var, label)
-        for key, label in EXPERIENCE_FIELDS:
-            watch(self.exp_vars[key], "改我方联队经验·%s" % label)
         for key, rv in self.role_vars.items():
             watch(rv, "勾选用途 %s" % ROLE_SHORT.get(key, key))
         for var, label in ((self.var_filter, "改机型筛选"), (self.var_f_year, "改年份筛选"),
@@ -2136,22 +2099,6 @@ class App(tk.Tk):
 
         for var in (self.var_cap, self.var_capacity):
             var.trace_add("write", on_prod)
-
-        # 我方联队经验：改了立刻重算（它只进分数、不进 ⑥ 的合计）
-        def on_exp(*_a):
-            for key, _label in EXPERIENCE_FIELDS:
-                raw = (self.exp_vars[key].get() or "0").strip()
-                try:
-                    float(raw)
-                except ValueError:
-                    return                    # 还在输入中
-            self.on_preview()
-            self._refresh_totals()
-            if getattr(self, "rows", None):
-                self.on_calculate()
-
-        for var in self.exp_vars.values():
-            var.trace_add("write", on_exp)
 
         # 对手修正/经验：改了立刻写回 by_country 并重算对手（写不进去 = 还在输入中）
         def on_enemy_mods(*_a):

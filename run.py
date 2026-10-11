@@ -91,9 +91,9 @@ DEFAULT_INPUTS = {
     "extra_modifiers": {},
     "unlocked_techs": ["advanced_machine_tools", "computing_machine"],  # 1939 年前完成的科技
     "unlocked_flags": [],
-    "experience": {"air_agility": 0.20, "maximum_speed": 0.05, "air_attack": 0.10,
-                   "air_defence": 0.10, "air_ground_attack": 0.10,
-                   "naval_strike_attack": 0.10, "naval_strike_targetting": 0.15},
+    # 我方联队经验**不建模**（= 0）：表口径是"设计值"，经验只在对手段单独建模
+    # （engine.ENEMY_EXPERIENCE）。留这个键只是为了兼容旧 inputs.json 的写法。
+    "experience": {},
     # 对手（AI）的"设计商修正"由 engine.enemy_design() 按模组 ai_bonus_weights 自动判定；
     # 界面手填的值存在 by_country[该国]（优先级高于自动判定）。
     "enemy": {"country": "GER", "rule": "previous_year", "override_key": None,
