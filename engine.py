@@ -290,13 +290,21 @@ EXPERIENCE_BONUS = {
 }
 
 
+_DATA_CACHE = None
+
+
 def load_data():
+    """读全部数据表（带缓存：MIO/机型的 json 很大，界面里会被反复用到）。"""
+    global _DATA_CACHE
+    if _DATA_CACHE is not None:
+        return _DATA_CACHE
     data = {}
     for name in ("airframes", "airframes_all", "upgrades", "national_ideas", "mio", "archetypes",
                  "policies", "special_projects", "tech_years", "mio_groups"):
         path = os.path.join(DATA_DIR, name + ".json")
         default = {} if name == "mio_groups" else []
         data[name] = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else default
+    _DATA_CACHE = data
     return data
 
 
@@ -695,32 +703,6 @@ CARRIER_ENEMY_CATEGORIES = {
 }
 
 
-# 对手预设（data/enemy_presets.json）：按对手国别给"设计商修正 + 经验"。
-# 之前写死成德国（阿拉多）那一套，换对手国别时不生效 —— 例如拿苏联当对手，
-# 苏联飞机照样被套上德国的 +4% 机动 / +1.5% 速度，分数自然是错的。
-_ENEMY_PRESETS = None
-
-
-def enemy_presets():
-    """按国别的对手预设：{"default": {...}, "by_country": {国家: {...}}}（懒加载 + 缓存）。"""
-    global _ENEMY_PRESETS
-    if _ENEMY_PRESETS is None:
-        path = os.path.join(DATA_DIR, "enemy_presets.json")
-        if os.path.exists(path):
-            with open(path, encoding="utf-8") as fh:
-                _ENEMY_PRESETS = json.load(fh)
-        else:
-            _ENEMY_PRESETS = {}
-    return _ENEMY_PRESETS
-
-
-def enemy_preset(country, presets=None):
-    """该对手国别的预设（没有国别条目时退回 default；都没有则 {}）。"""
-    pres = presets if presets is not None else enemy_presets()
-    return ((pres.get("by_country") or {}).get(country or "")
-            or pres.get("default") or {})
-
-
 def _first_not_none(*vals):
     """取第一个不是 None 的值（空 dict 算"明确给了值"，用来表达"该国没有设计商加成"）。"""
     for v in vals:
@@ -729,29 +711,142 @@ def _first_not_none(*vals):
     return {}
 
 
-def enemy_spec(role, enemy_cfg, presets=None):
-    """该用途对应的 (对手机种类别, 经验加成, 制造商修正)。
+# MIO「满级」步数上限（够覆盖任何组织的特质树；贪心会在没有正收益时提前停）
+MIO_MAX_LEVEL = 14
+# 对手（AI）的满经验加成：机动 +20% / 速度 +5%（用户实测口径；可界面手填覆盖）
+ENEMY_EXPERIENCE = {"air_agility": 0.20, "maximum_speed": 0.05}
+# 空军 MIO 的装备类型关键字（判断一个组织是不是做飞机的）
+AIR_EQ_TOKENS = ("mio_cat_eq_all_small_plane", "mio_cat_eq_all_medium_plane",
+                 "mio_cat_eq_all_heavy_plane", "mio_cat_eq_only_light_fighter",
+                 "mio_cat_eq_all_close_air_support", "mio_cat_eq_all_cv_aircraft",
+                 "plane_equipment", "aircraft_organization")
+_AI_WEIGHTS = None
+_AI_DESIGN_CACHE = {}
 
-    取值顺序：手填的 by_country[该国] → data/enemy_presets.json 的该国预设
-    → 预设 default → 老式全局 modifiers/experience（兼容旧 inputs.json）。
+
+def ai_bonus_weights():
+    """AI 挑 MIO / 特质用的属性权重（data/ai_bonus_weights.json，懒加载 + 缓存）。"""
+    global _AI_WEIGHTS
+    if _AI_WEIGHTS is None:
+        path = os.path.join(DATA_DIR, "ai_bonus_weights.json")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                _AI_WEIGHTS = json.load(fh)
+        else:
+            _AI_WEIGHTS = {}
+    return _AI_WEIGHTS
+
+
+def is_air_mio(org, by_name):
+    """这个军工组织做不做飞机（自身或 include 的装备类型里有没有飞机关键字）。"""
+    types = list(org.get("equipment_types") or [])
+    for inc in org.get("includes") or []:
+        src = by_name.get(inc)
+        if src:
+            types += list(src.get("equipment_types") or [])
+    joined = " ".join(types)
+    return any(tok in joined for tok in AIR_EQ_TOKENS)
+
+
+def country_air_mios(mio_orgs, country, plane=None, by_name=None):
+    """该国的空军 MIO；给了 plane 就只留"覆盖该机型装备组"的（全被滤掉时退回全部）。"""
+    by_name = by_name if by_name is not None else {o["organization"]: o for o in mio_orgs}
+    own = [o for o in mio_orgs
+           if os.path.basename(o.get("file", "")).upper().startswith((country or "") + "_")
+           and is_air_mio(o, by_name)]
+    groups = plane_groups((plane or {}).get("archetype")) if plane else set()
+    if groups:
+        fit = [o for o in own if set(o.get("equipment_types") or []) & groups]
+        own = fit or own
+    return own
+
+
+def ai_trait_score(mods, weights=None):
+    """AI 的打分：Σ(权重 × 加成)。缺权重就按 1 算（BI 的飞机就是这样，走 default）。"""
+    w = weights or {}
+    return sum(float(w.get(k, 1.0)) * float(v) for k, v in mods.items())
+
+
+def ai_route(org, plane, weights=None, level=MIO_MAX_LEVEL):
+    """AI 会怎么点这个 MIO：满级、前提闭包内挑 Σ(权重×加成) 最大的一套特质。
+
+    返回 (选中 token 列表, 修正合计, 打分)。**注意**：这不是"战斗力最优"——
+    实测德国 AI 的阿拉多就是"加成项目总和最大"那套（机动 +4% / 速度 +1.5%），
+    而按空战分最优会点成机动 +6% / 攻击 +9%（游戏里对不上）。
+    """
+    ini = org.get("initial_trait")
+    base = dict(ini.get("bonuses") or {}) if ini else {}
+    groups = plane_groups(plane.get("archetype")) if plane else set()
+    order, sets = mio_feasible_sets(org, level, (), groups, (plane or {}).get("archetype"))
+    best = None
+    for mask in sets:
+        mods = dict(base)
+        for i, trait in enumerate(order):
+            if mask & (1 << i):
+                mods = combine_modifiers(mods, trait.get("bonuses") or {})
+        score = ai_trait_score(mods, weights)
+        if best is None or score > best[0]:
+            tokens = [t["token"] for i, t in enumerate(order) if mask & (1 << i)]
+            best = (score, tokens, mods)
+    if best is None:
+        return [], base, ai_trait_score(base, weights)
+    return best[1], best[2], best[0]
+
+
+def enemy_design(country, role, year, data=None, plane=None, level=MIO_MAX_LEVEL):
+    """AI 会用什么设计：该国的哪家 MIO + 点什么特质 + 给的机动/速度修正。
+
+    规则来自模组的 `ai_bonus_weights`（见 PLAN §35）：AI 挑 MIO 和挑特质都用
+    "Σ(权重 × 加成) 最大"。AI 等级按满级算（用户口径），不走方针。
+    返回 dict（含 organization/traits/modifiers/score/plane）或 None。
+    """
+    cats = CARRIER_ENEMY_CATEGORIES.get(role, ("fighter",))
+    data = data if data is not None else load_data()
+    if plane is None:
+        plane = pick_enemy(data["airframes_all"], country, year, category=cats,
+                           rule="previous_year")
+    if not plane:
+        return None
+    key = (country, role, year, plane["key"], level)
+    if key in _AI_DESIGN_CACHE:
+        return _AI_DESIGN_CACHE[key]
+    weights = (ai_bonus_weights() or {}).get("default") or {}
+    best = None
+    for org in country_air_mios(data["mio"], country, plane):
+        tokens, mods, score = ai_route(org, plane, weights, level)
+        if best is None or score > best["score"]:
+            best = {"organization": org["organization"], "traits": tokens,
+                    "modifiers": {k: v for k, v in mods.items() if v},
+                    "score": score, "plane": plane["key"], "level": level}
+    _AI_DESIGN_CACHE[key] = best
+    return best
+
+
+def enemy_spec(role, enemy_cfg, year=None, data=None):
+    """该用途对应的 (对手机种类别, 经验加成, 设计商修正)。
+
+    取值顺序：界面手填的 by_country[该国] → **按 AI 权重自动判定**（需要年份）
+    → 老式全局 modifiers/experience（兼容旧 inputs.json）。
+    舰载用途照旧：对手换舰载机、不吃经验。
     """
     cfg = enemy_cfg or {}
     country = cfg.get("country") or ""
     hand = (cfg.get("by_country") or {}).get(country) or {}
-    pre = enemy_preset(country, presets)
-    mods = _first_not_none(hand.get("modifiers"), pre.get("modifiers"),
+    design = None
+    if not hand.get("modifiers") and year:
+        design = enemy_design(country, role, year, data=data)
+    mods = _first_not_none(hand.get("modifiers"), (design or {}).get("modifiers"),
                            cfg.get("modifiers"), {})
-    exp = _first_not_none(hand.get("experience"), pre.get("experience"),
-                          cfg.get("experience"), {})
     if role in CARRIER_ROLES:
         return CARRIER_ENEMY_CATEGORIES[role], {}, mods
+    exp = _first_not_none(hand.get("experience"), cfg.get("experience"), ENEMY_EXPERIENCE)
     return ("fighter",), exp, mods
 
 
-def pick_enemy_values(all_airframes, enemy_cfg, role, year):
+def pick_enemy_values(all_airframes, enemy_cfg, role, year, data=None):
     """按用途取对手及其最终机动/速度。返回 (对手条目, 数值 dict)，找不到时为 (None, None)。"""
     cfg = enemy_cfg or {}
-    cats, exp, mods = enemy_spec(role, cfg)
+    cats, exp, mods = enemy_spec(role, cfg, year=year, data=data)
     enemy = pick_enemy(all_airframes, cfg.get("country", "GER"), year, category=cats,
                        override_key=cfg.get("override_key"),
                        rule=cfg.get("rule", "previous_year"))
@@ -834,7 +929,7 @@ def pick_mio_traits(org, level, base, upgrade_map, mods, enemy, roles, range_cap
 
 
 # MIO「满级」步数上限（够覆盖任何组织的特质树；贪心会在没有正收益时提前停）
-MIO_MAX_LEVEL = 14
+# 注：常量定义在文件上方（AI 对手判定要用到它做默认参数）
 # MIO 装备组缓存（懒加载 mio_groups.json）
 _MIO_GROUPS = None
 

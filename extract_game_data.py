@@ -104,6 +104,9 @@ AIR_CATEGORY_HINTS = ("fighter", "interceptor", "cas", "bomber", "plane", "air_"
 MIO_DIR = os.path.join("common", "military_industrial_organization", "organizations")
 # MIO 装备组定义（特质里的 limit_to_equipment_type 用的就是这套组名）
 MIO_GROUPS_FILE = os.path.join("common", "equipment_groups", "mio_equipment_groups.txt")
+# AI 挑 MIO / 特质时用的属性权重（default 全 1；BI 只覆盖了少量陆军装备，飞机走 default）
+AI_WEIGHTS_FILE = os.path.join("common", "military_industrial_organization",
+                               "ai_bonus_weights", "ai_bonus_weights.txt")
 # 需要抽取的 MIO 来源；None = 自动发现 organizations 目录下全部 *_organization 文件
 MIO_FILES = None
 AIR_ARCHETYPES = ("fighter_equipment", "fighter_alt_equipment", "interceptor_equipment",
@@ -407,6 +410,27 @@ def parse_mio_groups(game_dir):
         members = re.findall(r"^\s*([a-z_0-9]+)\s*$", body, re.M)
         if members:
             out[name] = members
+    return out
+
+
+def parse_ai_bonus_weights(game_dir):
+    """AI 给产线挑 MIO / 给 MIO 点特质时用的属性权重：{装备类别: {属性: 权重}}。
+
+    规则（2026-10-11 用德国实测校准反推出来，见 PLAN §35）：
+    AI 在"前提闭包 + 满级"里挑 **Σ(权重 × 加成) 最大** 的那套特质，
+    MIO 也一样按这个和来挑。BI 只覆盖了少量陆军装备，飞机走 `default`（全 1），
+    所以对飞机来说就是"加成项目总和最大"——这条刚好能把德国 AI 的阿拉多面板
+    （机动 +4% / 速度 +1.5% / 攻击 +6% / 防御 +9% / 半径 +13% / 对地 +10% / 对海 +8% …）
+    一比一复现出来。
+    """
+    path = os.path.join(game_dir, AI_WEIGHTS_FILE)
+    out = {}
+    if not os.path.exists(path):
+        return out
+    for name, body in parse_blocks(read_text(path)):
+        pairs = _pairs(body)
+        if pairs:
+            out[name] = pairs
     return out
 
 
@@ -761,6 +785,7 @@ def main():
     projects = parse_special_projects(game_dir)
     tech_years = parse_tech_years(game_dir)
     mio_groups = parse_mio_groups(game_dir)
+    ai_weights = parse_ai_bonus_weights(game_dir)
 
     os.makedirs(DATA_DIR, exist_ok=True)
     manifest = {
@@ -768,7 +793,8 @@ def main():
         "game_dir": game_dir,
         "sources": [],
     }
-    for rel in [SOV_LOCALISATION, UPGRADES_FILE, DEFINES_FILE] + [
+    for rel in [SOV_LOCALISATION, UPGRADES_FILE, DEFINES_FILE, MIO_GROUPS_FILE,
+                AI_WEIGHTS_FILE] + [
         os.path.join("common", "units", "equipment", f) for _, f, _ in frame_sources
     ]:
         path = os.path.join(game_dir, rel)
@@ -800,6 +826,8 @@ def main():
         json.dump(tech_years, fh, ensure_ascii=False, indent=1)
     with open(os.path.join(DATA_DIR, "mio_groups.json"), "w", encoding="utf-8") as fh:
         json.dump(mio_groups, fh, ensure_ascii=False, indent=1)
+    with open(os.path.join(DATA_DIR, "ai_bonus_weights.json"), "w", encoding="utf-8") as fh:
+        json.dump(ai_weights, fh, ensure_ascii=False, indent=1)
     with open(os.path.join(DATA_DIR, "manifest.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, ensure_ascii=False, indent=1)
 
@@ -817,6 +845,8 @@ def main():
     print("机身原型的改装轨：%s" % ", ".join("%s=%d" % (a["category"], len(a["upgrades"])) for a in archetypes))
     print("NAir 常量：%s" % json.dumps(air_defines, ensure_ascii=False))
     print("MIO 方针：%d 条" % len(policies))
+    print("AI 挑 MIO 的权重表：%d 组（飞机走 default，%d 项权重）"
+          % (len(ai_weights), len(ai_weights.get("default") or {})))
     print("特殊工程（会授予国家标识的）：%d 条" % len(projects))
     print("科技年份：%d 项" % len(tech_years))
     for p in projects:
