@@ -3,15 +3,18 @@
 给 **BIX（BlackICE 子模组）** 用的飞机选型计算器：输入年份、国家、用途、军工组织与已解锁的前置，
 输出「该造哪一型飞机、怎么改装、为什么」。
 
-**对应模组**：BlackICE Historical Immersion Mod（黑冰）**正式版**（workshop id 1137372539）
-**v12.1.0**（游戏本体 1.19.2.0，仅参考）。数据是这个组合的固定快照——
+**对应模组**：看本分支的 `data/build_info.json`（`edition` / `mod_version` / `workshop_id`）：
+
+| 分支 | 适配的模组 | 配套 Release |
+| --- | --- | --- |
+| `main` | 黑冰**正式版**（BlackICE Historical Immersion Mod，workshop id 1137372539）**v12.1.0** | [v12.1.0.2](https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.1.0.2)（Latest） |
+| `beta` | 黑冰**测试版**（Blackice HOI IV TEST，workshop id 1851181613）**v12.3.0** | [v12.3.0-test.2](https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.3.0-test.2)（Pre-release） |
+
+两分支的**代码是同一份**（beta 用 `git checkout main -- <代码文件>` 同步），
+只有 `data/`（抽自各自模组版本）与 `data/build_info.json` 不同。
+**两个版本的数据不通用，别混用 exe。** 游戏本体 1.19.2.0（仅参考）。
 黑冰更新后需重跑 `extract_game_data.py` / `extract_loc_zh.py` 并重新打包，
 打出来的 exe 名字里会带**模组版本**（如 `飞机设计计算器_黑冰正式版v12.1.0.exe`）。
-
-> **本分支 = `main`，适配正式版。** 黑冰**测试版**（`Blackice HOI IV TEST`，
-> workshop id 1851181613 / v12.3.0）在 **`beta` 分支**，配套 Release 是
-> [v12.3.0-test](https://github.com/Git-zyj/BI_air_design_calculator/releases/tag/v12.3.0-test)（Pre-release）。
-> **两个版本的数据不通用，别混用 exe。**
 
 ## 快速开始
 
