@@ -591,35 +591,41 @@ class App(tk.Tk):
             self.role_vars[key] = v
             ttk.Checkbutton(roles_bar, text=label, variable=v,
                             command=self._on_roles_changed).pack(side="left", padx=(0, PADX))
-        # 「最远目标距离 + 目标距离差」单独一行：跟六个勾选框挤在同一行时整行 1035px，
-        # 窗口缩到 1000px 就会被右缘裁掉
-        ttk.Label(box, text="最远目标距离").grid(row=1, column=0, sticky="w",
-                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
+        # 第 1 行：两对"字段块"（标签 + 控件紧贴，和 ②④ 一个规矩）——
+        # 直接放在卡片网格里的话，下面那条长说明（跨 5 列）会把列宽撑开，
+        # "最远目标距离"到它自己的下拉框就被拉出老远（用户 2026-10-12 报）。
+        rng_row = ttk.Frame(box)
+        rng_row.grid(row=1, column=0, columnspan=5, sticky="w", padx=PADX,
+                     pady=(ROW_PAD, ROW_PAD))
+        blk = ttk.Frame(rng_row)
+        blk.grid(row=0, column=0, sticky="w", padx=(0, PADX * 2))
+        ttk.Label(blk, text="最远目标距离").grid(row=0, column=0, sticky="w", padx=(0, 6))
         self.var_distance = tk.StringVar(
             value=str(int(self.inputs.get("range_cap") or DEFAULT_DISTANCE)))
-        dbox = ttk.Combobox(box, textvariable=self.var_distance, width=CTL_W_NUM + 1,
+        dbox = ttk.Combobox(blk, textvariable=self.var_distance, width=CTL_W_NUM + 1,
                             state="readonly",
                             values=DISTANCES)
-        dbox.grid(row=1, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
+        dbox.grid(row=0, column=1, sticky="w")
         dbox.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
+        ttk.Label(blk, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
+            row=0, column=2, sticky="w", padx=(2, 0))
         # 目标区域纵深（近边 = 最远目标距离 − 目标距离差）：默认 300（游戏里的空域纵深量级）
-        ttk.Label(box, text="目标距离差").grid(row=1, column=2, sticky="w",
-                                          padx=(PADX * 2, 6))
+        blk2 = ttk.Frame(rng_row)
+        blk2.grid(row=0, column=1, sticky="w")
+        ttk.Label(blk2, text="目标距离差").grid(row=0, column=0, sticky="w", padx=(0, 6))
         self.var_band = tk.StringVar(value=str(int(self.inputs.get("range_band") or 0)))
-        bbox = ttk.Spinbox(box, from_=0, to=3600, increment=300, width=CTL_W_NUM + 1,
+        bbox = ttk.Spinbox(blk2, from_=0, to=3600, increment=300, width=CTL_W_NUM + 1,
                            textvariable=self.var_band, command=self._on_range_band_changed)
-        bbox.grid(row=1, column=3, sticky="w")
+        bbox.grid(row=0, column=1, sticky="w")
         bbox.bind("<FocusOut>", lambda e: self._on_range_band_changed())
         bbox.bind("<Return>", lambda e: self._on_range_band_changed())
-        ttk.Label(box, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
-            row=1, column=4, sticky="w", padx=(2, 0))
+        ttk.Label(blk2, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
+            row=0, column=2, sticky="w", padx=(2, 0))
 
-        # 航程口径说明（用户要求"辅以文字说明"）
+        # 说明（用户口径 2026-10-12：只解释这两个属性表示什么，不解释原理）
         self.lbl_range_note = ttk.Label(
-            box, text="航程口径：最远目标距离 = 目标区域远边到机场的距离；"
-                      "目标距离差 = 区域纵深（近边距离 = 最远目标距离 − 距离差）。"
-                      "航程不超过近边距离的飞机对该区域完全够不到，效率记 0"
-                      "（对应游戏里 Coverage in this region 的 0%）。",
+            box, text="最远目标距离：目标区域最远边到机场的距离。"
+                      "目标距离差：目标区域的纵深。",
             foreground=MUTED, justify="left", font=(self.family, FONT_NOTE))
         self.lbl_range_note.grid(row=2, column=0, columnspan=5, sticky="w", padx=PADX,
                                  pady=(0, ROW_PAD))
@@ -2570,12 +2576,16 @@ class App(tk.Tk):
         self._render_rows()
         # 全是 0 分时给一句人话：多半是"最远目标距离 / 目标距离差"组合下所有机型都飞不到
         zeros = [r for r in rows if (r.get("values") or {}).get("range_factor", 1.0) <= 0]
+        op = getattr(self, "_last_op", None)      # 上一次改了什么（状态行用）
+        self._last_op = None
+        prefix = "「%s」已生效：" % op if op else ""
         if rows and len(zeros) == len(rows):
             self.lbl_hint.configure(
-                text="⚠ 该「最远目标距离 / 目标距离差」下所有机型覆盖率都是 0（飞不到）"
-                     "——调小最远目标距离或调大目标距离差")
+                text=("%s⚠ 该「最远目标距离 / 目标距离差」下所有机型都飞不到（覆盖率 0）"
+                      "—— 调小最远目标距离或调大目标距离差" % prefix))
         else:
-            self.lbl_hint.configure(text="已计算 %d 行；需要写文件时点「导出 Excel」" % len(rows))
+            self.lbl_hint.configure(text="%s已重算 %d 行；需要写文件时点「导出 Excel」"
+                                         % (prefix, len(rows)))
         if view_result:
             self._scroll_to(self.card_result)  # 结果在折叠线以下，按了计算就带过去
 
@@ -2629,13 +2639,18 @@ class App(tk.Tk):
                     return          # Tk 写入同值也会触发，这里去重
                 last[label] = val
                 _dbg("操作：%s → %s" % (label, val))
+                # 记下"刚刚改了什么"：算完后状态行会写一句「XX 已生效：重算 N 行」，
+                # 免得用户改完输入不知道发生了什么、该看哪里（用户 2026-10-12 口径）
+                self._last_op = "%s → %s" % (label, val)
 
             last[label] = var.get()
             var.trace_add("write", on_change)
 
         for var, label in ((self.var_year, "改当前年份"), (self.var_tech, "改飞机科技年份"),
                            (self.var_tag, "改国家"), (self.var_enemy_tag, "改对手国别"),
-                           (self.var_rule, "改对手选取规则"), (self.var_distance, "改距离目标"),
+                           (self.var_rule, "改对手选取规则"),
+                           (self.var_distance, "改最远目标距离"),
+                           (self.var_band, "改目标距离差"),
                            (self.var_level, "改 MIO 等级"), (self.var_org, "改军工组织"),
                            (self.var_policy, "改方针"), (self.var_source, "改修正来源"),
                            (self.var_alloc, "改配点方式"), (self.var_spirits, "改国家精神"),

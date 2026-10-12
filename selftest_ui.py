@@ -402,7 +402,10 @@ def t_style(app):
                     gi = node.grid_info()
                     key.append(int(gi.get("column", 0)) if gi else 0)
                     node = node.master
-                xs[txt] = (w.winfo_rootx() - app.inner.winfo_rootx(), tuple(key))
+                # 分组键里带上**卡片本身**：① 和 ② 都有"(0,1,0)"这样的列链，
+                # 不带卡片就会把两张卡的字段名混到一组里比（实测 266 vs 277）
+                xs[txt] = (w.winfo_rootx() - app.inner.winfo_rootx(),
+                           (str(card), tuple(key)))
         except Exception:                    # noqa: BLE001
             pass
         try:
