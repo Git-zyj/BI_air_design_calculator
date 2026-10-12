@@ -288,17 +288,33 @@ def pick_reference_plane(pool, inputs, data, upgrade_map, enemy_by_role):
     return pool[0]
 
 
+#: 候选池的"年式窗口"（用户口径 2026-10-12）：科技年份 N 只算**最近 3 个年式**
+#: （N−2、N−1、N）—— 1942 年就只看 1940/1941/1942 的机型，1936 年的 I-16
+#: 不会再出现在 1944 的候选名单里。想放宽/收紧改这一个数就行。
+POOL_WINDOW = 3
+
+
 def candidate_pool(inputs, data):
     """候选机身 = 当前国家 + 科技年份以内 + 本次用途对应的机种（archetype）。
 
     用途只决定"能用哪一类飞机"：对空挑战斗机族、对地挑 CAS 族、对海挑海军轰炸机族、
     侦察/运输挑侦察机与运输机。这样对地不会再选出一架多用途战斗机。
+
+    年份窗口：只保留**最近 `POOL_WINDOW` 个年式**（N−2 / N−1 / N）。
+    窗口锚在"该用途下**实际最新**的可用年式"上，而不是死的科技年份——有些国家/机种
+    在科技年份那一年根本没有新机（例如德国 1948 的对空、苏联 1947 的对地），
+    用科技年份当锚会算出空窗口、只能退回"全部 ≤ 科技年份"（等于没限制）。
+    锚在最新可用年式上，既能保住"只看最近三个年式"，又不会出现空候选池。
     """
     archetypes = engine.role_archetypes(inputs["roles"])
-    return [a for a in data["airframes_all"]
-            if a.get("country") == inputs.get("country")
-            and (a.get("year") or 0) <= inputs["tech_year"]
-            and a.get("archetype") in archetypes]
+    all_ok = [a for a in data["airframes_all"]
+              if a.get("country") == inputs.get("country")
+              and (a.get("year") or 0) <= inputs["tech_year"]
+              and a.get("archetype") in archetypes]
+    if not all_ok:
+        return []
+    newest = max((a.get("year") or 0) for a in all_ok)
+    return [a for a in all_ok if (a.get("year") or 0) >= newest - (POOL_WINDOW - 1)]
 
 
 def build_rows(inputs, data):
