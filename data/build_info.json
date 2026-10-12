@@ -1,0 +1,7 @@
+{
+ "edition": "黑冰正式版",
+ "mod_version": "12.1.0",
+ "workshop_id": "1137372539",
+ "game_version": "1.19.2.0",
+ "note": "main 分支 = BlackICE 正式版。beta 分支把本文件换成测试版（Blackice HOI IV TEST / 1851181613 / v12.3.0）；代码两分支共用，只有 data/ 不同。"
+}

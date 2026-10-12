@@ -38,7 +38,91 @@ def app_dir():
 
 
 DEFAULT_OUT = os.path.abspath(os.path.join(app_dir(), "output", "BI_SOV_选型输出.xlsx"))
+OUTPUT_DIR = os.path.dirname(DEFAULT_OUT)
 INPUTS = os.path.join(app_dir(), "inputs.json")
+BUILD_INFO = os.path.join(engine.DATA_DIR, "build_info.json")
+
+
+def build_info():
+    """版本标识（分支 / 模组版本 / 工坊号）。
+
+    放在 `data/` 里而不是代码里：main 与 beta 两个分支的**代码是同一份**
+    （beta 用 `git checkout main -- <code>` 同步），只有 `data/` 各自不同。
+    """
+    try:
+        with open(BUILD_INFO, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:                       # noqa: BLE001
+        return {}
+
+
+def edition_label():
+    """给标题栏用的一行版本说明，例如「黑冰正式版 v12.1.0」。"""
+    info = build_info()
+    edition, ver = info.get("edition") or "", info.get("mod_version") or ""
+    if edition and ver:
+        return "%s v%s" % (edition, ver)
+    return edition or ("v%s" % ver if ver else "（未标注版本）")
+
+
+# 用途 → 导出文件名里用的短名
+ROLE_FILE = {"air_near": "对空", "air_far": "对空", "air_cv": "对空舰载",
+             "ground_near": "对地近", "ground_far": "对地远",
+             "naval_near": "对海近", "naval_far": "对海远", "naval_cv": "对海舰载",
+             "recon": "侦察运输"}
+
+
+def output_path(inputs):
+    """导出文件名：带上国家/年份/用途，免得连续导出几份分不清。
+
+    例：`output\\飞机选型_SOV_1944年_科技1944_对空.xlsx`
+    """
+    roles = inputs.get("roles") or []
+    names = []
+    for r in roles:
+        n = ROLE_FILE.get(r, r)
+        if n not in names:
+            names.append(n)
+    parts = ["飞机选型", str(inputs.get("country") or "?"),
+             "%s年" % (inputs.get("current_year") or ""),
+             "科技%s" % (inputs.get("tech_year") or "")]
+    if names:
+        parts.append("+".join(names))
+    return os.path.abspath(os.path.join(OUTPUT_DIR, "_".join(parts) + ".xlsx"))
+
+
+def last_inputs_path():
+    """上次输入的"记忆文件"。
+
+    优先 `%LOCALAPPDATA%\\BI_air_design_calculator\\`（exe 目录可能是只读的，
+    比如放在 Program Files 或解压到只读盘），写不进去才退回 exe 同目录。
+    """
+    base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+    if base:
+        folder = os.path.join(base, "BI_air_design_calculator")
+        try:
+            os.makedirs(folder, exist_ok=True)
+            return os.path.join(folder, "last_inputs.json")
+        except OSError:
+            pass
+    return os.path.join(app_dir(), "last_inputs.json")
+
+
+def save_last_inputs(inputs):
+    try:
+        with open(last_inputs_path(), "w", encoding="utf-8") as fh:
+            json.dump(inputs, fh, ensure_ascii=False, indent=1)
+        return True
+    except Exception:                       # noqa: BLE001
+        return False
+
+
+def clear_last_inputs():
+    try:
+        os.remove(last_inputs_path())
+        return True
+    except OSError:
+        return False
 
 # ---------- 路线方案（方针 × 特质）的表与缓存 ----------
 # 离线预计算表随工具发布（只读）；运行时新算出来的方案写进用户机器上的缓存文件。

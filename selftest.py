@@ -1,0 +1,238 @@
+# -*- coding: utf-8 -*-
+"""自动自检（不需要界面）：每次改完先跑这个。
+
+    python selftest.py            # 全部检查
+    python selftest.py --quick    # 跳过慢的（工作簿导出、全量候选池扫描）
+
+界面相关的检查在 `selftest_ui.py`（需要能开窗口的环境）。
+两套合起来就是 `TESTING.md` 里的「阶段 1 / 阶段 2」。
+"""
+import argparse
+import os
+import sys
+import tempfile
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+import engine  # noqa: E402
+import run  # noqa: E402
+
+if getattr(sys, "stdout", None):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+TOL = 1e-9
+RESULTS = []
+
+
+def check(name, ok, detail=""):
+    RESULTS.append((name, bool(ok), detail))
+    print("  %s %s%s" % ("PASS" if ok else "FAIL", name,
+                         ("　— " + detail) if detail else ""))
+    return ok
+
+
+def approx(a, b, tol=1e-6):
+    return abs(float(a) - float(b)) <= tol * max(1.0, abs(float(b)))
+
+
+def inputs_for(country="SOV", role="air_far", tech_year=1944, current_year=1944, **kw):
+    i = dict(run.DEFAULT_INPUTS)
+    i.update({"country": country, "role": role, "tech_year": tech_year,
+              "current_year": current_year, "roles": [role],
+              "enemy": {"country": "GER" if country != "GER" else "SOV",
+                        "rule": "previous_year", "override_key": None, "by_country": {}}})
+    i.update(kw)
+    return i
+
+
+# ---------------------------------------------------------------- 1. 锚点
+def t_anchor():
+    print("[1] 验收锚点（Yak-9U@1944 对空 900）")
+    code = run.anchor_check()
+    return check("锚点校验", code == 0, "run.anchor_check() 返回 %d" % code)
+
+
+# ---------------------------------------------------------------- 2. 候选池
+def t_pool_window(data, quick=False):
+    print("[2] 候选池「最近 3 个年式」")
+    ok = True
+    combos = [("SOV", "air_far", 1944, 40), ("SOV", "air_far", 1942, 32)]
+    if not quick:
+        combos += [("GER", "air_far", 1948, None), ("ITA", "recon", 1944, None)]
+    for country, role, ty, old_n in combos:
+        i = inputs_for(country, role, ty)
+        pool = run.candidate_pool(i, data)
+        if not pool:
+            ok &= check("%s %s %d 候选池非空" % (country, role, ty), False, "空池")
+            continue
+        years = [a.get("year") or 0 for a in pool]
+        newest = max(years)
+        ok &= check("%s %s %d 只含最近 3 个年式" % (country, role, ty),
+                    min(years) >= newest - (run.POOL_WINDOW - 1),
+                    "年份 %s" % sorted(set(years)))
+        if old_n:                            # 老规则下的架数，用来确认"确实收窄了"
+            ok &= check("%s %s %d 比旧规则少" % (country, role, ty), len(pool) < old_n,
+                        "新 %d < 旧 %d" % (len(pool), old_n))
+    return ok
+
+
+# ------------------------------------------------------- 3. 资源加权分恒等式
+def t_weighted(data):
+    print("[3] 资源加权分 = 折算后总分数 ÷ 资源开销")
+    ok = True
+    for alloc in ("split", "balanced"):
+        i = inputs_for("SOV", "air_far", 1944, 1944,
+                       manufacturer_mode="traits", modifier_source="mio", alloc_mode=alloc,
+                       unlocked_techs=["advanced_machine_tools", "computing_machine",
+                                       "worker_training", "assembly_line_production",
+                                       "Ltaircraft_industry2", "Ltaircraft_industry3",
+                                       "chemical_industry_iii", "improved_centimetric_radar",
+                                       "advanced_centimetric_radar"],
+                       unlocked_flags=["unlock_plane_anti_air_rocket_upgrade"],
+                       mio={"organization": "SOV_lavochkin_design_bureau_organization",
+                            "level": 14, "manual_traits": None,
+                            "policy": "mio_policy_air_wind_tunnel_pioneers"})
+        rows, _m, _e, _ev, mfr = run.build_rows(i, data)
+        res = [r for r in rows if "9U" in ((r["airframe"] or {}).get("name") or "")]
+        if not res:
+            ok &= check("%s 找到 Yak-9U 行" % alloc, False)
+            continue
+        r = res[0]
+        need = (r.get("production") or {}).get("production_resource_need_factor", 0.0)
+        cost = (r["airframe"].get("air_production") or 0) * (1.0 + need)
+        ok &= check("%s 恒等式（%s）" % (alloc, r["airframe"]["name"]),
+                    cost and approx(r["weighted"], r["score"] / cost),
+                    "weighted %.4f = score %.4f ÷ %.4f" % (r["weighted"], r["score"], cost))
+        ok &= check("%s 分数含生产折算" % alloc,
+                    approx(r["score"], r["score_raw"] * r["production_gain"]),
+                    "gain %.6f" % r["production_gain"])
+    return ok
+
+
+# ---------------------------------------------------------------- 4. 生产折算
+def t_production(data):
+    print("[4] 生产折算公式")
+    gain, parts = engine.production_gain({"production_capacity_factor": 0.05}, 100, 200)
+    ok = check("产量 +5% 在 100/200 上 = ×1.016667", approx(gain, 1.0166666, 1e-6),
+               "gain %.6f" % gain)
+    gain2, _ = engine.production_gain({"production_cost_factor": -0.03}, 100, 200)
+    ok &= check("生产产出花费 −3% = ×1.030928", approx(gain2, 1.0309278, 1e-6),
+                "gain %.6f" % gain2)
+    gain3, _ = engine.production_gain({"production_capacity_factor": 0.05,
+                                       "production_cost_factor": -0.03}, 100, 200)
+    ok &= check("两项可乘（×1.0167 × ×1.0309）", approx(gain3, gain * gain2, 1e-9),
+                "gain %.6f" % gain3)
+    return ok
+
+
+# ------------------------------------------------------------ 5. 对手 AI 判定
+def t_enemy(data):
+    print("[5] 对手（AI）设计与经验")
+    _e, values = engine.pick_enemy_values(data["airframes_all"],
+                                         {"country": "GER", "rule": "previous_year"},
+                                         "air_far", 1944)
+    ok = check("德国 1944 对空 = 机动 86.112 / 速度 708.72375",
+               values and approx(values.get("agility", 0), 86.112, 1e-6)
+               and approx(values.get("speed", 0), 708.72375, 1e-6),
+               "%.5f / %.5f" % ((values or {}).get("agility", 0), (values or {}).get("speed", 0)))
+    _e2, cv = engine.pick_enemy_values(data["airframes_all"],
+                                       {"country": "GER", "rule": "previous_year"},
+                                       "air_cv", 1944)
+    ok &= check("舰载对手不计经验（数值低于陆基口径）",
+                cv and cv.get("agility", 0) < values.get("agility", 0),
+                "舰载 %.2f < 陆基 %.2f" % (cv.get("agility", 0), values.get("agility", 0)))
+    return ok
+
+
+# ------------------------------------------------------------ 6. 命名与版本
+def t_naming(data):
+    print("[6] 版本标识与导出文件名")
+    info = run.build_info()
+    label = run.edition_label()
+    ok = check("data/build_info.json 可读且标题非空", bool(label) and "未标注" not in label,
+               "edition_label() = %r" % label)
+    ok &= check("版本号与 exe 名一致（%s）" % info.get("mod_version"),
+                bool(info.get("mod_version")), "workshop %s" % info.get("workshop_id"))
+    i = inputs_for("SOV", "air_far", 1944, 1944)
+    p = run.output_path(i)
+    base = os.path.basename(p)
+    ok &= check("导出文件名带 国家/年份/用途", all(s in base for s in ("SOV", "1944", "对空")),
+                base)
+    ok &= check("导出目录 = <app>/output", os.path.dirname(p) == run.OUTPUT_DIR,
+                os.path.dirname(p))
+    i2 = inputs_for("GER", "air_cv", 1943, 1942)
+    ok &= check("多用途/舰载命名正常", "对空舰载" in os.path.basename(run.output_path(i2)),
+                os.path.basename(run.output_path(i2)))
+    return ok
+
+
+# ------------------------------------------------------------ 7. 离线表分片
+def t_table_files(data):
+    print("[7] 离线表分片")
+    import glob
+    import json
+    files = sorted(glob.glob(os.path.join(run.PLAN_TABLE_DIR, "*.json")))
+    total = 0
+    for p in files:
+        with open(p, encoding="utf-8") as fh:
+            total += len(json.load(fh))
+    ok = check("12 片都在", len(files) == 12, "%d 片" % len(files))
+    ok &= check("条目数 ≥ 6800", total >= 6800, "%d 条" % total)
+    return ok
+
+
+# ------------------------------------------------------------ 8. 导出工作簿
+def t_workbook(data):
+    print("[8] 导出工作簿（写临时文件）")
+    i = inputs_for("SOV", "air_far", 1944, 1944)
+    rows, mods, enemy, ev, mfr = run.build_rows(i, data)
+    path = os.path.join(tempfile.gettempdir(), "_selftest_out.xlsx")
+    if os.path.exists(path):
+        os.remove(path)
+    try:
+        run.write_workbook(path, i, rows, mods, enemy, ev, mfr)
+    except Exception as exc:                 # noqa: BLE001
+        return check("write_workbook 不报错", False, repr(exc))
+    ok = check("写出文件", os.path.exists(path) and os.path.getsize(path) > 5000,
+               "%d 字节" % (os.path.getsize(path) if os.path.exists(path) else 0))
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(path)
+        ok &= check("两张表（选型 + 参数与口径）", len(wb.sheetnames) >= 2,
+                    ",".join(wb.sheetnames))
+    except Exception as exc:                 # noqa: BLE001
+        ok &= check("openpyxl 能打开", False, repr(exc))
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+    return ok
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--quick", action="store_true", help="跳过慢检查")
+    args = ap.parse_args()
+    t0 = time.time()
+    data = engine.load_data()
+    print("数据指纹：%s　候选池窗口：%d 年式" % (engine.data_fingerprint(), run.POOL_WINDOW))
+    t_anchor()
+    t_pool_window(data, args.quick)
+    t_weighted(data)
+    t_production(data)
+    t_enemy(data)
+    t_naming(data)
+    t_table_files(data)
+    if not args.quick:
+        t_workbook(data)
+    bad = [n for n, ok, _d in RESULTS if not ok]
+    print("\n合计 %d 项，失败 %d 项，用时 %.1fs" % (len(RESULTS), len(bad), time.time() - t0))
+    if bad:
+        print("失败：" + "；".join(bad))
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

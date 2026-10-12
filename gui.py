@@ -193,9 +193,15 @@ class App(tk.Tk):
         self.font_ok = picked in CJK_OK_FONTS
         self.family = picked or tkfont.nametofont("TkDefaultFont").actual("family")
         self._apply_style()
-        self.title("BI_SOV 飞机选型")
-        # 给一个明确坐标，避免窗口被放到可视区之外（WSLg 偶尔会这样）
-        self.geometry("1280x980+60+40")
+        # 标题带版本：文档反复强调"版本必须对上"，标题栏一眼能确认
+        self.title("飞机设计计算器 · %s" % run.edition_label())
+        # 窗口按屏幕自适应（矮屏笔记本上 980 高会伸到屏幕外），并给一个明确坐标
+        # 避免窗口被放到可视区之外（WSLg 偶尔会这样）
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        win_w = min(1280, max(980, sw - 60))
+        win_h = min(980, max(620, sh - 90))
+        self.geometry("%dx%d+40+20" % (win_w, win_h))
+        self.minsize(min(980, win_w), min(600, win_h))
         self.data = engine.load_data()
         self.by_name = {o["organization"]: o for o in self.data["mio"]}
         self.loc = load_loc()
@@ -204,6 +210,14 @@ class App(tk.Tk):
         if os.path.exists(run.INPUTS):
             with open(run.INPUTS, encoding="utf-8") as fh:
                 self.inputs.update(json.load(fh))
+        # 「记住上次输入」：有记忆文件就用它覆盖示例默认值（用户口径 2026-10-12）
+        self._last_inputs_path = run.last_inputs_path()
+        if os.path.exists(self._last_inputs_path):
+            try:
+                with open(self._last_inputs_path, encoding="utf-8") as fh:
+                    self.inputs.update(json.load(fh))
+            except (OSError, ValueError):
+                pass
         self.tags = sorted({a.get("country") for a in self.data["airframes_all"] if a.get("country")})
         self._tag_labels = {t: self._country_label(t) for t in self.tags}
         self._label_to_tag = {v: k for k, v in self._tag_labels.items()}
@@ -226,8 +240,46 @@ class App(tk.Tk):
         self._refresh_totals()
         self._watch_inputs()          # 调试：输入项一变就打一行日志
         self._bind_live_refresh()     # 年份直接键入时也要重算 ② 的对手
+        self.protocol("WM_DELETE_WINDOW", self._on_close)   # 关窗口时记住这次输入
         _say("准备就绪，正在显示窗口…")
         self.after(80, self._pop_to_front)
+        # 首屏就把默认输入算一遍：新用户打开就能看到结果表与帕累托图，
+        # 不用先猜"结果要从哪里点出来"（用户口径 2026-10-12）。
+        self.after(200, self._first_run)
+
+    def _on_close(self):
+        """退出前把当前输入记下来（下次启动直接回到这个状态）。"""
+        try:
+            run.save_last_inputs(self.collect())
+        except (Exception, SystemExit):     # noqa: BLE001
+            pass
+        self.destroy()
+
+    def _first_run(self):
+        if not getattr(self, "rows", None):
+            self.on_calculate()
+
+    def _forget_last_inputs(self):
+        """清掉"上次输入"的记忆文件（下次启动回到默认示例值）。"""
+        ok = run.clear_last_inputs()
+        _dbg("忘记上次输入：%s（%s）" % (ok, self._last_inputs_path))
+        self.lbl_hint.configure(text=("已清除记忆的输入，下次启动回到默认示例"
+                                      if ok else "本来就没有记忆的输入"))
+
+    def _scroll_to(self, widget, pad=6):
+        """把某一块滚动到可视区（算完滚到结果区、双击行滚到明细区）。"""
+        try:
+            self.update_idletasks()
+            bbox = self.canvas.bbox("all")
+            if not bbox:
+                return
+            total = max(1, bbox[3] - bbox[1])
+            if self.canvas.winfo_height() <= 1 or total <= self.canvas.winfo_height():
+                return                       # 还没布局 / 本来就全放得下
+            y = widget.winfo_rooty() - self.inner.winfo_rooty() - pad
+            self.canvas.yview_moveto(max(0.0, min(1.0, y / float(total))))
+        except Exception:                    # noqa: BLE001
+            pass
 
     def _pop_to_front(self):
         """把窗口顶到最前——WSLg 开的新窗口常常落在其它窗口后面，看起来像"没弹出来"。"""
@@ -237,7 +289,8 @@ class App(tk.Tk):
             self.attributes("-topmost", True)
             self.after(400, lambda: self.attributes("-topmost", False))
             self.focus_force()
-            _say("窗口已显示（标题：BI_SOV 飞机选型）。若仍看不到，检查是否有窗口挡在前面；"
+            _say("窗口已显示（标题：%s）。若仍看不到，检查是否有窗口挡在前面；"
+                 % self.title() +
                  "或执行 wsl --shutdown 后重开 WSL 再试。")
         except tk.TclError:
             pass
@@ -311,6 +364,11 @@ class App(tk.Tk):
             return x
 
         def on_conf(_event=None):
+            try:
+                if not label.winfo_exists():
+                    return
+            except tk.TclError:
+                return
             avail = self.canvas.winfo_width()
             if avail <= 1:                       # 还没完成布局
                 avail = max(self.winfo_width() - 2 * PADX, 640)
@@ -321,10 +379,16 @@ class App(tk.Tk):
             width = int(max(avail - x - WRAP_RESERVE, 240))
             try:
                 cur = int(float(label.cget("wraplength") or 0))
-            except (TypeError, ValueError):
-                cur = -1
+            except (TypeError, ValueError, tk.TclError):
+                # 明细区重建时会先 destroy 子控件，此时队列里可能还有一条
+                # <Configure> 事件 → cget 会抛 "invalid command name"。
+                # 以前这条会刷一屏 "Exception in Tkinter callback"，无害但很难看。
+                return
             if cur != width:
-                label.configure(wraplength=width)
+                try:
+                    label.configure(wraplength=width)
+                except tk.TclError:
+                    return
 
         # 容器只绑一次（否则每次重建明细都会往同一个容器上叠一个回调）
         if not getattr(container, "_wrap_bound", False):
@@ -338,13 +402,19 @@ class App(tk.Tk):
         self.columnconfigure(0, weight=1)
         banner = tk.Frame(self, background=ACCENT)
         banner.grid(row=0, column=0, sticky="ew")
-        tk.Label(banner, text="BI_SOV 飞机选型", background=ACCENT, foreground="white",
+        tk.Label(banner, text="飞机设计计算器 · %s" % run.edition_label(),
+                 background=ACCENT, foreground="white",
                  font=(self.family, BODY + 4, "bold"), padx=PADX, pady=5).pack(side="left")
-        hint = "字体：%s" % self.family
+        # 右侧：字体信息单列一个小标签，别占着"状态行"
+        font_hint = "字体：%s" % self.family
         if not self.font_ok:
-            hint += "（当前 Tk 不支持 TTF 中文，请用 gui.sh 启动）"
-        self.lbl_hint = tk.Label(banner, text=hint, background=ACCENT, foreground="#C9D8EC",
-                                 font=(self.family, BODY - 1), padx=PADX)
+            font_hint += "（当前 Tk 不支持 TTF 中文，请用 gui.sh 启动）"
+        self.lbl_font = tk.Label(banner, text=font_hint, background=ACCENT,
+                                 foreground="#9FB4CE", font=(self.family, BODY - 2), padx=PADX)
+        self.lbl_font.pack(side="right")
+        # 状态行（"点计算"/"已计算 N 行"/"已导出 …"）
+        self.lbl_hint = tk.Label(banner, text="正在准备…", background=ACCENT,
+                                 foreground="#C9D8EC", font=(self.family, BODY - 1))
         self.lbl_hint.pack(side="right")
 
         # 整页可上下滚动（卡片多、屏幕矮时不至于看不到底部）
@@ -410,8 +480,8 @@ class App(tk.Tk):
                     command=self._on_tech_year_changed).grid(row=0, column=4, sticky="w")
         ttk.Label(fields, text="（决定我方可用机身，可超前研究）").grid(row=0, column=5, sticky="w")
 
-        ttk.Label(fields, text="所选国家 tag").grid(row=1, column=0, sticky="e",
-                                               padx=(PADX, 4), pady=PADY)
+        ttk.Label(fields, text="所选国家").grid(row=1, column=0, sticky="e",
+                                             padx=(PADX, 4), pady=PADY)
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
         cb = ttk.Combobox(fields, textvariable=self.var_tag, width=10,
                           state="readonly")
@@ -537,7 +607,7 @@ class App(tk.Tk):
                                           state="readonly",
                                           values=[label for _k, label in ALLOC_MODES])
         self.cb_alloc_mode.grid(row=0, column=1, sticky="w")
-        self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_change())
+        self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_picked())
         self.lbl_alloc_rec = ttk.Label(frm_alloc, text="", foreground=ACCENT,
                                        font=(self.family, BODY - 2, "bold"), justify="left")
         self.lbl_alloc_rec.grid(row=0, column=2, sticky="w", padx=PADX)
@@ -672,16 +742,21 @@ class App(tk.Tk):
 
         # ⑦ 最终结果展示
         card = self._card(row, "⑦ 最终结果展示")
+        self.card_result = card           # 供"算完自动滚到结果区"用
         bar = ttk.Frame(card)
         bar.grid(row=0, column=0, sticky="ew", padx=PADX, pady=(PADY, 2))
 
         # 第一行：动作 + 输出路径。路径很长，单独占一行，否则会把下面的轴选择挤出框、点不到
         bar_btn = ttk.Frame(bar)
         bar_btn.pack(fill="x")
-        ttk.Button(bar_btn, text="计算", command=self.on_calculate).pack(side="left")
+        ttk.Button(bar_btn, text="计算",
+                   command=lambda: self.on_calculate(view_result=True)).pack(side="left")
         ttk.Button(bar_btn, text="导出 Excel", command=self.on_export).pack(side="left",
                                                                           padx=(6, 0))
-        ttk.Label(bar_btn, text="输出：%s" % run.DEFAULT_OUT).pack(side="left", padx=PADX)
+        ttk.Button(bar_btn, text="忘记上次输入", command=self._forget_last_inputs).pack(
+            side="left", padx=(6, 0))
+        ttk.Label(bar_btn, text="输出目录：%s" % os.path.basename(run.OUTPUT_DIR)).pack(
+            side="left", padx=PADX)
 
         # 第二行：帕累托图轴选择
         bar_axis = ttk.Frame(bar)
@@ -746,6 +821,8 @@ class App(tk.Tk):
         self.frm_design.grid(row=4, column=0, sticky="ew", padx=PADX, pady=(0, PADY))
         self.frm_design.columnconfigure(1, weight=1)
         self.tree_out.bind("<<TreeviewSelect>>", lambda e: self._show_design())
+        # 双击一行 = "我要看这架的细节"：选中它并把明细区滚进视野
+        self.tree_out.bind("<Double-1>", lambda e: self._show_design(scroll=True))
         self.canvas_plot = tk.Canvas(card, height=300, background="white", highlightthickness=1,
                                      highlightbackground="#D0D7E5")
         self.canvas_plot.grid(row=5, column=0, sticky="ew", padx=PADX, pady=(0, PADY))
@@ -904,6 +981,12 @@ class App(tk.Tk):
     def _apply_tech_year_changed(self):
         self._tech_job = None
         self._on_tech_year_changed()
+
+    def _apply_override(self):
+        """手动指定机型键入完（防抖 400ms）：刷新对手，必要时重算结果表。"""
+        self._override_job = None
+        self._refresh_enemy()
+        self._on_inputs_affecting_plan()
 
     def _tech_usage(self):
         """{科技: ["改装：改良舱盖", "方针：完美抛光", ...]}——这项科技能启用什么（全称）。"""
@@ -1425,6 +1508,11 @@ class App(tk.Tk):
         if getattr(self, "rows", None):
             self.on_calculate()
 
+    def _on_alloc_mode_picked(self):
+        """用户**自己**在下来框里选了配点口径 → 之后就不再自动跟随推荐。"""
+        self._alloc_user_picked = True
+        self._on_alloc_mode_change()
+
     def _refresh_alloc_recommendation(self):
         """比较"分离 / 兼顾"哪个更优，写在配点口径右边（分块算，不阻塞界面）。
 
@@ -1457,8 +1545,15 @@ class App(tk.Tk):
         worse = min(scores, key=scores.get)
         gap = (scores[better] / scores[worse] - 1) * 100 if scores[worse] else 0.0
         # 不给"持平"这种话：总有一个更高的，把差距直接给出来，用户自己判断
-        short = dict(ALLOC_MODES)[better].split("（")[0]
+        label = dict(ALLOC_MODES)[better]
+        short = label.split("（")[0]
         self.lbl_alloc_rec.configure(text="推荐：%s（比另一种高 %.2f%%）" % (short, gap))
+        # 用户还没自己选过 → 直接把默认口径也切到推荐那个
+        # （以前默认固定"分离"，新用户看到推荐"兼顾"却不知道要不要动）
+        if not getattr(self, "_alloc_user_picked", False) and self.var_alloc_mode.get() != label:
+            _dbg("配点口径：未手动选择 → 自动跟随推荐「%s」" % short)
+            self.var_alloc_mode.set(label)
+            self._on_alloc_mode_change()
 
     def _policy_ready(self, pol):
         """门槛（等级 + 科技）是否满足。"""
@@ -2152,13 +2247,19 @@ class App(tk.Tk):
         text = head + "　".join(items)
         # 合计：产能倍率（产量/效率上限/生产产出花费）与资源消耗倍率（资源需求）分列，
         # 等效造价 = (1 ÷ 合计产能) × 合计资源消耗 —— 不同方针/路线可以直接横向比。
+        # 换一行写：紧跟在上一条修正后面时，"⇒" 看着像那一条的倍率（用户反馈）。
         need_total = 1.0 + float((prod or {}).get("production_resource_need_factor", 0.0) or 0.0)
-        text += "　⇒ 合计产能×%.4f，资源消耗×%.4f（等效造价 ×%.4f）" % (
+        text += "\n　⇒ 合计产能×%.4f，资源消耗×%.4f（等效造价 ×%.4f）" % (
             gain or 1.0, need_total, (1.0 / (gain or 1.0)) * need_total)
         return text
 
-    def on_calculate(self):
-        """只计算并在界面里展示（不写文件）。"""
+    def on_calculate(self, view_result=False):
+        """只计算并在界面里展示（不写文件）。
+
+        `view_result=True` 只有"用户按了计算按钮"才传：算完把结果区滚进视野。
+        界面内部的自动重算（改口径/改对手/防抖后的重算）**不滚动**——不然用户
+        在 ① ② 改个输入，画面会自己跳走。
+        """
         try:
             inputs = self._with_route(self.collect())
             _dbg("计算：年份 %s/%s｜国家 %s｜用途 %s｜距离 %s｜来源 %s"
@@ -2195,6 +2296,8 @@ class App(tk.Tk):
         self.lbl_overall.configure(text=fmt_mods(player_mods))
         self._render_rows()
         self.lbl_hint.configure(text="已计算 %d 行；需要写文件时点「导出 Excel」" % len(rows))
+        if view_result:
+            self._scroll_to(self.card_result)  # 结果在折叠线以下，按了计算就带过去
 
     def on_export(self):
         """把当前结果写成工作簿；没算过就先算一次。"""
@@ -2203,14 +2306,14 @@ class App(tk.Tk):
             if not getattr(self, "_last", None):
                 return
         inputs, rows, player_mods, enemy, enemy_values, mfr_info = self._last
+        path = run.output_path(inputs)
         try:
-            run.write_workbook(run.DEFAULT_OUT, inputs, rows, player_mods, enemy, enemy_values,
-                               mfr_info)
+            run.write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_info)
         except (Exception, SystemExit) as exc:  # noqa: BLE001
             messagebox.showerror("导出出错", str(exc))
             return
-        _dbg("导出：%s（%d 行）" % (run.DEFAULT_OUT, len(rows)))
-        self.lbl_hint.configure(text="已导出 → %s" % os.path.basename(run.DEFAULT_OUT))
+        _dbg("导出：%s（%d 行）" % (path, len(rows)))
+        self.lbl_hint.configure(text="已导出 → %s" % os.path.basename(path))
 
     def _axis_key(self, label):
         for key, text in AXIS_CHOICES:
@@ -2309,6 +2412,19 @@ class App(tk.Tk):
 
         self.var_tech.trace_add("write", on_tech_year)
 
+        # 「手动指定机型」：同样是键入类输入，以前只有日志 trace → ② 那行不刷新
+        # （实测填了 me_109_late_fighter_equipment_4 还显示 1939 的 109 D）。
+        def on_override(*_a):
+            job = getattr(self, "_override_job", None)
+            if job:
+                try:
+                    self.after_cancel(job)
+                except Exception:          # noqa: BLE001
+                    pass
+            self._override_job = self.after(400, self._apply_override)
+
+        self.var_override.trace_add("write", on_override)
+
         # 生产折算的两个输入：改了要重算，但**必须防抖** —— 以前每敲一个字符
         # （例如输入 118 时先敲出 "1"）就整套重算，冷路径下要卡 2 秒以上。
         def on_prod(*_a):
@@ -2343,7 +2459,7 @@ class App(tk.Tk):
         _dbg("排序：按 %s %s" % (cid, "降序" if self._sort_desc else "升序"))
         self._render_rows()
 
-    def _show_design(self):
+    def _show_design(self, scroll=False):
         """表格下方（散点图上方）：选中行的明细，按【块】排版，方便扫读。"""
         for child in self.frm_design.winfo_children():
             child.destroy()
@@ -2383,6 +2499,8 @@ class App(tk.Tk):
                 blocks.append(("战斗比值", combat[0].replace("战斗比值 ", "", 1), "formula"))
                 blocks.extend(("", text.lstrip("　"), "note") for text in combat[1:])
         self._render_design_blocks(blocks)
+        if scroll:
+            self._scroll_to(self.frm_design)
 
     def _design_blocks(self, v):
         """明细的前两块：① 这些改装改了哪些属性；② 最终**设计数值**（对照游戏「设计」界面）。
