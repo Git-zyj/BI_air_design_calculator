@@ -39,7 +39,6 @@ BODY = 11
 PADX, PADY = 12, 8
 ACCENT = "#1F4E79"
 CARD_BG = "#F7F7F7"
-WRAP_RESERVE = 110         # 累计标签换行时给按钮/边距留的宽度
 
 ROLE_LABELS = engine.ROLES
 MOD_ZH = {
@@ -62,6 +61,7 @@ MOD_FIELDS = [("air_attack", "对空"), ("air_defence", "防御"), ("air_agility
               ("naval_strike_attack", "对海"), ("naval_strike_targetting", "瞄准")]
 # 对手规则：界面用中文，内部映射到引擎取值
 RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_year"), ("手动", "manual")]
+RULE_KEYS = {key: label for label, key in RULE_LABELS}      # 反查：key → 显示名
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
 DISTANCES = list(range(600, 3601, 300))
 DEFAULT_DISTANCE = 900
@@ -225,6 +225,8 @@ class App(tk.Tk):
         self.rows = []
         self._sort_key, self._sort_desc = "pure", True      # 默认按总分数从高到低
         self._plans = {}             # 满级+方针的配点路线缓存（供推荐与展示只读）
+        self._alloc_user_picked = False   # 用户是否自己选过"配点口径"（没选过就跟随推荐）
+        self._wrap_labels = []       # 需要按窗口宽度换行的长标签：(label, 所在容器)
         # 离线表（随包发布）+ 本机缓存（新算的写这里），键相同
         self._plan_table = {}        # 离线表按 (国家, 用途) 分片，用到哪片读哪片
         self._plan_runtime = run.load_plan_cache()
@@ -259,12 +261,51 @@ class App(tk.Tk):
         if not getattr(self, "rows", None):
             self.on_calculate()
 
-    def _forget_last_inputs(self):
-        """清掉"上次输入"的记忆文件（下次启动回到默认示例值）。"""
-        ok = run.clear_last_inputs()
-        _dbg("忘记上次输入：%s（%s）" % (ok, self._last_inputs_path))
-        self.lbl_hint.configure(text=("已清除记忆的输入，下次启动回到默认示例"
-                                      if ok else "本来就没有记忆的输入"))
+    def _reset_to_default(self):
+        """「重置为默认」：清掉"上次输入"的记忆，并**立刻**把界面恢复成出厂示例值。
+
+        以前这个按钮叫"忘记上次输入"，只能下次启动生效、意思也不直观（用户 2026-10-12 提）。
+        """
+        run.clear_last_inputs()
+        base = dict(run.DEFAULT_INPUTS)
+        if os.path.exists(run.INPUTS):
+            try:
+                with open(run.INPUTS, encoding="utf-8") as fh:
+                    base.update(json.load(fh))
+            except (OSError, ValueError):
+                pass
+        self.inputs = base
+        self.var_year.set(int(base.get("current_year") or 1939))
+        self.var_tech.set(int(base.get("tech_year") or 1939))
+        self.var_distance.set(str(int(float(base.get("range_cap") or 900))))
+        roles = base.get("roles") or ["air_far"]
+        for key, var in self.role_vars.items():
+            var.set(key in roles)
+        self.var_tag.set(self._tag_labels.get(base.get("country") or "SOV", "苏联"))
+        enemy = base.get("enemy") or {}
+        self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country") or "GER", "德国"))
+        self.var_rule.set(RULE_KEYS.get(enemy.get("rule") or "previous_year", "当前年份−1"))
+        self.var_override.set(enemy.get("override_key") or "")
+        self.var_spirits.set(",".join(base.get("national_spirits") or []))
+        self.var_source.set(base.get("modifier_source") or "mio")
+        self.var_cap.set(int(base.get("efficiency_cap_now") or 100))
+        self.var_capacity.set(int(base.get("capacity_bonus_now") or 200))
+        self.var_alloc.set("auto")
+        self.var_level.set(int((base.get("mio") or {}).get("level") or 14))
+        self.var_alloc_mode.set(ALLOC_MODES[0][1])
+        self._alloc_user_picked = False
+        self._plans.clear()
+        self._build_tech_checks()
+        self._refresh_country()          # 重挑军工组织/方针 + 重算推荐
+        self._sync_alloc()
+        self._sync_source()
+        self._sync_rule()
+        self._refresh_enemy()
+        self._refresh_totals()
+        self._refresh_alloc_recommendation()
+        _dbg("重置为默认：%s / %s" % (self.var_tag.get(), self.var_year.get()))
+        self.lbl_hint.configure(text="已重置为默认输入（%s / %s）"
+                                     % (self.var_tag.get(), self.var_year.get()))
 
     def _scroll_to(self, widget, pad=6):
         """把某一块滚动到可视区（算完滚到结果区、双击行滚到明细区）。"""
@@ -345,57 +386,81 @@ class App(tk.Tk):
         self.canvas.bind_all("<Button-5>", on_down)      # X11 向下
 
     def _wrap_to_card(self, label, container):
-        """让长标签按**画布实际可用宽度**换行（不是按卡片自己的宽度）。
+        """让长标签按**实际可用宽度**换行。
 
-        ⚠️ 别用 event.width（卡片宽度）：长文本会把卡片撑宽，卡片一宽 wraplength 又变大，
-        两者互相追着涨，最后整张卡片比窗口还宽、右边直接被画布裁掉——雅科夫列夫满级
-        （十几个修正）就是被这个坑撑爆的。这里改成：
-            画布可见宽度 − 标签在画布里的横向起点 − 预留
+        以前是"画布宽 − 标签绝对 x − `WRAP_RESERVE`(110)"，两个毛病（用户 2026-10-12 报）：
+          ① 只在容器/标签自己的 `<Configure>` 里算 —— 窗口变大、容器宽度却没变时，
+             wraplength 停在小值上：实测 1266 宽的画布上，② 的"数值来源"还按 505 换行；
+          ② 固定多扣 110px —— 右边明明有空间却提前换行，断句位置看着很怪。
+        现在：`宽度 = min(画布可见宽, 卡片宽) − 标签在卡片里的 x − 边距`，
+        并且挂到**画布**的 `<Configure>`（窗口一改就重算）。
+        也别改成"按卡片宽度"：长文本会把卡片撑宽、卡片一宽 wraplength 又变大，
+        最后卡片比窗口还宽、右边被裁掉（雅科夫列夫满级就是被这个坑撑爆的）。
         """
-        def abs_x(widget):
-            """标签在画布内层里的横向起点（可能嵌在子 Frame 里，要逐级往上加）。"""
-            x, node = 0, widget
-            while node is not None and node is not self.inner:
-                try:
-                    x += node.winfo_x()
-                    node = node.master
-                except Exception:                # noqa: BLE001
-                    break
-            return x
+        self._wrap_labels.append((label, container))
+        card = self._find_card(container, self.inner) or self._find_card(label, self.inner)
+        # 画布 / 卡片 / 标签三级都要听：一次改窗口会依次触发三级的 <Configure>，
+        # 而"卡片宽度"要等 Tk 重排完才是新值（实测窗口从 1000 拉到 1600 时，
+        # 只挂画布那一层会拿到旧的卡片宽度、算出 1211 就停住）。统一丢给
+        # `_schedule_rewrap()`（idle 去重），尺寸稳定后才算，算完就收敛。
+        for widget in (self.canvas, card, container, label):
+            if not getattr(widget, "_wrap_bound", False):
+                widget.bind("<Configure>", lambda _e: self._schedule_rewrap(), add="+")
+                widget._wrap_bound = True
+        self._wrap_one(label, container)
 
-        def on_conf(_event=None):
+    @staticmethod
+    def _find_card(widget, inner):
+        node = widget
+        while node is not None and node is not inner:
+            if node.__class__.__name__ in ("Labelframe", "TLabelframe"):
+                return node
+            node = node.master
+        return inner
+
+    def _wrap_one(self, label, container):
+        try:
+            if not label.winfo_exists():
+                return
+            card = self._find_card(container, self.inner) or self._find_card(label, self.inner)
+            avail = min(self.canvas.winfo_width(), card.winfo_width())
+            if avail <= 1:                        # 还没完成布局
+                avail = max(self.winfo_width() - 2 * PADX, 640)
+            x, node = 0, label
+            while node is not None and node is not card:
+                x += node.winfo_x()
+                node = node.master
+            width = int(max(avail - x - PADX - 6, 200))
+            cur = int(float(label.cget("wraplength") or 0))
+            if cur != width:
+                label.configure(wraplength=width)
+        except (tk.TclError, TypeError, ValueError):
+            # 明细区重建时会先 destroy 子控件，队列里残留的事件可能拿到已销毁的控件
+            # （"invalid command name"），直接跳过。
+            return
+
+    def _rewrap_all(self, _event=None):
+        self._rewrap_job = None
+        alive = []
+        for label, container in self._wrap_labels:
             try:
                 if not label.winfo_exists():
-                    return
+                    continue
             except tk.TclError:
-                return
-            avail = self.canvas.winfo_width()
-            if avail <= 1:                       # 还没完成布局
-                avail = max(self.winfo_width() - 2 * PADX, 640)
-            try:
-                x = abs_x(label)
-            except Exception:                    # noqa: BLE001
-                x = 0
-            width = int(max(avail - x - WRAP_RESERVE, 240))
-            try:
-                cur = int(float(label.cget("wraplength") or 0))
-            except (TypeError, ValueError, tk.TclError):
-                # 明细区重建时会先 destroy 子控件，此时队列里可能还有一条
-                # <Configure> 事件 → cget 会抛 "invalid command name"。
-                # 以前这条会刷一屏 "Exception in Tkinter callback"，无害但很难看。
-                return
-            if cur != width:
-                try:
-                    label.configure(wraplength=width)
-                except tk.TclError:
-                    return
+                continue
+            alive.append((label, container))
+            self._wrap_one(label, container)
+        self._wrap_labels = alive
 
-        # 容器只绑一次（否则每次重建明细都会往同一个容器上叠一个回调）
-        if not getattr(container, "_wrap_bound", False):
-            container.bind("<Configure>", on_conf, add="+")
-            container._wrap_bound = True
-        label.bind("<Configure>", on_conf, add="+")
-        on_conf()
+    def _schedule_rewrap(self):
+        """窗口尺寸变了：等布局落定（idle）再统一重算换行宽度。
+
+        直接在 `<Configure>` 回调里算会拿到**旧的卡片宽度**（Tk 这一步还没重排），
+        于是窗口从 1000 拉到 1600 时，长标签还按 931 换行（实测）。
+        """
+        if getattr(self, "_rewrap_job", None):
+            return
+        self._rewrap_job = self.after_idle(self._rewrap_all)
 
     # ---------- 界面 ----------
     def _build(self):
@@ -499,7 +564,9 @@ class App(tk.Tk):
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
         ttk.Label(fields, text="选取规则").grid(row=1, column=4, sticky="e", padx=(PADX, 4))
-        cur_rule = dict(RULE_LABELS).get(enemy.get("rule", "previous_year"), "当前年份−1")
+        # 旧写法 dict(RULE_LABELS).get(key) 方向反了（表是"显示名 → key"），
+        # 不管 inputs.json 写什么都会显示成"当前年份−1"。
+        cur_rule = RULE_KEYS.get(enemy.get("rule", "previous_year"), "当前年份−1")
         self.var_rule = tk.StringVar(value=cur_rule)
         rb = ttk.Combobox(fields, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
                           width=12, state="readonly")
@@ -569,9 +636,6 @@ class App(tk.Tk):
         ttk.Radiobutton(card, text="手动勾选特质", variable=self.var_alloc,
                         value="pick", command=self._sync_alloc).grid(row=0, column=2, sticky="w",
                                                                      padx=PADX)
-        self.lbl_org_rec = ttk.Label(card, text="", foreground=ACCENT,
-                                     font=(self.family, BODY - 1, "bold"), justify="left")
-        self.lbl_org_rec.grid(row=0, column=3, columnspan=3, sticky="w", padx=PADX)
 
         mio = self.inputs.get("mio") or {}
         self.var_org = tk.StringVar(value="")
@@ -585,22 +649,26 @@ class App(tk.Tk):
         self.cb_policy = ttk.Combobox(card, textvariable=self.var_policy, width=26, state="readonly")
         self.cb_policy.grid(row=1, column=3, sticky="w")
         self.cb_policy.bind("<<ComboboxSelected>>", lambda e: self._on_policy_change())
+        # 方针的「前置 / 加成 / 组织」说明：单独占一整行（挤在方针下拉右边时，
+        # 小窗口下会被卡片裁掉、还只能换出很窄的几行 —— 用户 2026-10-12 报）
         self.lbl_policy = ttk.Label(card, text="", foreground="#5A6472",
                                     font=(self.family, BODY - 2), justify="left")
-        self.lbl_policy.grid(row=1, column=4, columnspan=2, sticky="w", padx=PADX)
+        self.lbl_policy.grid(row=2, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_policy, card)
 
         # 第 2 行：等级 + 预览按钮
-        ttk.Label(card, text="等级").grid(row=2, column=0, sticky="e", padx=(PADX, 4))
+        ttk.Label(card, text="等级").grid(row=3, column=0, sticky="e", padx=(PADX, 4))
         self.spin_level = ttk.Spinbox(card, from_=0, to=14, textvariable=self.var_level, width=6,
                                       command=self._on_level_changed)
-        self.spin_level.grid(row=2, column=1, sticky="w")
+        self.spin_level.grid(row=3, column=1, sticky="w")
         ttk.Button(card, text="预览军工组织总加成", command=self.on_preview).grid(
-            row=2, column=2, sticky="w", padx=(PADX, 2))
+            row=3, column=2, sticky="w", padx=(PADX, 2))
         # 「配点口径 + 推荐」放进一个子框：推荐紧跟在选择框右边，
         # 又不会被卡片左边那几列的宽度变化推着跑（以前塞主网格里就会漂）。
+        # 2026-10-12：这一框改**单独占一整行** —— 原来挂在"等级"那行的第 3 列，
+        # 卡片各列是跨行共享宽度的，窄窗口（≤1000px）下整行能到 1001px、推荐几个字被右缘裁掉。
         frm_alloc = ttk.Frame(card)
-        frm_alloc.grid(row=2, column=3, columnspan=3, sticky="w")
+        frm_alloc.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
         ttk.Label(frm_alloc, text="配点口径").grid(row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
         self.cb_alloc_mode = ttk.Combobox(frm_alloc, textvariable=self.var_alloc_mode, width=24,
@@ -611,11 +679,19 @@ class App(tk.Tk):
         self.lbl_alloc_rec = ttk.Label(frm_alloc, text="", foreground=ACCENT,
                                        font=(self.family, BODY - 2, "bold"), justify="left")
         self.lbl_alloc_rec.grid(row=0, column=2, sticky="w", padx=PADX)
+        self._wrap_to_card(self.lbl_alloc_rec, frm_alloc)
 
-        # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
+        # 参考机型 + MIO 推荐：也单独占一整行（原来挂在"配点方式"右边，初始窗口宽度下
+        # 会顶出卡片右缘被裁掉；用户 2026-10-12 报）
+        self.lbl_org_rec = ttk.Label(card, text="", foreground=ACCENT,
+                                     font=(self.family, BODY - 1, "bold"), justify="left")
+        self.lbl_org_rec.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX)
+        self._wrap_to_card(self.lbl_org_rec, card)
+
+        # 第 6 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
                                        font=(self.family, BODY, "bold"), justify="left")
-        self.lbl_mio_total.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_total.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_mio_total, card)
 
         # 生产侧（**不参与评分**）：设计槽吃 equipment_bonus，生产槽吃 production_bonus，
@@ -626,7 +702,7 @@ class App(tk.Tk):
         #   两个输入各自有"当前效率上限 / 当前产量加成"标签，够清楚。）
         # 列宽一变 "%" 就飘到离输入框很远的地方）
         prod_row = ttk.Frame(card)
-        prod_row.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX, pady=(PADY, 0))
+        prod_row.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX, pady=(PADY, 0))
         self.frm_prod = prod_row          # 供布局核对（每个字段自带 %）
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
@@ -641,17 +717,18 @@ class App(tk.Tk):
 
         self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
                                   font=(self.family, BODY - 1), justify="left")
-        self.lbl_prod.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_prod.grid(row=8, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_prod, card)
 
         self.lbl_partner = ttk.Label(card, text="", foreground="#7A5C1E",
                                      font=(self.family, BODY - 2), justify="left")
-        self.lbl_partner.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_partner.grid(row=9, column=0, columnspan=6, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_partner, card)
 
         self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
                                        font=(self.family, BODY - 2), justify="left")
-        self.lbl_mio_route.grid(row=8, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_route.grid(row=10, column=0, columnspan=6, sticky="w", padx=PADX)
+        self._wrap_to_card(self.lbl_mio_route, card)
 
         self.tree_mio = ttk.Treeview(card, columns=("lvl", "trait", "bonus"),
                                      show="headings", height=5)
@@ -659,10 +736,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=9, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=11, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=10, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=12, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -753,7 +830,7 @@ class App(tk.Tk):
                    command=lambda: self.on_calculate(view_result=True)).pack(side="left")
         ttk.Button(bar_btn, text="导出 Excel", command=self.on_export).pack(side="left",
                                                                           padx=(6, 0))
-        ttk.Button(bar_btn, text="忘记上次输入", command=self._forget_last_inputs).pack(
+        ttk.Button(bar_btn, text="重置为默认", command=self._reset_to_default).pack(
             side="left", padx=(6, 0))
         ttk.Label(bar_btn, text="输出目录：%s" % os.path.basename(run.OUTPUT_DIR)).pack(
             side="left", padx=PADX)
@@ -1587,7 +1664,8 @@ class App(tk.Tk):
             # 这些是组织级修正（经费/研究），**不影响飞机属性**，说清楚免得误读
             parts.append("组织（不影响飞机属性）：" + fmt_mods(
                 {k: v for k, v in org_mod.items() if v}, self.loc))
-        return "　".join(parts)
+        # 一项一行：挤成一行时 Tk 会把连续中文断在很怪的位置（用户 2026-10-12 报）
+        return "\n".join(parts)
 
     def _best_policy_token(self):
         """挑"预计加成最优"的方针：用参考机型（当年最新候选）在各方针下的分数取最大。"""
@@ -1928,7 +2006,8 @@ class App(tk.Tk):
         """对手数值是哪来的：手填 / 按模组 AI 权重自动判定（写明 MIO 与机型）。"""
         country = self._enemy_tag()
         if ((self.inputs.get("enemy") or {}).get("by_country") or {}).get(country):
-            return "数值来源：界面手填（优先于 AI 自动判定）｜点『恢复 AI 自动值』回到自动判定值"
+            return ("数值来源：界面手填（优先于 AI 自动判定）\n"
+                    "　　（点『恢复 AI 自动值』可回到自动判定值）")
         seen = {}
         for role in roles:
             plane = picked.get(role, (None, None))[0]
@@ -1947,8 +2026,10 @@ class App(tk.Tk):
                          % ("" if len(roles) == 1 else "（%s）" % label,
                             "通用 " if fallback else "",
                             zh(self.loc, org) or org, zh(self.loc, plane_key) or plane_key, n))
-        return ("数值来源：按模组 AI 权重自动判定（AI 按「加成总和最大」点特质，不是战斗力最优）｜"
-                + "；".join(parts))
+        # 显式换行：Tk 对连续中文只在空格处断行，一条长句会被切在很怪的位置
+        # （实测"…（AI / 按「加成总和最大」…"），所以人工分行。
+        return ("数值来源：按模组 AI 权重自动判定（AI 按「加成总和最大」点特质，不是战斗力最优）\n"
+                "　　" + "\n　　".join(parts))
 
     def var_roles_are_carrier(self):
         """当前勾的用途是不是全是舰载（舰载对手不吃经验）。"""

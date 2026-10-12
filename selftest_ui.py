@@ -173,7 +173,7 @@ def t_export(app):
 
 # ------------------------------------------------------------ 8. 记住上次输入
 def t_memory():
-    print("[8] 记住上次输入 / 忘记上次输入")
+    print("[8] 记住上次输入 / 重置为默认")
     tmp = os.path.join(tempfile.gettempdir(), "_selftest_ui_last.json")
     if os.path.exists(tmp):
         os.remove(tmp)
@@ -193,9 +193,12 @@ def t_memory():
         ok &= check("重开后回到上次输入（德国/1944）",
                     app2.var_tag.get() == "德国" and int(app2.var_year.get()) == 1944,
                     "%s / %s" % (app2.var_tag.get(), app2.var_year.get()))
-        app2._forget_last_inputs()
-        pump(app2, 0.4)
-        ok &= check("「忘记上次输入」清掉了文件", not os.path.exists(tmp))
+        app2._reset_to_default()
+        pump(app2, 1.2)
+        ok &= check("「重置为默认」立刻回到苏联/1939（不用重启）",
+                    app2.var_tag.get() == "苏联" and int(app2.var_year.get()) == 1939,
+                    "%s / %s" % (app2.var_tag.get(), app2.var_year.get()))
+        ok &= check("「重置为默认」清掉了记忆文件", not os.path.exists(tmp))
         app2.destroy()
         return ok
     finally:
@@ -217,6 +220,39 @@ def t_small_window(app):
     vis = app.card_result.winfo_rooty() - app.canvas.winfo_rooty()
     ok &= check("滚动后能看到结果区", 0 <= vis < app.canvas.winfo_height(),
                 "结果区 top=%d" % vis)
+    app.geometry("1280x980")
+    pump(app, 0.4)
+    return ok
+
+
+# ------------------------------------------------ 11. 长文本换行（不越界/不留空）
+def t_wrapping(app):
+    print("[11] 长文本换行：不越界、宽度跟着窗口走")
+    labels = (("lbl_enemy_src", "②数值来源"), ("lbl_enemy", "②对手"),
+              ("lbl_policy", "④方针说明"), ("lbl_org_rec", "④参考机型"),
+              ("lbl_alloc_rec", "④口径推荐"), ("lbl_mio_total", "④累计"),
+              ("lbl_prod", "④生产侧"), ("lbl_mio_route", "④路线说明"))
+    ok = True
+    for size, min_wrap in (("1280x980", 1100), ("1000x650", 850), ("1600x977", 1400)):
+        app.geometry(size)
+        pump(app, 0.8)
+        cw = app.canvas.winfo_width()
+        for name, label in labels:
+            w = getattr(app, name, None)
+            if w is None:
+                continue
+            right = (w.winfo_rootx() - app.inner.winfo_rootx()) + w.winfo_width()
+            ok &= check("%s @%s 不越右缘" % (label, size), right <= cw + 2,
+                        "右缘 %d / 画布 %d" % (right, cw))
+        wrap = int(float(app.lbl_policy.cget("wraplength") or 0))
+        ok &= check("换行宽跟着窗口走（%s → %d px）" % (size, wrap), wrap >= min_wrap,
+                    "期望 ≥ %d" % min_wrap)
+    ok &= check("② 数值来源按语义分两行",
+                app.lbl_enemy_src.cget("text").count("\n") == 1,
+                repr(app.lbl_enemy_src.cget("text"))[:60])
+    ok &= check("④ 方针说明一项一行",
+                app.lbl_policy.cget("text").count("\n") >= 1,
+                repr(app.lbl_policy.cget("text")).replace("\\n", " / ")[:80])
     app.geometry("1280x980")
     pump(app, 0.4)
     return ok
@@ -289,6 +325,7 @@ def main():
     t_scroll(app)
     t_export(app)
     t_small_window(app)
+    t_wrapping(app)
     app.destroy()
     t_memory()
     t_table_coverage(args.full)
