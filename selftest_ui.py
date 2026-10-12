@@ -633,7 +633,8 @@ def t_alloc_recommendation():
         text = app.lbl_alloc_rec.cget("text")
         lo, hi = min(s["split"], s["balanced"]), max(s["split"], s["balanced"])
         gap = (hi / lo - 1) * 100 if lo else 0.0
-        want = ("%.2f%%" % gap) if gap >= 0.005 else "<0.01%"
+        # 2026-10-13 用户口径：**确实完全相同**就允许说"持平"（以前一律硬给赢家）
+        want = ("%.2f%%" % gap) if gap >= 0.005 else "持平"
         ok &= check("最远 %d：界面差距 = 两分数之比（%.4f vs %.4f）"
                     % (cap, s["split"], s["balanced"]),
                     want in text and ("推荐：" in text), text)
@@ -643,6 +644,93 @@ def t_alloc_recommendation():
     ok &= check("至少一个距离下两种口径分数不同（证明比的是真数）",
                 max(gaps.values()) > 1e-9,
                 "900 差 %.4f / 1200 差 %.4f" % (gaps[900], gaps[1200]))
+    # 真同解那一档必须是"持平"措辞
+    tie = [c for c, v in seen.items() if abs(v["split"] - v["balanced"]) <= 1e-9]
+    if tie:
+        app.var_distance.set(str(tie[0]))
+        app._on_inputs_affecting_plan()
+        pump(app, 2.0)
+        ok &= check("两口径相同时写'持平'（最远 %d）" % tie[0],
+                    "持平" in app.lbl_alloc_rec.cget("text"),
+                    app.lbl_alloc_rec.cget("text"))
+    app.destroy()
+    return ok
+
+
+def t_swap_and_highlight():
+    """② 的「⇄ 交换」+ 表格选中行在帕累托图上高亮（用户 2026-10-13 口径）。"""
+    print("[17] 交换国家/对手 + 帕累托图高亮选中机型")
+    ok = True
+    tmp = os.path.join(tempfile.gettempdir(), "_selftest_ui_swap.json")
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    orig_last = run.last_inputs_path
+    run.last_inputs_path = lambda: tmp
+    try:
+        app = new_app()
+    finally:
+        run.last_inputs_path = orig_last
+    pump(app, 2.0)
+    a, b = app.var_tag.get(), app.var_enemy_tag.get()
+    ok &= check("交换键在 ② 里（真按钮、不是文字）",
+                app.btn_swap.winfo_class() == "TButton", app.btn_swap.cget("text"))
+    app._swap_country_enemy()
+    pump(app, 2.5)
+    ok &= check("一键交换：国家/对手对调", (app.var_tag.get(), app.var_enemy_tag.get()) == (b, a),
+                "%s / %s → %s / %s" % (a, b, app.var_tag.get(), app.var_enemy_tag.get()))
+    # 换国家要真的换掉军工组织（德国 → 梅赛施密特一类），换对手要刷新 ② 的对手行
+    ok &= check("换过来的国家挑了自己的 MIO",
+                app._org_key().split("_")[0] == app._tag(),
+                "MIO=%s / 国家=%s" % (app._org_key(), app._tag()))
+    ok &= check("② 对手行跟着刷新", bool(app.lbl_enemy.cget("text")), app.lbl_enemy.cget("text")[:40])
+    # 状态行最终会被"换国家 → 自动重挑军工组织"的异步推荐覆盖（和手改国家一样），
+    # 所以这里查**操作记录**里有没有这次交换；状态行只要有反馈就行
+    ok &= check("操作记录里记下了这次交换",
+                any("交换所选国家与对手国别" in line for line in gui.LOG),
+                next((l for l in reversed(gui.LOG) if "交换" in l), ""))
+    ok &= check("状态行有反馈", bool(app.lbl_hint.cget("text")), app.lbl_hint.cget("text")[:36])
+    app._swap_country_enemy()               # 换回去
+    pump(app, 2.5)
+    ok &= check("再点一次换回原样", (app.var_tag.get(), app.var_enemy_tag.get()) == (a, b),
+                "%s / %s" % (app.var_tag.get(), app.var_enemy_tag.get()))
+    app.var_enemy_tag.set(a)                # 故意设成与国家相同
+    app._swap_country_enemy()
+    pump(app, 0.5)
+    ok &= check("国家＝对手时交换不报错、只提示",
+                (app.var_tag.get(), app.var_enemy_tag.get()) == (a, a),
+                app.lbl_hint.cget("text"))
+    app.var_enemy_tag.set(b)
+    app._on_enemy_change()
+    pump(app, 1.5)
+
+    # 帕累托图高亮：选中一行 → 图上有高亮图元；取消选中 → 抹掉
+    cv = app.canvas_plot
+    ok &= check("未选中时图上没有高亮图元",
+                len(cv.find_withtag("selhl")) == 0, "%d 个" % len(cv.find_withtag("selhl")))
+    items = app.tree_out.get_children()
+    pick = items[1] if len(items) > 1 else items[0]
+    app.tree_out.selection_set(pick)
+    app._show_design()
+    pump(app, 0.8)
+    hl = len(cv.find_withtag("selhl"))
+    ok &= check("选中一行 → 图上出现高亮（圈 + 准星 + 标签）", hl >= 5, "%d 个图元" % hl)
+    texts = []
+    for item in cv.find_withtag("selhl"):
+        if cv.type(item) == "text":
+            texts.append(cv.itemcget(item, "text"))
+    ok &= check("高亮标签点出是哪一架", any(t.startswith("选中 ") for t in texts), str(texts))
+    # 选到另一行 → 高亮跟着换（图元不叠加）
+    other = items[2] if len(items) > 2 else items[0]
+    app.tree_out.selection_set(other)
+    app._show_design()
+    pump(app, 0.8)
+    ok &= check("换一行 → 高亮跟着换、不叠加", len(cv.find_withtag("selhl")) == hl,
+                "%d → %d" % (hl, len(cv.find_withtag("selhl"))))
+    app.tree_out.selection_remove(*app.tree_out.selection())
+    app._show_design()
+    pump(app, 0.6)
+    ok &= check("取消选中 → 高亮抹掉",
+                len(cv.find_withtag("selhl")) == 0, "%d 个" % len(cv.find_withtag("selhl")))
     app.destroy()
     return ok
 
@@ -772,6 +860,7 @@ def main():
     t_role_single_and_log(app)
     app.destroy()
     t_alloc_recommendation()
+    t_swap_and_highlight()
     t_memory()
     t_table_coverage(args.full)
     bad = [n for n, ok, _d in RESULTS if not ok]

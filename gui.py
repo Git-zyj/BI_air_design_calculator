@@ -781,9 +781,9 @@ class App(tk.Tk):
         #   第 1 行：当前年份 ｜ 飞机科技年份
         #   第 2 行：所选国家 ｜ 对手国别 ｜ 选取规则
         # （以前是 2 行 × 3 列混排，字段名落在三条不同竖线 x=25/224/354 上。）
-        def field_block(row, col):
+        def field_block(row, col, padx=(0, PADX * 2)):
             blk = ttk.Frame(fields)
-            blk.grid(row=row, column=col, sticky="w", padx=(0, PADX * 2),
+            blk.grid(row=row, column=col, sticky="w", padx=padx,
                      pady=(ROW_PAD, ROW_PAD))
             return blk
 
@@ -797,7 +797,11 @@ class App(tk.Tk):
         ttk.Spinbox(blk, from_=1936, to=1948, textvariable=self.var_tech, width=CTL_W_NUM,
                     command=self._on_tech_year_changed).grid(row=0, column=1, sticky="w")
 
-        blk = field_block(1, 0)
+        # 所选国家 ｜ ⇄ ｜ 对手国别 ｜ 选取规则
+        # 「⇄」= 一键把国家和对手对调（用户 2026-10-13 口径）。它挤在
+        # 所选国家与对手国别**中间**，所以这条左右各留 4px（而不是默认的 24px），
+        # 否则 1000px 窗口下 ② 卡片会越过画布右缘（实测过）。
+        blk = field_block(1, 0, padx=(0, 4))
         ttk.Label(blk, text="所选国家").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
         cb = ttk.Combobox(blk, textvariable=self.var_tag, width=CTL_W_TAG,
@@ -808,7 +812,15 @@ class App(tk.Tk):
         self.var_tag.set(self._tag_labels.get(self.inputs.get("country") or "SOV", "苏联"))
         enemy = self.inputs.get("enemy") or {}
 
-        blk = field_block(1, 1)
+        blk = field_block(1, 1, padx=(0, 4))
+        self.btn_swap = ttk.Button(blk, text="⇄", width=2, style="Tight.TButton",
+                                   command=self._swap_country_enemy)
+        self.btn_swap.grid(row=0, column=0, sticky="w")
+        ttk.Label(blk, text="交换", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=0, column=1, sticky="w",
+                                                      padx=(3, 0))
+
+        blk = field_block(1, 2)
         ttk.Label(blk, text="对手国别").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         self.var_enemy_tag = tk.StringVar(value=enemy.get("country", "GER"))
         eb = ttk.Combobox(blk, textvariable=self.var_enemy_tag, width=CTL_W_TAG,
@@ -818,7 +830,7 @@ class App(tk.Tk):
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
 
-        blk = field_block(1, 2)
+        blk = field_block(1, 3)
         ttk.Label(blk, text="选取规则").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         # 旧写法 dict(RULE_LABELS).get(key) 方向反了（表是"显示名 → key"），
         # 不管 inputs.json 写什么都会显示成"当前年份−1"。
@@ -1985,9 +1997,9 @@ class App(tk.Tk):
         else:
             # 两种口径可能落到**同一套特质**（常见于"本 MIO 就是本国最好的生产方"，
             # 没有更优的生产伙伴可换）→ 表里两行逐位相同。这时写"高 0.00%"会被
-            # 当成"没算生产折算"的老毛病（用户 2026-10-12 就是这么质疑的），
-            # 所以直接说明"同解"，不写 0.00%。
-            text = "推荐：%s（比另一种高 <0.01%%，两种口径同解）" % short
+            # 当成"没算生产折算"的老毛病（用户 2026-10-12 就是这么质疑的）。
+            # 用户 2026-10-13 口径：**确实完全相同**就说持平，不硬凑一个赢家。
+            text = "推荐：%s（与另一种持平，差 <0.01%%，选哪个都一样）" % short
         self.lbl_alloc_rec.configure(text=text)
         # 用户还没自己选过 → 直接把默认口径也切到推荐那个
         # （以前默认固定"分离"，新用户看到推荐"兼顾"却不知道要不要动）
@@ -2278,6 +2290,33 @@ class App(tk.Tk):
         """换对手国别 / 手填对手机型：对手数值变了，最优路线与方针也可能跟着变。"""
         self._refresh_enemy()
         self._on_inputs_affecting_plan()
+
+    def _swap_country_enemy(self):
+        """② 里的「⇄ 交换」：把"所选国家"和"对手国别"对调（省得两个下拉各点一次）。
+
+        顺序要和国家切换一致：先换国家（重建 ③ 前置清单、重挑军工组织/方针），
+        再换对手（② 的对手数值行、手填修正用对手国的 AI 判定值、路线重推）。
+        两边相同时不发操作、不重算（免得日志里多一条无意义记录）。
+        """
+        a = self.var_tag.get()          # 所选国家（中文名）
+        b = self.var_enemy_tag.get()    # 对手国别（中文名）
+        if not a or not b or a == b:
+            self.lbl_hint.configure(text="所选国家与对手国别相同，无需交换")
+            return
+        self.var_tag.set(b)
+        self.var_enemy_tag.set(a)
+        _dbg("操作：交换所选国家与对手国别 → %s ↔ %s" % (b, a))
+        self._refresh_country()         # 换国家：重建 ③、重挑军工组织与方针
+        self._on_enemy_change()         # 换对手：对手数值/路线重推
+        # 走和其它输入同一条"操作反馈"：算完状态行会写
+        # 「交换国家与对手 → 德国 ↔ 苏联」已生效：已重算 N 行…。
+        # ⚠ 必须放在上面两步**之后** —— `_refresh_country()` 会改军工组织下拉，
+        # 那个 trace 也会写 `_last_op`（实测被"改军工组织 → 梅赛施密特"顶掉）。
+        self._last_op = "交换国家与对手 → %s ↔ %s" % (b, a)
+        if getattr(self, "rows", None):
+            self.on_calculate()
+        else:
+            self.lbl_hint.configure(text="已交换：你 = %s，对手 = %s" % (b, a))
 
     def _on_rule_change(self):
         self._sync_rule()
@@ -2988,9 +3027,11 @@ class App(tk.Tk):
             child.destroy()
         sel = self.tree_out.selection()
         if not sel:
+            self._draw_chart()          # 取消选中 → 把图上的高亮圈也抹掉
             return
         values = self.tree_out.item(sel[0])["values"]
         if not values:
+            self._draw_chart()
             return
         row = getattr(self, "_row_by_iid", {}).get(sel[0])
         v = (row or {}).get("values") or {}
@@ -3022,6 +3063,7 @@ class App(tk.Tk):
                 blocks.append(("战斗比值", combat[0].replace("战斗比值 ", "", 1), "formula"))
                 blocks.extend(("", text.lstrip("　"), "note") for text in combat[1:])
         self._render_design_blocks(blocks)
+        self._draw_chart()              # 选中的那架在帕累托图上圈出来（用户 2026-10-13 口径）
         if scroll:
             self._scroll_to(self.frm_design)
 
@@ -3230,6 +3272,35 @@ class App(tk.Tk):
                                fill=ACCENT, font=(self.family, FONT_NOTE, "bold"))
             else:
                 cv.create_oval(cx - 2, cy - 2, cx + 2, cy + 2, fill=DOT, outline=DOT)
+
+        # 表格里**选中的那架**在图上圈出来（用户 2026-10-13 口径：想看自己那架在图里的位置）。
+        # 画在最后 = 压在所有点之上；标签带上"选中"，和帕累托前沿的名称标签区分开。
+        sel_row = self._selected_row()
+        if sel_row is not None:
+            sx, sy = px(xget(sel_row)), py(yget(sel_row))
+            cv.create_oval(sx - 7, sy - 7, sx + 7, sy + 7, outline=INK, width=2,
+                           tags="selhl")
+            # 十字准星：点被别的点盖住时也能一眼看到在哪
+            cv.create_line(sx - 11, sy, sx - 8, sy, fill=INK, tags="selhl")
+            cv.create_line(sx + 8, sy, sx + 11, sy, fill=INK, tags="selhl")
+            cv.create_line(sx, sy - 11, sx, sy - 8, fill=INK, tags="selhl")
+            cv.create_line(sx, sy + 8, sx, sy + 11, fill=INK, tags="selhl")
+            name = self._row_name(sel_row).split()[-1]
+            cv.create_text(sx, sy - 15, anchor="s", text="选中 %s" % name, fill=INK,
+                           font=(self.family, FONT_NOTE, "bold"), tags="selhl")
+
+    def _selected_row(self):
+        """表格里当前选中的那一行（没选中返回 None）。"""
+        tree = getattr(self, "tree_out", None)
+        if tree is None:
+            return None
+        try:
+            sel = tree.selection()
+        except tk.TclError:
+            return None
+        if not sel:
+            return None
+        return getattr(self, "_row_by_iid", {}).get(sel[0])
 
 
 if __name__ == "__main__":
