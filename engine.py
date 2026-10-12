@@ -208,23 +208,27 @@ def range_coverage(actual_range, range_cap):
     `Out of range of this Air Zone!`（等效 0 架）。
 
     一维模拟（用户口径 2026-10-12）：
-        d₁ = 最远目标距离（= range_cap）、Δ = 目标距离差（= band）
-        d₀ = max(0, d₁ − Δ)                       ← 目标区域近边
-        覆盖率 = clamp((min(实际航程, d₁) − d₀) ÷ Δ, 0, 1)
+        d₁ = 最远目标距离（= range_cap）、Δ = 目标距离差（区域纵深）
+        d₀ = max(0, d₁ − Δ)        ← 目标区域近边（不会跑到机场后面去）
+        depth = d₁ − d₀            ← 在我们这个距离口径里，区域真正占的纵深
+        覆盖率 = clamp((min(实际航程, d₁) − d₀) ÷ depth, 0, 1)
 
-    - 实际航程 ≤ d₀ → 0（完全够不到）
-    - 实际航程 ≥ d₁ → 1（全覆盖）
-    - Δ ≤ 0（或老代码传普通 float）→ 退化为旧口径 `min(航程, d₁) ÷ d₁`（近边 = 0）
+    几个端点是自洽的（用户 2026-10-12 指出我先前写反了）：
+      Δ = 0   → depth = 0：区域缩成**最远目标距离上的一个点** → 二段式
+                （航程 ≥ d₁ 记 1，否则 0），**不是**旧口径；
+      Δ = d₁  → d₀ = 0、depth = d₁ → 就是旧口径 `min(航程, d₁) ÷ d₁`（近边在机场脚下）；
+      Δ > d₁  → 近边被夹到 0（区域有一截在机场"后面"，不算）→ 同样回到旧口径。
     """
     d1 = float(range_cap or 0.0)
     if d1 <= 0:
         return 1.0
-    band = range_band(range_cap)
-    if band <= 0.0:
-        return min(float(actual_range), d1) / d1
-    d0 = max(0.0, d1 - band)
-    covered = min(float(actual_range), d1) - d0
-    return max(0.0, min(1.0, covered / band))
+    rng = min(float(actual_range), d1)
+    d0 = max(0.0, d1 - range_band(range_cap))
+    depth = d1 - d0
+    if depth <= 0:                     # Δ ≤ 0：点目标 → 到不了就是 0，够得到就满分
+        return 1.0 if rng >= d1 else 0.0
+    covered = rng - d0
+    return max(0.0, min(1.0, covered / depth))
 GROUND_FLOOR = 0.0001
 
 ROLES = {

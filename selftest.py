@@ -157,16 +157,27 @@ def t_range_coverage(data):
         got = engine.range_coverage(rng, spec)
         ok &= check("航程 %d @ d₁=900/Δ=300 → %.2f" % (rng, want), approx(got, want, 1e-9),
                     "%.4f" % got)
-    # Δ = 0 → 退化成旧口径（近边 = 0）
-    old = engine.RangeSpec(900, 0)
-    ok &= check("Δ=0 退化成旧口径 min(R,d₁)/d₁",
-                approx(engine.range_coverage(450, old), 0.5)
-                and approx(engine.range_coverage(700, old), 700 / 900),
-                "450→%.3f，700→%.3f" % (engine.range_coverage(450, old),
-                                        engine.range_coverage(700, old)))
-    # 端到端：改「目标距离差」必须真的改变分数（说明它一路传到了引擎）
+    # Δ = 0 → 区域缩成"最远目标距离上的一个点" → 二段式（航程 ≥ d₁ 才 1）
+    point = engine.RangeSpec(900, 0)
+    ok &= check("Δ=0 = 点目标（二段式）",
+                approx(engine.range_coverage(899, point), 0.0)
+                and approx(engine.range_coverage(900, point), 1.0)
+                and approx(engine.range_coverage(1200, point), 1.0),
+                "899→%.3f，900→%.3f，1200→%.3f" % (engine.range_coverage(899, point),
+                                                   engine.range_coverage(900, point),
+                                                   engine.range_coverage(1200, point)))
+    # Δ = d₁（近边在机场脚下）才是旧口径；Δ > d₁ 也夹回旧口径
+    for band, label in ((900, "Δ=d₁"), (1200, "Δ>d₁")):
+        old = engine.RangeSpec(900, band)
+        ok &= check("%s 退化成旧口径 min(R,d₁)/d₁" % label,
+                    approx(engine.range_coverage(450, old), 0.5)
+                    and approx(engine.range_coverage(700, old), 700 / 900),
+                    "450→%.3f，700→%.3f" % (engine.range_coverage(450, old),
+                                            engine.range_coverage(700, old)))
+    # 端到端：改「目标距离差」必须真的改变分数（说明它一路传到了引擎）。
+    # 基线用 Δ = d₁ = 900（近边在机场脚下 = 旧口径），对照新默认 Δ=300。
     base = inputs_for("SOV", "air_far", 1944, 1944)
-    rows_a, *_ = run.build_rows(dict(base, range_band=0), data)
+    rows_a, *_ = run.build_rows(dict(base, range_band=900), data)
     rows_b, *_ = run.build_rows(dict(base, range_band=300), data)
     fa = {r["airframe"]["key"]: r["values"]["range_factor"]
           for r in rows_a if r["role"] == "air_far"}
@@ -176,7 +187,7 @@ def t_range_coverage(data):
     top_b = next(r for r in rows_b if r["role"] == "air_far")["score"]
     lowered = [k for k in fa if fb.get(k, 1.0) < fa[k] - 1e-9]
     ok &= check("改 Δ 会改变分数", abs(top_a - top_b) > 1e-9,
-                "Δ=0 首名 %.4f / Δ=300 首名 %.4f" % (top_a, top_b))
+                "Δ=900（旧口径）首名 %.4f / Δ=300（默认）首名 %.4f" % (top_a, top_b))
     ok &= check("Δ=300 会压低短航程飞机的覆盖率", bool(lowered),
                 "%d 架覆盖率被压低（其中 %d 架为 0）"
                 % (len(lowered), sum(1 for k in lowered if fb[k] <= 0)))
