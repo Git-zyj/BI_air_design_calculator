@@ -548,10 +548,9 @@ class App(tk.Tk):
         # 生产侧（**不参与评分**）：设计槽吃 equipment_bonus，生产槽吃 production_bonus，
         # 但一个 MIO 只有一条特质路线 —— 所以这里把这条路线带来的生产修正如实列出来，
         # 供用户定性判断"值不值得为了生产改路线 / 换一个 MIO 来生产"。
-        # 第 4 行：生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同
-        ttk.Label(card, text="生产折算").grid(row=4, column=0, sticky="e", padx=(PADX, 4),
-                                              pady=(PADY, 0))
-        # 生产折算的两个输入：**每个字段自带 %**（以前把 "%" 拼在下一个标签里，
+        # 生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同。
+        # （原来这里还有个"生产折算"标题标签，挪行后和累计行撞在一起，已删；
+        #   两个输入各自有"当前效率上限 / 当前产量加成"标签，够清楚。）
         # 列宽一变 "%" 就飘到离输入框很远的地方）
         prod_row = ttk.Frame(card)
         prod_row.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX, pady=(PADY, 0))
@@ -839,6 +838,7 @@ class App(tk.Tk):
         # 换年份会刷新；之后手动改的勾选不再保留。
         years = self.data.get("tech_years") or {}
         year = int(self.var_year.get() or 1939)
+        self._tech_default_year = year          # 记住这份默认是按哪一年生成的
         unlocked = {t for t in self._relevant_techs() if (years.get(t) or 9999) <= year}
         flags_on = set(self.inputs.get("unlocked_flags") or [])
         self._group_items = {}
@@ -1739,6 +1739,14 @@ class App(tk.Tk):
 
     def _apply_inputs_affecting_plan(self, recalc=False):
         self._plan_job = None
+        # 当前年份变了 → ③ 的前置默认要跟着重算（默认 = "到当前年份为止已完成"）；
+        # 以前只有换国家/改科技年份才重建，所以"切当前年份"看不到解锁变化。
+        try:
+            year = int(self.var_year.get())
+        except (tk.TclError, ValueError):
+            year = None
+        if year is not None and year != getattr(self, "_tech_default_year", None):
+            self._build_tech_checks()
         try:
             self._refresh_policies()
         except (Exception, SystemExit):       # noqa: BLE001

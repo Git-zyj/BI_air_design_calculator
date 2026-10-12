@@ -96,6 +96,7 @@ def main():
                     app._on_tech_year_changed()
                     for year in years:
                         app.var_year.set(year)
+                        app._build_tech_checks()   # 切当前年份 → ③ 前置默认跟着变（和界面一致）
                         for alloc in allocs:
                             app.var_alloc_mode.set(alloc_label[alloc])
                             app._on_alloc_mode_change()
