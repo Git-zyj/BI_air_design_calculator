@@ -576,13 +576,7 @@ def t_table_coverage(full=False):
     years = range(1939, 1949) if full else (1939, 1943, 1947)
     techs = range(1939, 1949) if full else (1939, 1944, 1948)
     groups = 0
-    # 2026-10-12：算法版本升到 v7 后按用户口径**只重跑了苏德**，
-    # 其余四国的分片还是 v6 键（用起来会现算并写进本机缓存，结果一样、就是慢一点）。
-    # 所以这里对苏德严格断言 0 缺失，其余国家只报告缺失数（不当失败）。
-    strict = ("SOV", "GER")
-    misses_by_country = {}
     for country in ("SOV", "GER", "USA", "Commonwealth", "JAP", "ITA"):
-        misses_by_country[country] = len(misses)
         label = app._tag_labels.get(country)
         if not label:
             continue
@@ -612,11 +606,9 @@ def t_table_coverage(full=False):
                             app._org_plan(org, inputs)
                         groups += 1
     app.destroy()
-    strict_miss = sum(1 for m in misses if m.split("|")[3] in strict)
-    other = len(misses) - strict_miss
-    ok = check("离线表命中：苏德缺 %d 个" % strict_miss, strict_miss == 0,
-               "走了 %d 组%s；其余四国缺 %d 个（分片还是 v6 键，运行时现算+本机缓存）"
-               % (groups, "（全量）" if full else "（抽样）", other))
+    # 12 片全部按出厂默认口径（v7 / 最远 900 / 差值 300）重跑过 → 这里应当 0 缺失
+    ok = check("离线表命中（缺 %d 个）" % len(misses), not misses,
+               "走了 %d 组%s" % (groups, "（全量）" if full else "（抽样）"))
     for m in misses[:3]:
         print("     缺：%s" % m[:130])
     return ok
