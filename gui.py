@@ -527,17 +527,20 @@ class App(tk.Tk):
         self.spin_level.grid(row=2, column=1, sticky="w")
         ttk.Button(card, text="预览军工组织总加成", command=self.on_preview).grid(
             row=2, column=2, sticky="w", padx=(PADX, 2))
-        ttk.Label(card, text="配点口径").grid(row=2, column=3, sticky="e", padx=(PADX, 4))
+        # 「配点口径 + 推荐」放进一个子框：推荐紧跟在选择框右边，
+        # 又不会被卡片左边那几列的宽度变化推着跑（以前塞主网格里就会漂）。
+        frm_alloc = ttk.Frame(card)
+        frm_alloc.grid(row=2, column=3, columnspan=3, sticky="w")
+        ttk.Label(frm_alloc, text="配点口径").grid(row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
         self.cb_alloc_mode = ttk.Combobox(card, textvariable=self.var_alloc_mode, width=24,
                                           state="readonly",
                                           values=[label for _k, label in ALLOC_MODES])
-        self.cb_alloc_mode.grid(row=2, column=4, columnspan=2, sticky="w")
+        self.cb_alloc_mode.grid(row=0, column=1, sticky="w")
         self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_change())
-        self.lbl_alloc_rec = ttk.Label(card, text="", foreground=ACCENT,
+        self.lbl_alloc_rec = ttk.Label(frm_alloc, text="", foreground=ACCENT,
                                        font=(self.family, BODY - 2, "bold"), justify="left")
-        # 单独占一行（以前塞在第 2 行第 6 列：左侧列宽一变它就被推着走、甚至跑出界面）
-        self.lbl_alloc_rec.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_alloc_rec.grid(row=0, column=2, sticky="w", padx=PADX)
 
         # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
