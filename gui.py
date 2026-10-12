@@ -1238,6 +1238,18 @@ class App(tk.Tk):
                 text="推荐：%s（满级 + %s%s）"
                      % (zh(self.loc, best["organization"]),
                         zh(self.loc, pol["token"]) if pol else "无方针", extra))
+            if len(orgs) <= 1:
+                # 只有一家可选时给不出"比次优高多少" —— 说明白，免得被当成"就这么定的"
+                self.lbl_org_rec.configure(
+                    text=self.lbl_org_rec.cget("text")
+                         + "〔该参考机型只适用 1 家 MIO，未作比较〕")
+            ref = self._ref_plane()
+            if ref:
+                self.lbl_org_rec.configure(
+                    text="参考机型：%s（%s）｜" % (zh(self.loc, ref["key"]) or ref["name"],
+                                              engine.CATEGORY_ZH.get(ref.get("category"),
+                                                                      ref.get("category")))
+                         + self.lbl_org_rec.cget("text"))
             # 只打一行汇总：以前每个组织打一行，一次操作能刷 5 行
             _dbg("MIO 路线：比较 %d 个组织（重算 %d，缓存命中 %d，用时 %.2fs）"
                  "→ 推荐「%s」，方针「%s」%s"

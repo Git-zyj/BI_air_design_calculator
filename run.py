@@ -262,34 +262,30 @@ CARRIER_ARCHETYPES = ("cv_fighter_equipment", "cv_mr_fighter_equipment",
 
 
 def pick_reference_plane(pool, inputs, data, upgrade_map, enemy_by_role):
-    """路线优化 / 装备类型过滤用的"参考机型"：
-    **该用途下"空修正"分数最高的候选**（陆基用途优先非舰载机型）。
+    """参考机型 = **该国 AI 在该用途下的主力机型**（按 `priority`，用户口径 2026-10-12）。
 
-    以前直接取 `max(pool, key=year)`：1939 会挑到舰载机 I-153k、1944 会挑到重型战斗机 MiG-5
-    —— 按它们的装备组去过滤 MIO，下拉和特质表都会带偏（雅科夫列夫就被误删过）。
-    用"谁分最高"当代表，和工具自己的口径一致。
+    ⚠️ 不能直接取 priority 全局最大：喷气机/夜间战斗机那一档的数字天生更高
+    （10000~13000，日间战斗机只有 1000~2000），会把参考机型带到夜间机/重型机上
+    —— 实测苏联 1939/1941 被带到 Ip-1（重型）→ 装备组只被雅科夫列夫覆盖 →
+    "比较 1 个组织"。所以先限定类别：
+      对空 → fighter / light_fighter（其次 multi_role、heavy_fighter）
+      舰载 → cv_fighter / cv_mr_fighter（其次上面两类）
+    再按 priority 取最高。与"对手选取"同一口径（对手那边已验证 德国 1944 = Bf 109 G-14）。
     """
     if not pool:
         return None
-    carrier_role = any(r in engine.CARRIER_ROLES for r in (inputs.get("roles") or ()))
-    cands = pool if carrier_role else (
-        [a for a in pool if a.get("archetype") not in CARRIER_ARCHETYPES] or pool)
     role = (inputs.get("roles") or ["air_far"])[0]
-    _enemy, enemy_values = enemy_by_role.get(role, (None, None))
-    score_key = engine.score_role(role)
-    acc_f = engine.accident_factor(role in engine.CARRIER_ROLES)
-    best, best_score = cands[0], None
-    for airframe in cands:
-        tokens = engine.available_upgrades(
-            airframe["category"], data, techs=inputs.get("unlocked_techs") or [],
-            flags=inputs.get("unlocked_flags") or [], archetype=airframe.get("archetype"))[0]
-        result = engine.optimize(airframe, upgrade_map, {}, enemy_values, score_key,
-                                 available=tokens, range_cap=inputs.get("range_cap"),
-                                 experience=inputs.get("experience"), accident_f=acc_f)
-        value = result["scores"].get(score_key, 0.0)
-        if best_score is None or value > best_score:
-            best, best_score = airframe, value
-    return best
+    preferred = {
+        "air_near": ("fighter", "light_fighter", "fighter_alt"),
+        "air_far": ("fighter", "light_fighter", "fighter_alt"),
+        "air_cv": ("cv_fighter", "cv_mr_fighter", "fighter", "light_fighter"),
+        "naval_cv": ("cv_nav_bomber", "nav_bomber", "naval_bomber"),
+    }.get(role, ())
+    for cats in (preferred, ("multi_role", "heavy_fighter", "interceptor"), None):
+        cands = list(pool) if not cats else [a for a in pool if a.get("category") in cats]
+        if cands:
+            return max(cands, key=lambda a: ((a.get("priority") or 0), a.get("year") or 0))
+    return pool[0]
 
 
 def candidate_pool(inputs, data):

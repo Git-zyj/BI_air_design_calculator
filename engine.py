@@ -729,6 +729,17 @@ MIO_MAX_LEVEL = 14
 # 路线搜索的粗筛规模：先用"不含改装"的廉价分取前 N 个可行集，再跑真实管线
 # （抽样验证：N=20~100 与全枚举结果完全一致；N=0 = 不粗筛/全枚举）
 ROUTE_TOP_K = 20
+# 机型类别的中文名（参考机型/对手信息里显示用）
+CATEGORY_ZH = {
+    "fighter": "战斗机", "light_fighter": "轻型战斗机", "heavy_fighter": "重型战斗机",
+    "multi_role": "多用途战斗机", "interceptor": "截击机", "night_fighter": "夜间战斗机",
+    "jet_fighter": "喷气战斗机", "jet_mr_fighter": "喷气多用途战斗机",
+    "rocket_interceptor": "火箭截击机", "cv_fighter": "舰载战斗机",
+    "cv_mr_fighter": "舰载多用途", "nav_bomber": "海军轰炸机",
+    "cv_nav_bomber": "舰载海军轰炸机", "cas": "近距支援机",
+    "naval_bomber": "海军轰炸机", "tac_bomber": "战术轰炸机",
+    "strat_bomber": "战略轰炸机", "scout_plane": "侦察机", "transport_plane": "运输机",
+}
 # 对手（AI）的满经验加成：机动 +20% / 速度 +5%（用户实测口径；可界面手填覆盖）
 ENEMY_EXPERIENCE = {"air_agility": 0.20, "maximum_speed": 0.05}
 # 空军 MIO 的装备类型关键字（判断一个组织是不是做飞机的）
