@@ -474,6 +474,39 @@ def t_style(app):
     return ok
 
 
+def t_distance_choices(app):
+    """最远目标距离的挡位按用途分档（用户口径 2026-10-12）：
+    舰载 1500 / 对海（陆基）3000 / 其余 2100；超出上限要自动收到上限。"""
+    print("[14] 最远目标距离挡位按用途分档")
+    ok = True
+    cases = (("air_cv", "对空舰载", 1500), ("naval_cv", "对海舰载", 1500),
+             ("naval_far", "对海", 3000), ("air_far", "对空", 2100),
+             ("ground_far", "对地", 2100), ("recon", "侦察/运输", 2100))
+    for key, label, cap in cases:
+        for k, v in app.role_vars.items():
+            v.set(k == key)
+        app._on_roles_changed()
+        pump(app, 0.8)
+        vals = list(app.cb_distance.cget("values"))
+        ok &= check("%s → 600…%d" % (label, cap),
+                    vals[0] == "600" and vals[-1] == str(cap), "挡位 %s…%s（%d 档）"
+                    % (vals[0], vals[-1], len(vals)))
+    # 超上限自动收回：先在对海把距离拉到 3000，再切回对空 → 应收到 2100
+    for k, v in app.role_vars.items():
+        v.set(k == "naval_far")
+    app._on_roles_changed()
+    pump(app, 0.8)
+    app.var_distance.set("3000")
+    pump(app, 0.6)
+    for k, v in app.role_vars.items():
+        v.set(k == "air_far")
+    app._on_roles_changed()
+    pump(app, 0.8)
+    ok &= check("超出上限自动收到 2100", int(float(app.var_distance.get())) == 2100,
+                app.var_distance.get())
+    return ok
+
+
 def t_table_coverage(full=False):
     print("[10] 离线表覆盖（方案键命中率）")
     app = new_app()
@@ -552,6 +585,7 @@ def main():
     t_wrapping(app)
     t_card4_layout(app)
     t_style(app)
+    t_distance_choices(app)
     app.destroy()
     t_memory()
     t_table_coverage(args.full)

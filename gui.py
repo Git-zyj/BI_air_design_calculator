@@ -92,6 +92,22 @@ RULE_KEYS = {key: label for label, key in RULE_LABELS}      # 反查：key → �
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
 DISTANCES = list(range(600, 3601, 300))
 DEFAULT_DISTANCE = 900
+# 最远目标距离的挡位**按用途分档**（用户口径 2026-10-12）：
+#   对空（舰载）/ 对海（舰载）→ 1500；对海（陆基）→ 3000；其余（对空 / 对地 / 侦察运输）→ 2100
+# 依据：各用途"航程改装拉满（只算正向航程改装）"的上限 ——
+#   对海轰炸机 3380（Ju 290 A-2）、对地 2647、对空 2598（Hornet）、侦察/运输 2477、
+#   舰载 1560~1669；所以各档留一点余量取整到 300 的倍数。
+DISTANCE_MAX_BY_ROLE = {"air_cv": 1500, "naval_cv": 1500, "naval_far": 3000}
+DISTANCE_MAX_DEFAULT = 2100
+
+
+def distances_for(roles):
+    """按选中的用途给出"最远目标距离"的可选挡位（600 起，每 300 一档）。"""
+    top = max((DISTANCE_MAX_BY_ROLE.get(r, DISTANCE_MAX_DEFAULT)
+               for r in (roles or ())), default=DISTANCE_MAX_DEFAULT)
+    return [d for d in range(600, top + 1, 300)]
+
+
 # 目标距离差（目标区域纵深）挡位（用户口径 2026-10-12）：100~600，默认 300
 BAND_CHOICES = [100, 200, 300, 400, 500, 600]
 DEFAULT_BAND = 300
@@ -312,6 +328,7 @@ class App(tk.Tk):
         roles = base.get("roles") or ["air_far"]
         for key, var in self.role_vars.items():
             var.set(key in roles)
+        self._sync_distance_choices()      # 挡位跟着用途回到 2100 那一档
         self.var_tag.set(self._tag_labels.get(base.get("country") or "SOV", "苏联"))
         enemy = base.get("enemy") or {}
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country") or "GER", "德国"))
@@ -605,11 +622,11 @@ class App(tk.Tk):
         ttk.Label(blk, text="最远目标距离").grid(row=0, column=0, sticky="w", padx=(0, 6))
         self.var_distance = tk.StringVar(
             value=str(int(self.inputs.get("range_cap") or DEFAULT_DISTANCE)))
-        dbox = ttk.Combobox(blk, textvariable=self.var_distance, width=CTL_W_NUM + 1,
-                            state="readonly",
-                            values=DISTANCES)
-        dbox.grid(row=0, column=1, sticky="w")
-        dbox.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
+        self.cb_distance = ttk.Combobox(blk, textvariable=self.var_distance,
+                                        width=CTL_W_NUM + 1, state="readonly",
+                                        values=distances_for(cur_roles))
+        self.cb_distance.grid(row=0, column=1, sticky="w")
+        self.cb_distance.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
         ttk.Label(blk, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
             row=0, column=2, sticky="w", padx=(2, 0))
         # 目标区域纵深（近边 = 最远目标距离 − 目标距离差）：默认 300（游戏里的空域纵深量级）
@@ -766,16 +783,6 @@ class App(tk.Tk):
         # ④ 军工组织加成
         card = self._card(row, "④ 军工组织加成")
         self.var_alloc = tk.StringVar(value="auto")
-        ttk.Label(card, text="配点方式").grid(row=0, column=0, sticky="w",
-                                          padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
-        self.radio_alloc_auto = ttk.Radiobutton(card, text="自动配点（按等级）",
-                                                variable=self.var_alloc,
-                                                value="auto", command=self._sync_alloc)
-        self.radio_alloc_auto.grid(row=0, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
-        ttk.Radiobutton(card, text="手动勾选特质", variable=self.var_alloc,
-                        value="pick", command=self._sync_alloc).grid(
-            row=0, column=2, sticky="w", padx=PADX, pady=(ROW_PAD, ROW_PAD))
-
         mio = self.inputs.get("mio") or {}
         self.var_org = tk.StringVar(value="")
         self.var_level = tk.IntVar(value=mio.get("level") or 5)
@@ -2172,8 +2179,25 @@ class App(tk.Tk):
 
     def _on_roles_changed(self):
         self._refresh_enemy()
+        self._sync_distance_choices()   # 距离挡位随用途变（舰载 1500 / 对海 3000 / 其余 2100）
         self._plans.clear()            # 用途变了，"满级最优"重新比较
         self._recommend_org()
+
+    def _sync_distance_choices(self):
+        """按当前用途刷新「最远目标距离」的挡位；超出上限就收到该档上限。"""
+        roles = [k for k, v in self.role_vars.items() if v.get()] or ["air_far"]
+        opts = distances_for(roles)
+        try:
+            self.cb_distance.configure(values=opts)
+        except tk.TclError:
+            return
+        try:
+            cur = int(float(self.var_distance.get() or 0))
+        except (tk.TclError, ValueError):
+            cur = 0
+        if cur not in opts:
+            _dbg("距离挡位：当前用途上限 %d km → 距目标收到 %d" % (opts[-1], opts[-1]))
+            self.var_distance.set(str(opts[-1]))
 
     def _enemy_cfg(self):
         rule = self._rule_value()
