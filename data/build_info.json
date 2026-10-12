@@ -1,0 +1,7 @@
+{
+ "edition": "黑冰测试版",
+ "mod_version": "12.3.0",
+ "workshop_id": "1851181613",
+ "game_version": "1.19.2.0",
+ "note": "beta 分支 = BlackICE 测试版（Blackice HOI IV TEST）。代码与 main 同一份（用 git checkout main -- <code> 同步），只有 data/（抽自 1851181613 的数值）与本文件不同。"
+}

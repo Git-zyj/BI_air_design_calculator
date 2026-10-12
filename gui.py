@@ -18,6 +18,7 @@ import os
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
+from datetime import datetime
 from tkinter import ttk, messagebox
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -37,9 +38,35 @@ REEXEC_ENV = "BI_SOV_REEXEC"
 
 BODY = 11
 PADX, PADY = 12, 8
-ACCENT = "#1F4E79"
-CARD_BG = "#F7F7F7"
-WRAP_RESERVE = 110         # 累计标签换行时给按钮/边距留的宽度
+# ④ 卡片（字段最多的那张）的统一行高与行内边距：行距一致 = 每行一样高、上下留白一样
+# 行高取"最高那种控件行"的自然高度（按钮 28 + 上下各 5 = 38），文字行用 minsize 补到一样高
+ROW_H, ROW_PAD = 38, 5
+
+# ── 视觉规范（2026-10-12 统一：字体只 4 档、颜色只一套语义色）──────────────
+# 字体档位：整个界面只允许这四种字号（加粗算同一档）
+FONT_TITLE = BODY + 4      # 顶栏标题
+FONT_CARD = BODY           # 卡片标题 / 表头
+FONT_FIELD = BODY          # 字段名 / 正文 / 明细正文
+FONT_NOTE = BODY - 1       # 说明、次要信息、明细算式、图表刻度
+# 语义色：不再各处写十六进制
+ACCENT = "#1F4E79"         # 标题、强调数值、卡片标题、表格选中
+MUTED = "#5A6472"          # 说明文字、坐标轴标题
+INFO = "#44506B"           # "数值来源"这类过程说明
+PROD = "#7A5C1E"           # 生产侧
+INK = "#333333"            # 明细正文
+LINE = "#8A93A5"           # 图表坐标轴 / 刻度
+DOT = "#B9C2D0"            # 图表里被支配的点
+GRID = "#D0D7E5"           # 卡片边框 / 图表边框
+DISABLED = "#A8AEB8"       # 置灰（点不了的特质）
+PAGE_BG = "#EDF1F7"        # 页面底色
+CARD_BG = "#F7F7F7"        # 卡片底色
+BANNER_BG = ACCENT
+BANNER_FG = "#FFFFFF"
+BANNER_SUB = "#C9D8EC"     # 顶栏次要文字（字体提示 / 状态行）
+# 控件宽度：同类控件同宽
+CTL_W_TEXT = 22            # 文本型下拉（军工组织 / 方针 / 配点口径）
+CTL_W_TAG = 14             # 国家名下拉
+CTL_W_NUM = 7              # 数值输入（年份 / 修正百分比）
 
 ROLE_LABELS = engine.ROLES
 MOD_ZH = {
@@ -62,9 +89,29 @@ MOD_FIELDS = [("air_attack", "对空"), ("air_defence", "防御"), ("air_agility
               ("naval_strike_attack", "对海"), ("naval_strike_targetting", "瞄准")]
 # 对手规则：界面用中文，内部映射到引擎取值
 RULE_LABELS = [("当前年份−1", "previous_year"), ("当前年份", "same_year"), ("手动", "manual")]
+RULE_KEYS = {key: label for label, key in RULE_LABELS}      # 反查：key → 显示名
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
 DISTANCES = list(range(600, 3601, 300))
 DEFAULT_DISTANCE = 900
+# 最远目标距离的挡位**按用途分档**（用户口径 2026-10-12）：
+#   对空（舰载）/ 对海（舰载）→ 1500；对海（陆基）→ 3000；其余（对空 / 对地 / 侦察运输）→ 2100
+# 依据：各用途"航程改装拉满（只算正向航程改装）"的上限 ——
+#   对海轰炸机 3380（Ju 290 A-2）、对地 2647、对空 2598（Hornet）、侦察/运输 2477、
+#   舰载 1560~1669；所以各档留一点余量取整到 300 的倍数。
+DISTANCE_MAX_BY_ROLE = {"air_cv": 1500, "naval_cv": 1500, "naval_far": 3000}
+DISTANCE_MAX_DEFAULT = 2100
+
+
+def distances_for(roles):
+    """按选中的用途给出"最远目标距离"的可选挡位（600 起，每 300 一档）。"""
+    top = max((DISTANCE_MAX_BY_ROLE.get(r, DISTANCE_MAX_DEFAULT)
+               for r in (roles or ())), default=DISTANCE_MAX_DEFAULT)
+    return [d for d in range(600, top + 1, 300)]
+
+
+# 目标距离差（目标区域纵深）挡位（用户口径 2026-10-12）：100~600，默认 300
+BAND_CHOICES = [100, 200, 300, 400, 500, 600]
+DEFAULT_BAND = 300
 # 自动配点的口径：
 #   design   只按设计分挑路线（生产侧顺带拿到的算白赚）
 #   balanced 兼顾：同一条路线里最大化"折算后总分数"（生产特质与设计链并存）
@@ -78,13 +125,13 @@ ALLOC_MODES = [("split", "分离（设计最优 + 生产另算）"),
 #                  **产能**是折算出来的等效产出倍率（"⇒ 产能 ×1.0167"）。
 PROD_ZH = {"production_capacity_factor": "产量",
            "production_cost_factor": "生产产出花费",
-           "production_efficiency_cap_factor": "效率上限",
-           "production_efficiency_gain_factor": "效率增长",
-           "production_resource_need_factor": "资源需求",
-           "production_resource_penalty_factor": "资源短缺惩罚",
-           "production_conversion_speed_factor": "转换速度",
+           "production_efficiency_cap_factor": "生产效率上限",
+           "production_efficiency_gain_factor": "生产效率增长",
+           "production_resource_need_factor": "生产资源需求",
+           "production_resource_penalty_factor": "生产资源惩罚",
+           "production_conversion_speed_factor": "生产转换速度",
            # 生产侧"可靠"与设计侧同效（都是百分比修正装备当前可靠性）→ 已并进有效造价
-           "reliability": "可靠"}
+           "reliability": "可靠性"}
 # 明细行里"设计数值"要展示的属性（顺序即显示顺序）
 DESIGN_SHOW = ("air_attack", "air_defence", "air_agility", "maximum_speed", "air_range",
                "reliability", "build_cost_ic", "air_ground_attack",
@@ -166,8 +213,21 @@ def _maybe_reexec():
     os.execv(BISOV_PY, [BISOV_PY, os.path.abspath(__file__)] + sys.argv[1:])
 
 
+# 本次会话的日志（右上角状态栏点开可看、可导出）：不管有没有控制台都记，
+# 这样发行版（--windowed，没有 stdout）的用户也能把"我做了什么"导出来报错。
+LOG_MAX = 4000
+LOG = []
+
+
+def _log_line(text):
+    LOG.append("%s  %s" % (datetime.now().strftime("%H:%M:%S"), text))
+    if len(LOG) > LOG_MAX:
+        del LOG[:len(LOG) - LOG_MAX]
+
+
 def _say(text):
     """启动阶段提示（打印到终端，方便"窗口没弹出来"时定位卡在哪一步）。"""
+    _log_line("启动：" + text)
     if getattr(sys, "stdout", None) is None:
         return          # 打包成 --windowed 的 exe 时没有控制台
     print("[BI_SOV] %s" % text)
@@ -179,6 +239,7 @@ DEBUG = bool(getattr(sys, "stdout", None)) or ("-v" in sys.argv)
 
 def _dbg(text):
     """调试信息：只有带控制台（调试版 exe / 命令行）时才打印，发行版静默。"""
+    _log_line(text)
     if DEBUG and getattr(sys, "stdout", None) is not None:
         print("[DEBUG] %s" % text)
         sys.stdout.flush()
@@ -193,9 +254,15 @@ class App(tk.Tk):
         self.font_ok = picked in CJK_OK_FONTS
         self.family = picked or tkfont.nametofont("TkDefaultFont").actual("family")
         self._apply_style()
-        self.title("BI_SOV 飞机选型")
-        # 给一个明确坐标，避免窗口被放到可视区之外（WSLg 偶尔会这样）
-        self.geometry("1280x980+60+40")
+        # 标题带版本：文档反复强调"版本必须对上"，标题栏一眼能确认
+        self.title("飞机设计计算器 · %s" % run.edition_label())
+        # 窗口按屏幕自适应（矮屏笔记本上 980 高会伸到屏幕外），并给一个明确坐标
+        # 避免窗口被放到可视区之外（WSLg 偶尔会这样）
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        win_w = min(1280, max(980, sw - 60))
+        win_h = min(980, max(620, sh - 90))
+        self.geometry("%dx%d+40+20" % (win_w, win_h))
+        self.minsize(min(980, win_w), min(600, win_h))
         self.data = engine.load_data()
         self.by_name = {o["organization"]: o for o in self.data["mio"]}
         self.loc = load_loc()
@@ -204,6 +271,17 @@ class App(tk.Tk):
         if os.path.exists(run.INPUTS):
             with open(run.INPUTS, encoding="utf-8") as fh:
                 self.inputs.update(json.load(fh))
+        # 「记住上次输入」：有记忆文件就用它覆盖示例默认值（用户口径 2026-10-12）
+        self._last_inputs_path = run.last_inputs_path()
+        # ⚠ 属性名别叫 `_first_run` —— 那是"首屏自动算一次"的**方法**名，
+        # 同名会把方法覆盖成 bool，`after(200, self._first_run)` 直接 TypeError。
+        self._is_first_run = not os.path.exists(self._last_inputs_path)  # 首次使用（没记忆文件）
+        if os.path.exists(self._last_inputs_path):
+            try:
+                with open(self._last_inputs_path, encoding="utf-8") as fh:
+                    self.inputs.update(json.load(fh))
+            except (OSError, ValueError):
+                pass
         self.tags = sorted({a.get("country") for a in self.data["airframes_all"] if a.get("country")})
         self._tag_labels = {t: self._country_label(t) for t in self.tags}
         self._label_to_tag = {v: k for k, v in self._tag_labels.items()}
@@ -211,6 +289,8 @@ class App(tk.Tk):
         self.rows = []
         self._sort_key, self._sort_desc = "pure", True      # 默认按总分数从高到低
         self._plans = {}             # 满级+方针的配点路线缓存（供推荐与展示只读）
+        self._alloc_user_picked = False   # 用户是否自己选过"配点口径"（没选过就跟随推荐）
+        self._wrap_labels = []       # 需要按窗口宽度换行的长标签：(label, 所在容器)
         # 离线表（随包发布）+ 本机缓存（新算的写这里），键相同
         self._plan_table = {}        # 离线表按 (国家, 用途) 分片，用到哪片读哪片
         self._plan_runtime = run.load_plan_cache()
@@ -226,19 +306,291 @@ class App(tk.Tk):
         self._refresh_totals()
         self._watch_inputs()          # 调试：输入项一变就打一行日志
         self._bind_live_refresh()     # 年份直接键入时也要重算 ② 的对手
+        self._install_copy_menu()     # 右键复制：标签/按钮、表格行、散点图的点
+        self.protocol("WM_DELETE_WINDOW", self._on_close)   # 关窗口时记住这次输入
         _say("准备就绪，正在显示窗口…")
         self.after(80, self._pop_to_front)
+        # 首屏就把默认输入算一遍：新用户打开就能看到结果表与帕累托图，
+        # 不用先猜"结果要从哪里点出来"（用户口径 2026-10-12）。
+        self.after(200, self._first_run)
+
+    def _on_close(self):
+        """退出前把当前输入记下来（下次启动直接回到这个状态）。"""
+        try:
+            run.save_last_inputs(self.collect())
+        except (Exception, SystemExit):     # noqa: BLE001
+            pass
+        self.destroy()
+
+    def _first_run(self):
+        if not getattr(self, "rows", None):
+            self.on_calculate()
+
+    def _reset_to_default(self):
+        """「重置为默认」：清掉"上次输入"的记忆，并**立刻**把界面恢复成出厂示例值。
+
+        以前这个按钮叫"忘记上次输入"，只能下次启动生效、意思也不直观（用户 2026-10-12 提）。
+        """
+        run.clear_last_inputs()
+        base = dict(run.DEFAULT_INPUTS)
+        if os.path.exists(run.INPUTS):
+            try:
+                with open(run.INPUTS, encoding="utf-8") as fh:
+                    base.update(json.load(fh))
+            except (OSError, ValueError):
+                pass
+        self.inputs = base
+        self.var_year.set(int(base.get("current_year") or 1939))
+        self.var_tech.set(int(base.get("tech_year") or 1939))
+        self.var_distance.set(str(int(float(base.get("range_cap") or 900))))
+        self.var_band.set(str(int(float(base.get("range_band") or 0))))
+        roles = base.get("roles") or ["air_far"]
+        for key, var in self.role_vars.items():
+            var.set(key in roles)
+        self._sync_distance_choices()      # 挡位跟着用途回到 2100 那一档
+        self.var_tag.set(self._tag_labels.get(base.get("country") or "SOV", "苏联"))
+        enemy = base.get("enemy") or {}
+        self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country") or "GER", "德国"))
+        self.var_rule.set(RULE_KEYS.get(enemy.get("rule") or "previous_year", "当前年份−1"))
+        self.var_override.set(enemy.get("override_key") or "")
+        self.var_spirits.set(",".join(base.get("national_spirits") or []))
+        self.var_source.set(base.get("modifier_source") or "mio")
+        self.var_cap.set(int(base.get("efficiency_cap_now") or 100))
+        self.var_capacity.set(int(base.get("capacity_bonus_now") or 200))
+        self.var_alloc.set("auto")
+        self.var_level.set(int((base.get("mio") or {}).get("level") or 14))
+        self.var_alloc_mode.set(ALLOC_MODES[0][1])
+        self._alloc_user_picked = False
+        self._plans.clear()
+        self._build_tech_checks()
+        self._refresh_country()          # 重挑军工组织/方针 + 重算推荐
+        self._sync_alloc()
+        self._sync_source()
+        self._sync_rule()
+        self._refresh_enemy()
+        self._refresh_totals()
+        self._refresh_alloc_recommendation()
+        _dbg("重置为默认：%s / %s" % (self.var_tag.get(), self.var_year.get()))
+        self.lbl_hint.configure(text="已重置为默认输入（%s / %s）"
+                                     % (self.var_tag.get(), self.var_year.get()))
+
+    # ---------- 操作记录 / 日志小窗（右上角状态栏点开）----------
+    def _log_header(self):
+        """日志开头的一段"环境信息"：报错时维护者一眼能看出是哪套数据/环境。"""
+        try:
+            info = run.build_info()
+        except Exception:                      # noqa: BLE001
+            info = {}
+        return [
+            "=== BI_SOV 飞机选型 · 操作记录 ===",
+            "版本：%s（工坊 %s）｜游戏 %s" % (run.edition_label(), info.get("workshop_id", "?"),
+                                          info.get("game_version", "?")),
+            "数据指纹：%s" % engine.data_fingerprint(),
+            "Python：%s｜Tk 字体：%s" % (sys.version.split()[0], self.family),
+            "日志：%d 行（最多保留 %d 行）" % (len(LOG), LOG_MAX),
+            "-" * 60,
+        ]
+
+    def _refresh_log_text(self):
+        txt = getattr(self, "_log_text", None)
+        if txt is None or not txt.winfo_exists():
+            return
+        txt.configure(state="normal")
+        txt.delete("1.0", "end")
+        txt.insert("end", "\n".join(self._log_header() + LOG))
+        txt.see("end")
+        txt.configure(state="disabled")
+
+    def _open_log_window(self):
+        """点状态栏弹出的小窗：本次会话干了什么（可导出给维护者报错）。"""
+        self._is_first_run = False        # 看过操作记录 = 已经"上手"了，别再挂提醒
+        win = getattr(self, "_log_win", None)
+        if win is not None and win.winfo_exists():
+            self._refresh_log_text()
+            win.deiconify()
+            win.lift()
+            return
+        win = tk.Toplevel(self)
+        self._log_win = win
+        win.title("操作记录 / 日志")
+        win.geometry("860x480")
+        win.configure(background=PAGE_BG)
+        bar = ttk.Frame(win)
+        bar.pack(fill="x", padx=PADX, pady=(PADX, 4))
+        ttk.Label(bar, text="这里是本次打开后的操作与计算记录（按时间顺序）。"
+                            "遇到问题就点右边「导出 log」，把文件发给维护者。").pack(side="left")
+        ttk.Button(bar, text="导出 log", command=self._export_log,
+                   style="Tight.TButton").pack(side="right")
+        ttk.Button(bar, text="刷新", command=self._refresh_log_text,
+                   style="Tight.TButton").pack(side="right", padx=(0, 6))
+        ttk.Button(bar, text="清空", command=self._clear_log,
+                   style="Tight.TButton").pack(side="right", padx=(0, 6))
+        box = ttk.Frame(win)
+        box.pack(fill="both", expand=True, padx=PADX, pady=(0, PADX))
+        # wrap="none"：日志里有很长的单行（制造商来源 JSON、操作明细），
+        # 所以纵向之外还要**横向**滚动条，否则右半截被裁掉看不到。
+        txt = tk.Text(box, wrap="none", font=(self.family, FONT_NOTE),
+                      background="white", foreground=INK)
+        sb = ttk.Scrollbar(box, orient="vertical", command=txt.yview)
+        hb = ttk.Scrollbar(box, orient="horizontal", command=txt.xview)
+        txt.configure(yscrollcommand=sb.set, xscrollcommand=hb.set)
+        sb.pack(side="right", fill="y")
+        hb.pack(side="bottom", fill="x")
+        txt.pack(side="left", fill="both", expand=True)
+        self._log_text = txt
+        self._refresh_log_text()
+        _dbg("打开操作记录窗口（%d 行）" % len(LOG))
+
+    def _clear_log(self):
+        del LOG[:]
+        self._refresh_log_text()
+        self.lbl_hint.configure(text="已清空本次的操作记录")
+
+    # ---------- 右键复制（用户 2026-10-13：界面文字没法选中，想复制飞机名称）----------
+    def _copy_text(self, text, what="文字"):
+        """把文字放进剪贴板 + 在状态行给一句反馈（Tk 的 Label 天生不能选中复制）。"""
+        text = str(text or "")
+        if not text:
+            return False
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(text)
+        except tk.TclError:
+            return False
+        short = text if len(text) <= 40 else text[:40] + "…"
+        self.lbl_hint.configure(text="已复制%s：%s" % (what, short))
+        _dbg("复制%s：%s" % (what, short))
+        return True
+
+    def _row_clipboard_info(self, iid):
+        """表格某行的 (机型名, 机型 key, 整行文本) —— 右键菜单与自检共用（不弹菜单）。"""
+        row = getattr(self, "_row_by_iid", {}).get(iid)
+        if not row:
+            return None
+        try:
+            values = self.tree_out.item(iid)["values"]
+        except tk.TclError:
+            values = []
+        return {"name": self._row_name(row),
+                "key": (row.get("airframe") or {}).get("key") or "",
+                "line": "\t".join(str(v) for v in values)}
+
+    def _chart_nearest_row(self, x, y, tol=16):
+        """散点图上离 (x, y) 最近的机型（超过 tol 像素算没点中，返回 None）。"""
+        best, best_d = None, float(tol) * float(tol)
+        for row, cx, cy in getattr(self, "_chart_pts", []):
+            d = (cx - x) ** 2 + (cy - y) ** 2
+            if d <= best_d:
+                best, best_d = row, d
+        return best
+
+    def _install_copy_menu(self):
+        """给"不能选中"的控件挂右键复制。
+
+        Tk 的 ttk.Label / Button / Checkbutton 没有可选中文本（选了也复制不了），
+        所以这里统一挂一个右键菜单：
+          · 标签/按钮/勾选框 → 「复制这段文字」；
+          · 结果表某行 → 「复制机型名称 / 机型 key / 整行」；
+          · 散点图某个点附近 → 「复制机型名称 / 机型 key」。
+        字符串类控件（Entry/Spinbox/Combobox/日志小窗的 Text）本来就能选中 Ctrl+C，不动。
+        """
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="复制这段文字",
+                         command=lambda: self._copy_text(menu._copy_text))
+        self._copy_menu = menu
+
+        def on_widget(event):
+            w = event.widget
+            try:
+                text = str(w.cget("text") or "")
+            except tk.TclError:
+                return
+            if not text.strip():
+                return
+            menu._copy_text = text
+            self._popup(menu, event)
+
+        for cls in ("TLabel", "TButton", "TCheckbutton", "TRadiobutton"):
+            self.bind_class(cls, "<Button-3>", on_widget, add="+")
+        self.tree_out.bind("<Button-3>", self._on_table_right_click, add="+")
+        self.canvas_plot.bind("<Button-3>", self._on_chart_right_click, add="+")
+
+    def _popup(self, menu, event):
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _on_table_right_click(self, event):
+        iid = self.tree_out.identify_row(event.y)
+        info = self._row_clipboard_info(iid) if iid else None
+        if not info:
+            return
+        # 右键顺手选中该行（图上也会跟着高亮，用户能立刻对上位置）
+        self.tree_out.selection_set(iid)
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="复制机型名称",
+                         command=lambda: self._copy_text(info["name"], "机型名称"))
+        if info["key"]:
+            menu.add_command(label="复制机型 key（数据里的 id）",
+                             command=lambda: self._copy_text(info["key"], "机型 key"))
+        menu.add_command(label="复制整行（制表符分隔）",
+                         command=lambda: self._copy_text(info["line"], "整行"))
+        self._popup(menu, event)
+
+    def _on_chart_right_click(self, event):
+        row = self._chart_nearest_row(event.x, event.y)
+        if not row:
+            return
+        name, key = self._row_name(row), (row.get("airframe") or {}).get("key") or ""
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="复制机型名称",
+                         command=lambda: self._copy_text(name, "机型名称"))
+        if key:
+            menu.add_command(label="复制机型 key（数据里的 id）",
+                             command=lambda: self._copy_text(key, "机型 key"))
+        self._popup(menu, event)
+
+    def _export_log(self):
+        """把日志导出到 output\\BI_SOV_log_时间戳.txt。"""
+        os.makedirs(run.OUTPUT_DIR, exist_ok=True)
+        path = os.path.join(run.OUTPUT_DIR,
+                            "BI_SOV_log_%s.txt" % datetime.now().strftime("%Y%m%d-%H%M%S"))
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(self._log_header() + LOG))
+        except OSError as exc:
+            messagebox.showerror("导出 log 失败", str(exc))
+            return
+        _dbg("导出日志：%s" % path)
+        self.lbl_hint.configure(text="已导出 log → %s" % os.path.basename(path))
+
+    def _scroll_to(self, widget, pad=6):
+        """把某一块滚动到可视区（算完滚到结果区、双击行滚到明细区）。"""
+        try:
+            self.update_idletasks()
+            bbox = self.canvas.bbox("all")
+            if not bbox:
+                return
+            total = max(1, bbox[3] - bbox[1])
+            if self.canvas.winfo_height() <= 1 or total <= self.canvas.winfo_height():
+                return                       # 还没布局 / 本来就全放得下
+            y = widget.winfo_rooty() - self.inner.winfo_rooty() - pad
+            self.canvas.yview_moveto(max(0.0, min(1.0, y / float(total))))
+        except Exception:                    # noqa: BLE001
+            pass
 
     def _pop_to_front(self):
-        """把窗口顶到最前——WSLg 开的新窗口常常落在其它窗口后面，看起来像"没弹出来"。"""
+        """把窗口顶到最前——新开的窗口偶尔会落在其它窗口后面，看起来像"没弹出来"。"""
         try:
             self.deiconify()
             self.lift()
             self.attributes("-topmost", True)
             self.after(400, lambda: self.attributes("-topmost", False))
             self.focus_force()
-            _say("窗口已显示（标题：BI_SOV 飞机选型）。若仍看不到，检查是否有窗口挡在前面；"
-                 "或执行 wsl --shutdown 后重开 WSL 再试。")
+            _say("窗口已显示（标题：%s）。若仍看不到，检查是否有窗口挡在前面；"
+                 % self.title() +
+                 "也可以在任务栏里找一下这个窗口。")
         except tk.TclError:
             pass
 
@@ -255,14 +607,18 @@ class App(tk.Tk):
         except tk.TclError:
             pass
         style.configure(".", font=(self.family, BODY), background=CARD_BG)
-        style.configure("TLabelframe", background=CARD_BG, bordercolor="#D0D7E5",
+        style.configure("TLabelframe", background=CARD_BG, bordercolor=GRID,
                         relief="solid", borderwidth=1)
         style.configure("TLabelframe.Label", background=CARD_BG, foreground=ACCENT,
-                        font=(self.family, BODY, "bold"))
+                        font=(self.family, FONT_CARD, "bold"))
         style.configure("TButton", padding=(10, 5))
-        style.configure("Treeview", rowheight=24, font=(self.family, BODY - 1), background="white")
-        style.configure("Treeview.Heading", font=(self.family, BODY - 1, "bold"))
-        self.configure(background="#EDF1F7")
+        # 紧凑按钮：默认按钮比 Combobox 高一截，同一行里会把这行顶高
+        # （④ 的"等级 / 预览军工组织总加成"那行实测 36px，旁边的行只有 21~26px）
+        style.configure("Tight.TButton", padding=(7, 1))
+        style.configure("Treeview", rowheight=26, font=(self.family, FONT_NOTE),
+                        background="white", fieldbackground="white")
+        style.configure("Treeview.Heading", font=(self.family, FONT_CARD, "bold"))
+        self.configure(background=PAGE_BG)
 
     def _card(self, row, title, **kw):
         box = ttk.LabelFrame(self.inner, text=" " + title + " ")
@@ -292,66 +648,154 @@ class App(tk.Tk):
         self.canvas.bind_all("<Button-5>", on_down)      # X11 向下
 
     def _wrap_to_card(self, label, container):
-        """让长标签按**画布实际可用宽度**换行（不是按卡片自己的宽度）。
+        """让长标签按**实际可用宽度**换行。
 
-        ⚠️ 别用 event.width（卡片宽度）：长文本会把卡片撑宽，卡片一宽 wraplength 又变大，
-        两者互相追着涨，最后整张卡片比窗口还宽、右边直接被画布裁掉——雅科夫列夫满级
-        （十几个修正）就是被这个坑撑爆的。这里改成：
-            画布可见宽度 − 标签在画布里的横向起点 − 预留
+        以前是"画布宽 − 标签绝对 x − `WRAP_RESERVE`(110)"，两个毛病（用户 2026-10-12 报）：
+          ① 只在容器/标签自己的 `<Configure>` 里算 —— 窗口变大、容器宽度却没变时，
+             wraplength 停在小值上：实测 1266 宽的画布上，② 的"数值来源"还按 505 换行；
+          ② 固定多扣 110px —— 右边明明有空间却提前换行，断句位置看着很怪。
+        现在：`宽度 = min(画布可见宽, 卡片宽) − 标签在卡片里的 x − 边距`，
+        并且挂到**画布**的 `<Configure>`（窗口一改就重算）。
+        也别改成"按卡片宽度"：长文本会把卡片撑宽、卡片一宽 wraplength 又变大，
+        最后卡片比窗口还宽、右边被裁掉（雅科夫列夫满级就是被这个坑撑爆的）。
         """
-        def abs_x(widget):
-            """标签在画布内层里的横向起点（可能嵌在子 Frame 里，要逐级往上加）。"""
-            x, node = 0, widget
-            while node is not None and node is not self.inner:
-                try:
-                    x += node.winfo_x()
-                    node = node.master
-                except Exception:                # noqa: BLE001
-                    break
-            return x
+        self._wrap_labels.append((label, container))
+        card = self._find_card(container, self.inner) or self._find_card(label, self.inner)
+        # 画布 / 卡片 / 标签三级都要听：一次改窗口会依次触发三级的 <Configure>，
+        # 而"卡片宽度"要等 Tk 重排完才是新值（实测窗口从 1000 拉到 1600 时，
+        # 只挂画布那一层会拿到旧的卡片宽度、算出 1211 就停住）。统一丢给
+        # `_schedule_rewrap()`（idle 去重），尺寸稳定后才算，算完就收敛。
+        for widget in (self.canvas, card, container, label):
+            if not getattr(widget, "_wrap_bound", False):
+                widget.bind("<Configure>", lambda _e: self._schedule_rewrap(), add="+")
+                widget._wrap_bound = True
+        self._wrap_one(label, container)
 
-        def on_conf(_event=None):
-            avail = self.canvas.winfo_width()
-            if avail <= 1:                       # 还没完成布局
+    @staticmethod
+    def _find_card(widget, inner):
+        node = widget
+        while node is not None and node is not inner:
+            if node.__class__.__name__ in ("Labelframe", "TLabelframe"):
+                return node
+            node = node.master
+        return inner
+
+    def _wrap_one(self, label, container):
+        try:
+            if not label.winfo_exists():
+                return
+            card = self._find_card(container, self.inner) or self._find_card(label, self.inner)
+            avail = min(self.canvas.winfo_width(), card.winfo_width())
+            if avail <= 1:                        # 还没完成布局
                 avail = max(self.winfo_width() - 2 * PADX, 640)
-            try:
-                x = abs_x(label)
-            except Exception:                    # noqa: BLE001
-                x = 0
-            width = int(max(avail - x - WRAP_RESERVE, 240))
-            try:
-                cur = int(float(label.cget("wraplength") or 0))
-            except (TypeError, ValueError):
-                cur = -1
+            x, node = 0, label
+            while node is not None and node is not card:
+                x += node.winfo_x()
+                node = node.master
+            # 同一行里排在它右边的控件（按钮/输入框）要把宽度让出来，
+            # 否则长文本会把这一行顶出卡片右缘（实测 ⑥ 的"合计"行 1294 > 1266）。
+            width = int(max(avail - x - self._row_reserve(label) - PADX - 6, 200))
+            cur = int(float(label.cget("wraplength") or 0))
             if cur != width:
                 label.configure(wraplength=width)
+        except (tk.TclError, TypeError, ValueError):
+            # 明细区重建时会先 destroy 子控件，队列里残留的事件可能拿到已销毁的控件
+            # （"invalid command name"），直接跳过。
+            return
 
-        # 容器只绑一次（否则每次重建明细都会往同一个容器上叠一个回调）
-        if not getattr(container, "_wrap_bound", False):
-            container.bind("<Configure>", on_conf, add="+")
-            container._wrap_bound = True
-        label.bind("<Configure>", on_conf, add="+")
-        on_conf()
+    def _row_reserve(self, label):
+        """同一 grid 行里排在 label 右边的控件宽度合计（换行时要让出这么多）。"""
+        try:
+            gi = label.grid_info()
+            card = label.master
+            if not gi or not card:
+                return 0
+            row = int(gi.get("row", 0))
+            col = int(gi.get("column", 0)) + int(gi.get("columnspan", 1))
+            used = 0
+            for sib in card.winfo_children():
+                si = sib.grid_info()
+                if not si or sib is label:
+                    continue
+                if int(si.get("row", -1)) == row and int(si.get("column", 0)) >= col:
+                    used += sib.winfo_width() + PADX
+            return used
+        except Exception:                         # noqa: BLE001
+            return 0
+
+    def _rewrap_all(self, _event=None):
+        self._rewrap_job = None
+        alive = []
+        for label, container in self._wrap_labels:
+            try:
+                if not label.winfo_exists():
+                    continue
+            except tk.TclError:
+                continue
+            alive.append((label, container))
+            self._wrap_one(label, container)
+        self._wrap_labels = alive
+
+    def _schedule_rewrap(self):
+        """窗口尺寸变了：等布局落定（idle）再统一重算换行宽度。
+
+        直接在 `<Configure>` 回调里算会拿到**旧的卡片宽度**（Tk 这一步还没重排），
+        于是窗口从 1000 拉到 1600 时，长标签还按 931 换行（实测）。
+        """
+        if getattr(self, "_rewrap_job", None):
+            return
+        self._rewrap_job = self.after_idle(self._rewrap_all)
+
+    def _set_partner(self, text):
+        """「生产伙伴」那一行：**有内容才占位**。
+
+        它经常是空的（分离口径且不需要换生产家），空着照样占一条 38px 的行 ——
+        用户看到的就是"生产侧"和"满级最优路线"之间莫名空一大块（2026-10-12 提问）。
+        没内容时 `grid_remove()` 并把该行 minsize 归零。
+        """
+        self.lbl_partner.configure(text=text or "")
+        card = self.lbl_partner.master
+        row = getattr(self, "_partner_row", None)
+        if row is None:
+            return
+        if text:
+            self.lbl_partner.grid()
+            card.grid_rowconfigure(row, minsize=ROW_H)
+        else:
+            self.lbl_partner.grid_remove()
+            card.grid_rowconfigure(row, minsize=0)
 
     # ---------- 界面 ----------
     def _build(self):
         self.columnconfigure(0, weight=1)
         banner = tk.Frame(self, background=ACCENT)
         banner.grid(row=0, column=0, sticky="ew")
-        tk.Label(banner, text="BI_SOV 飞机选型", background=ACCENT, foreground="white",
-                 font=(self.family, BODY + 4, "bold"), padx=PADX, pady=5).pack(side="left")
-        hint = "字体：%s" % self.family
+        tk.Label(banner, text="飞机设计计算器 · %s" % run.edition_label(),
+                 background=BANNER_BG, foreground=BANNER_FG,
+                 font=(self.family, FONT_TITLE, "bold"), padx=PADX, pady=5).pack(side="left")
+        # 右侧：字体信息单列一个小标签，别占着"状态行"
+        font_hint = "字体：%s" % self.family
         if not self.font_ok:
-            hint += "（当前 Tk 不支持 TTF 中文，请用 gui.sh 启动）"
-        self.lbl_hint = tk.Label(banner, text=hint, background=ACCENT, foreground="#C9D8EC",
-                                 font=(self.family, BODY - 1), padx=PADX)
+            font_hint += "（当前 Tk 不支持 TTF 中文，中文可能显示成宋体/位图字）"
+        self.lbl_font = tk.Label(banner, text=font_hint, background=BANNER_BG,
+                                 foreground=BANNER_SUB, font=(self.family, FONT_NOTE), padx=PADX)
+        self.lbl_font.pack(side="right")
+        # 状态行（"点计算"/"已计算 N 行"/"已导出 …"）；**点一下能看操作记录**（用户口径）
+        self.lbl_hint = tk.Label(
+            banner,
+            text=("首次使用？建议先看同目录的「开始使用前先看.txt」"
+                  "｜点这里看操作记录 / 导出 log" if getattr(self, "_is_first_run", False)
+                  else "正在准备…（点这里看操作记录 / 导出 log）"),
+            background=BANNER_BG, foreground=BANNER_SUB, font=(self.family, FONT_NOTE),
+            cursor="hand2")
         self.lbl_hint.pack(side="right")
+        self.lbl_hint.bind("<Button-1>", lambda _e: self._open_log_window())
 
         # 整页可上下滚动（卡片多、屏幕矮时不至于看不到底部）
-        outer = tk.Frame(self, background="#EDF1F7")
+        outer = tk.Frame(self, background=PAGE_BG)
         outer.grid(row=1, column=0, sticky="nsew")
         self.rowconfigure(1, weight=1)
-        self.canvas = tk.Canvas(outer, background="#EDF1F7", highlightthickness=0)
+        self.canvas = tk.Canvas(outer, background=PAGE_BG, highlightthickness=0)
         vsb = ttk.Scrollbar(outer, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=vsb.set)
         vsb.pack(side="right", fill="y")
@@ -370,25 +814,62 @@ class App(tk.Tk):
         box = self._card(row, "① 用途")
         self.role_vars = {}
         cur_roles = self.inputs.get("roles") or ["air_far"]
-        ttk.Label(box, text="用途").grid(row=0, column=0, sticky="e", padx=(PADX, 4), pady=PADY)
+        # 字段名一律**左对齐**（右对齐时不同字数的名字会顶到不同起点，看着像缩进）
+        ttk.Label(box, text="用途").grid(row=0, column=0, sticky="w",
+                                     padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         # 六个勾选框放进自己的子框：以前直接排在 box 的第 1..6 列，正好和"距离目标"
         # 那一列撞车 —— 对空（舰载）被标签压掉半截、对海（舰载）被下拉框整个盖住，
         # 看上去就像"有两个对空、少了一个对海"。子框之后，它们不可能再互相覆盖。
         roles_bar = ttk.Frame(box)
-        roles_bar.grid(row=0, column=1, sticky="w", pady=PADY)
+        roles_bar.grid(row=0, column=1, columnspan=4, sticky="w", pady=(ROW_PAD, ROW_PAD))
+        # 用途**单选**（用户口径 2026-10-12）：外观仍是 6 个勾选框，但只能选一个。
+        # 多选用会导致"分数线混在一起"，而且表里的用途筛选/帕累托比较也失去意义。
+        cur_role = (cur_roles or ["air_far"])[0]
         for key, label in ROLE_CHOICES:
-            v = tk.BooleanVar(value=key in cur_roles)
+            v = tk.BooleanVar(value=(key == cur_role))
             self.role_vars[key] = v
             ttk.Checkbutton(roles_bar, text=label, variable=v,
-                            command=self._on_roles_changed).pack(side="left", padx=(0, PADX))
-        ttk.Label(box, text="距离目标").grid(row=0, column=2, sticky="e", padx=(PADX * 2, 4))
+                            command=lambda k=key: self._on_role_click(k)).pack(
+                side="left", padx=(0, PADX))
+        # 第 1 行：两对"字段块"（标签 + 控件紧贴，和 ②④ 一个规矩）——
+        # 直接放在卡片网格里的话，下面那条长说明（跨 5 列）会把列宽撑开，
+        # "最远目标距离"到它自己的下拉框就被拉出老远（用户 2026-10-12 报）。
+        rng_row = ttk.Frame(box)
+        rng_row.grid(row=1, column=0, columnspan=5, sticky="w", padx=PADX,
+                     pady=(ROW_PAD, ROW_PAD))
+        blk = ttk.Frame(rng_row)
+        blk.grid(row=0, column=0, sticky="w", padx=(0, PADX * 2))
+        ttk.Label(blk, text="最远目标距离").grid(row=0, column=0, sticky="w", padx=(0, 6))
         self.var_distance = tk.StringVar(
             value=str(int(self.inputs.get("range_cap") or DEFAULT_DISTANCE)))
-        dbox = ttk.Combobox(box, textvariable=self.var_distance, width=8, state="readonly",
-                            values=DISTANCES)
-        dbox.grid(row=0, column=3, sticky="w")
-        dbox.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
-        ttk.Label(box, text="（= 航程上限，600 起每 300 一档）").grid(row=0, column=4, sticky="w")
+        self.cb_distance = ttk.Combobox(blk, textvariable=self.var_distance,
+                                        width=CTL_W_NUM + 1, state="readonly",
+                                        values=distances_for(cur_roles))
+        self.cb_distance.grid(row=0, column=1, sticky="w")
+        self.cb_distance.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
+        ttk.Label(blk, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
+            row=0, column=2, sticky="w", padx=(2, 0))
+        # 目标区域纵深（近边 = 最远目标距离 − 目标距离差）：默认 300（游戏里的空域纵深量级）
+        blk2 = ttk.Frame(rng_row)
+        blk2.grid(row=0, column=1, sticky="w")
+        ttk.Label(blk2, text="目标距离差").grid(row=0, column=0, sticky="w", padx=(0, 6))
+        self.var_band = tk.StringVar(
+            value=str(int(self.inputs.get("range_band") or DEFAULT_BAND)))
+        bbox = ttk.Combobox(blk2, textvariable=self.var_band, state="readonly",
+                            width=CTL_W_NUM + 1, values=BAND_CHOICES)
+        bbox.grid(row=0, column=1, sticky="w")
+        bbox.bind("<<ComboboxSelected>>", lambda e: self._on_range_band_changed())
+        ttk.Label(blk2, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
+            row=0, column=2, sticky="w", padx=(2, 0))
+
+        # 说明（用户口径 2026-10-12：只解释这两个属性表示什么，不解释原理）
+        self.lbl_range_note = ttk.Label(
+            box, text="最远目标距离：目标区域最远边到机场的距离。"
+                      "目标距离差：目标区域的纵深。",
+            foreground=MUTED, justify="left", font=(self.family, FONT_NOTE))
+        self.lbl_range_note.grid(row=2, column=0, columnspan=5, sticky="w", padx=PADX,
+                                 pady=(0, ROW_PAD))
+        self._wrap_to_card(self.lbl_range_note, box)
         row += 1
 
         # ② 年份 + 所选国家与主要对手（先定国家和年份，后面才谈前置科技）
@@ -401,45 +882,83 @@ class App(tk.Tk):
         self.frm_fields = fields          # 供后续核对布局（前两行的列宽只看它自己）
         self.var_year = tk.IntVar(value=self.inputs["current_year"])
         self.var_tech = tk.IntVar(value=self.inputs["tech_year"])
-        ttk.Label(fields, text="当前年份").grid(row=0, column=0, sticky="e", padx=PADX, pady=PADY)
-        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_year, width=6,
-                    command=self._refresh_enemy).grid(row=0, column=1, sticky="w")
-        ttk.Label(fields, text="（决定对手机型）").grid(row=0, column=2, sticky="w")
-        ttk.Label(fields, text="飞机科技年份").grid(row=0, column=3, sticky="e", padx=PADX)
-        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_tech, width=6,
-                    command=self._on_tech_year_changed).grid(row=0, column=4, sticky="w")
-        ttk.Label(fields, text="（决定我方可用机身，可超前研究）").grid(row=0, column=5, sticky="w")
+        # 版式（用户 2026-10-12 口径）：每个字段 = 一个子框（字段名 + 控件 + 说明），
+        # 子框按列排 —— 同一列的字段名首字对齐，列与列之间互不干扰：
+        #   第 1 行：当前年份 ｜ 飞机科技年份
+        #   第 2 行：所选国家 ｜ 对手国别 ｜ 选取规则
+        # （以前是 2 行 × 3 列混排，字段名落在三条不同竖线 x=25/224/354 上。）
+        def field_block(row, col, padx=(0, PADX * 2)):
+            blk = ttk.Frame(fields)
+            blk.grid(row=row, column=col, sticky="w", padx=padx,
+                     pady=(ROW_PAD, ROW_PAD))
+            return blk
 
-        ttk.Label(fields, text="所选国家 tag").grid(row=1, column=0, sticky="e",
-                                               padx=(PADX, 4), pady=PADY)
+        blk = field_block(0, 0)
+        ttk.Label(blk, text="当前年份").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
+        ttk.Spinbox(blk, from_=1936, to=1948, textvariable=self.var_year, width=CTL_W_NUM,
+                    command=self._refresh_enemy).grid(row=0, column=1, sticky="w")
+
+        blk = field_block(0, 1)
+        ttk.Label(blk, text="飞机科技年份").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
+        ttk.Spinbox(blk, from_=1936, to=1948, textvariable=self.var_tech, width=CTL_W_NUM,
+                    command=self._on_tech_year_changed).grid(row=0, column=1, sticky="w")
+
+        # 所选国家 ｜ ⇄ ｜ 对手国别 ｜ 选取规则
+        # 「⇄」= 一键把国家和对手对调（用户 2026-10-13 口径）。它挤在
+        # 所选国家与对手国别**中间**，所以这条左右各留 4px（而不是默认的 24px），
+        # 否则 1000px 窗口下 ② 卡片会越过画布右缘（实测过）。
+        blk = field_block(1, 0, padx=(0, 4))
+        ttk.Label(blk, text="所选国家").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
-        cb = ttk.Combobox(fields, textvariable=self.var_tag, width=10,
+        cb = ttk.Combobox(blk, textvariable=self.var_tag, width=CTL_W_TAG,
                           state="readonly")
-        cb.grid(row=1, column=1, sticky="w")
+        cb.grid(row=0, column=1, sticky="w")
         cb.bind("<<ComboboxSelected>>", lambda e: self._refresh_country())
         cb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_tag.set(self._tag_labels.get(self.inputs.get("country") or "SOV", "苏联"))
-        ttk.Label(fields, text="对手国别").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
         enemy = self.inputs.get("enemy") or {}
+
+        blk = field_block(1, 1, padx=(0, 4))
+        self.btn_swap = ttk.Button(blk, text="⇄", width=2, style="Tight.TButton",
+                                   command=self._swap_country_enemy)
+        self.btn_swap.grid(row=0, column=0, sticky="w")
+        ttk.Label(blk, text="交换", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=0, column=1, sticky="w",
+                                                      padx=(3, 0))
+
+        blk = field_block(1, 2)
+        ttk.Label(blk, text="对手国别").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         self.var_enemy_tag = tk.StringVar(value=enemy.get("country", "GER"))
-        eb = ttk.Combobox(fields, textvariable=self.var_enemy_tag, width=10,
+        eb = ttk.Combobox(blk, textvariable=self.var_enemy_tag, width=CTL_W_TAG,
                           state="readonly")
-        eb.grid(row=1, column=3, sticky="w")
+        eb.grid(row=0, column=1, sticky="w")
         eb.bind("<<ComboboxSelected>>", lambda e: self._on_enemy_change())
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
-        ttk.Label(fields, text="选取规则").grid(row=1, column=4, sticky="e", padx=(PADX, 4))
-        cur_rule = dict(RULE_LABELS).get(enemy.get("rule", "previous_year"), "当前年份−1")
+
+        blk = field_block(1, 3)
+        ttk.Label(blk, text="选取规则").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
+        # 旧写法 dict(RULE_LABELS).get(key) 方向反了（表是"显示名 → key"），
+        # 不管 inputs.json 写什么都会显示成"当前年份−1"。
+        cur_rule = RULE_KEYS.get(enemy.get("rule", "previous_year"), "当前年份−1")
         self.var_rule = tk.StringVar(value=cur_rule)
-        rb = ttk.Combobox(fields, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
-                          width=12, state="readonly")
-        rb.grid(row=1, column=5, sticky="w")
+        rb = ttk.Combobox(blk, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
+                          width=CTL_W_TAG, state="readonly")
+        rb.grid(row=0, column=1, sticky="w")
         rb.bind("<<ComboboxSelected>>", lambda e: self._on_rule_change())
+
+        # 两个年份的说明合成一行放在字段下面：塞在各自的块里会把列的宽度撑大
+        # （实测 1000px 窗口下 ② 整行 1029px > 画布 986px，右缘被裁）
+        ttk.Label(box, text="说明：当前年份决定对手机型；飞机科技年份决定我方可用机身"
+                            "（可超前研究）", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=1, column=0, sticky="w",
+                                                      padx=PADX, pady=(0, ROW_PAD))
 
         self.frm_manual_plane = ttk.Frame(box)
         self.frm_manual_plane.grid(row=3, column=0, sticky="w")
-        ttk.Label(self.frm_manual_plane, text="手动指定机型 key").grid(row=0, column=0, sticky="e",
-                                                                      padx=(PADX, 4))
+        ttk.Label(self.frm_manual_plane, text="手动指定机型 key", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=0, column=0, sticky="w",
+                                                      padx=(PADX, 6))
         self.var_override = tk.StringVar(value=enemy.get("override_key") or "")
         ov = ttk.Entry(self.frm_manual_plane, textvariable=self.var_override, width=46)
         ov.grid(row=0, column=1, sticky="w")
@@ -455,25 +974,28 @@ class App(tk.Tk):
             row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_enemy_mod_agi = tk.StringVar()
         self.var_enemy_mod_spd = tk.StringVar()
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_agi, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_agi, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=1, sticky="w")
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_spd, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_spd, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=2, sticky="w", padx=(2, PADX))
         ttk.Label(self.frm_enemy_mods, text="对手联队经验加成（机动/速度，%）").grid(
             row=0, column=3, sticky="e", padx=(PADX, 4))
         self.var_enemy_exp_agi = tk.StringVar()
         self.var_enemy_exp_spd = tk.StringVar()
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_agi, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_agi, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=4, sticky="w")
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_spd, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_spd, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=5, sticky="w", padx=(2, 4))
         ttk.Button(self.frm_enemy_mods, text="恢复 AI 自动值",
-                   command=self._reset_enemy_mods).grid(row=0, column=6, sticky="w", padx=PADX)
-        self.lbl_enemy_src = ttk.Label(self.frm_enemy_mods, text="", foreground="#44506B")
+                   command=self._reset_enemy_mods,
+                   style="Tight.TButton").grid(row=0, column=6, sticky="w", padx=PADX)
+        self.lbl_enemy_src = ttk.Label(self.frm_enemy_mods, text="", foreground=INFO,
+                                       font=(self.family, FONT_NOTE))
         self.lbl_enemy_src.grid(row=1, column=0, columnspan=7, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_enemy_src, self.frm_enemy_mods)
 
-        self.lbl_enemy = ttk.Label(box, text="", foreground=ACCENT, font=(self.family, BODY, "bold"))
+        self.lbl_enemy = ttk.Label(box, text="", foreground=ACCENT,
+                                   font=(self.family, FONT_FIELD, "bold"))
         self.lbl_enemy.grid(row=4, column=0, sticky="w", padx=PADX, pady=(0, PADY))
         self._wrap_to_card(self.lbl_enemy, box)
         row += 1
@@ -493,93 +1015,141 @@ class App(tk.Tk):
         # ④ 军工组织加成
         card = self._card(row, "④ 军工组织加成")
         self.var_alloc = tk.StringVar(value="auto")
-        ttk.Label(card, text="配点方式").grid(row=0, column=0, sticky="e", padx=(PADX, 4), pady=PADY)
-        ttk.Radiobutton(card, text="自动配点（按等级）", variable=self.var_alloc,
-                        value="auto", command=self._sync_alloc).grid(row=0, column=1, sticky="w")
-        ttk.Radiobutton(card, text="手动勾选特质", variable=self.var_alloc,
-                        value="pick", command=self._sync_alloc).grid(row=0, column=2, sticky="w",
-                                                                     padx=PADX)
-        self.lbl_org_rec = ttk.Label(card, text="", foreground=ACCENT,
-                                     font=(self.family, BODY - 1, "bold"), justify="left")
-        self.lbl_org_rec.grid(row=0, column=3, columnspan=3, sticky="w", padx=PADX)
-
         mio = self.inputs.get("mio") or {}
         self.var_org = tk.StringVar(value="")
         self.var_level = tk.IntVar(value=mio.get("level") or 5)
-        ttk.Label(card, text="军工组织").grid(row=1, column=0, sticky="e", padx=(PADX, 4), pady=4)
-        self.cb_org = ttk.Combobox(card, textvariable=self.var_org, width=22, state="readonly")
-        self.cb_org.grid(row=1, column=1, sticky="w")
+        # 2026-10-12 用户指定顺序：军工组织 → 参考机型（+推荐）→ 方针 → 前置/加成/组织。
+        # 版式规矩（用户口径）：字段做成**行内"字段块"**（和 ①② 一样）——标签与控件之间
+        # 只隔 6px；不要把控件拉到一条"被跨列长标签撑宽的竖线"上（那样标签到控件能差 100px）。
+        # 行距统一：每行 minsize=ROW_H + 同样的 pady；预览按钮用 `Tight.TButton`。
+        for _r in range(15):
+            card.grid_rowconfigure(_r, minsize=ROW_H)
+
+        def field_row(row, label):
+            """一行字段：字段块 = 标签 + 控件（标签与控件只隔 6px，和 ①② 一致）。"""
+            rowf = ttk.Frame(card)
+            rowf.grid(row=row, column=0, columnspan=6, sticky="w", padx=PADX,
+                      pady=(ROW_PAD, ROW_PAD))
+            ttk.Label(rowf, text=label).grid(row=0, column=0, sticky="w", padx=(0, 6))
+            return rowf
+
+        row0 = field_row(0, "配点方式")
+        self.radio_alloc_auto = ttk.Radiobutton(row0, text="自动配点（按等级）",
+                                                variable=self.var_alloc,
+                                                value="auto", command=self._sync_alloc)
+        self.radio_alloc_auto.grid(row=0, column=1, sticky="w")
+        ttk.Radiobutton(row0, text="手动勾选特质", variable=self.var_alloc,
+                        value="pick", command=self._sync_alloc).grid(
+            row=0, column=2, sticky="w", padx=(PADX, 0))
+
+        row1 = field_row(1, "军工组织")
+        self.cb_org = ttk.Combobox(row1, textvariable=self.var_org, width=CTL_W_TEXT,
+                                   state="readonly")
+        self.cb_org.grid(row=0, column=1, sticky="w")
         self.cb_org.bind("<<ComboboxSelected>>", lambda e: self._on_org_change())
-        ttk.Label(card, text="方针").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
+
+        # 参考机型 + MIO 推荐：紧跟军工组织那一行（用户指定位置；原来挂在"配点方式"右边）
+        self.lbl_org_rec = ttk.Label(card, text="", foreground=ACCENT,
+                                     font=(self.family, FONT_FIELD, "bold"), justify="left")
+        self.lbl_org_rec.grid(row=2, column=0, columnspan=6, sticky="w", padx=PADX,
+                              pady=(ROW_PAD, ROW_PAD))
+        self._wrap_to_card(self.lbl_org_rec, card)
+
         self.var_policy = tk.StringVar(value="（不选）")
-        self.cb_policy = ttk.Combobox(card, textvariable=self.var_policy, width=26, state="readonly")
-        self.cb_policy.grid(row=1, column=3, sticky="w")
+        row3 = field_row(3, "方针")
+        self.cb_policy = ttk.Combobox(row3, textvariable=self.var_policy, width=CTL_W_TEXT,
+                                      state="readonly")
+        self.cb_policy.grid(row=0, column=1, sticky="w")
         self.cb_policy.bind("<<ComboboxSelected>>", lambda e: self._on_policy_change())
-        self.lbl_policy = ttk.Label(card, text="", foreground="#5A6472",
-                                    font=(self.family, BODY - 2), justify="left")
-        self.lbl_policy.grid(row=1, column=4, columnspan=2, sticky="w", padx=PADX)
+        # 方针的「前置 / 加成 / 组织」说明：单独占一整行，段与段用全角空格分隔 ——
+        # 宽的时候自然**并成一行**，窄了才在段与段之间折行（用户口径 2026-10-12）
+        self.lbl_policy = ttk.Label(card, text="", foreground=MUTED,
+                                    font=(self.family, FONT_NOTE), justify="left")
+        self.lbl_policy.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX,
+                             pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_policy, card)
 
-        # 第 2 行：等级 + 预览按钮
-        ttk.Label(card, text="等级").grid(row=2, column=0, sticky="e", padx=(PADX, 4))
-        self.spin_level = ttk.Spinbox(card, from_=0, to=14, textvariable=self.var_level, width=6,
+        # 等级 + 预览按钮
+        row5 = field_row(5, "等级")
+        self.spin_level = ttk.Spinbox(row5, from_=0, to=14, textvariable=self.var_level,
+                                      width=6,
                                       command=self._on_level_changed)
-        self.spin_level.grid(row=2, column=1, sticky="w")
-        ttk.Button(card, text="预览军工组织总加成", command=self.on_preview).grid(
-            row=2, column=2, sticky="w", padx=(PADX, 2))
-        ttk.Label(card, text="配点口径").grid(row=2, column=3, sticky="e", padx=(PADX, 4))
+        self.spin_level.grid(row=0, column=1, sticky="w")
+        ttk.Button(row5, text="预览军工组织总加成", command=self.on_preview,
+                   style="Tight.TButton").grid(row=0, column=2, sticky="w", padx=(PADX, 2),
+                                               pady=0)
+        # 「配点口径」：同样放进字段块 —— 标签与选择框紧挨着
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
-        self.cb_alloc_mode = ttk.Combobox(card, textvariable=self.var_alloc_mode, width=24,
+        row6 = field_row(6, "配点口径")
+        self.cb_alloc_mode = ttk.Combobox(row6, textvariable=self.var_alloc_mode,
+                                          width=CTL_W_TEXT,
                                           state="readonly",
                                           values=[label for _k, label in ALLOC_MODES])
-        self.cb_alloc_mode.grid(row=2, column=4, columnspan=2, sticky="w")
-        self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_change())
-        self.lbl_alloc_rec = ttk.Label(card, text="", foreground=ACCENT,
-                                       font=(self.family, BODY - 2, "bold"), justify="left")
-        # 单独占一行（以前塞在第 2 行第 6 列：左侧列宽一变它就被推着走、甚至跑出界面）
-        self.lbl_alloc_rec.grid(row=3, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.cb_alloc_mode.grid(row=0, column=1, sticky="w")
+        self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_picked())
+        self.lbl_alloc_rec = ttk.Label(row6, text="", foreground=ACCENT,
+                                       font=(self.family, FONT_NOTE, "bold"), justify="left")
+        self.lbl_alloc_rec.grid(row=0, column=2, columnspan=4, sticky="w", padx=PADX,
+                                pady=0)
+        self._wrap_to_card(self.lbl_alloc_rec, row6)
 
-        # 第 3 行：累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
+        # 累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
-                                       font=(self.family, BODY, "bold"), justify="left")
-        self.lbl_mio_total.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX)
+                                       font=(self.family, FONT_FIELD, "bold"), justify="left")
+        self.lbl_mio_total.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX,
+                                pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_mio_total, card)
 
         # 生产侧（**不参与评分**）：设计槽吃 equipment_bonus，生产槽吃 production_bonus，
         # 但一个 MIO 只有一条特质路线 —— 所以这里把这条路线带来的生产修正如实列出来，
         # 供用户定性判断"值不值得为了生产改路线 / 换一个 MIO 来生产"。
-        # 第 4 行：生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同
-        ttk.Label(card, text="生产折算").grid(row=4, column=0, sticky="e", padx=(PADX, 4),
-                                              pady=(PADY, 0))
-        # 生产折算的两个输入：**每个字段自带 %**（以前把 "%" 拼在下一个标签里，
-        # 列宽一变 "%" 就飘到离输入框很远的地方）
-        prod_row = ttk.Frame(card)
-        prod_row.grid(row=5, column=0, columnspan=6, sticky="w", padx=PADX, pady=(PADY, 0))
-        self.frm_prod = prod_row          # 供布局核对（每个字段自带 %）
+        # 生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同。
+        # ⚠️ 这一行保持**一行两对**（用户口径 2026-10-12：这行的排版是对的，别拆），
+        # 而且放在自己的子框里 —— 卡片主网格的列宽会被"跨列长标签"撑开，
+        # "%" 会被挤到离输入框很远的第 3 列（实测 x=400，输入框才到 235）。
+        # 对齐靠 `_align_prod_slot()`：运行时把子框的 label 列宽调成与卡片 col1 相同。
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
-        for col, (text, var, lo, hi) in enumerate((
+        prod_row = ttk.Frame(card)
+        prod_row.grid(row=8, column=0, columnspan=6, sticky="w", padx=PADX,
+                      pady=(ROW_PAD, ROW_PAD))
+        self.frm_prod = prod_row
+        for i, (text, var, lo, hi) in enumerate((
                 ("当前效率上限", self.var_cap, 1, 500),
                 ("当前产量加成", self.var_capacity, 0, 2000))):
-            ttk.Label(prod_row, text=text).grid(row=0, column=col * 3, sticky="e",
-                                                padx=(0 if col == 0 else PADX, 4))
-            ttk.Spinbox(prod_row, from_=lo, to=hi, textvariable=var, width=5).grid(
-                row=0, column=col * 3 + 1, sticky="w")
-            ttk.Label(prod_row, text="%").grid(row=0, column=col * 3 + 2, sticky="w", padx=(1, 0))
+            lab = ttk.Label(prod_row, text=text)
+            lab.grid(row=0, column=i * 3, sticky="w",
+                     padx=((0, 6) if i == 0 else (PADX * 2, 6)),
+                     pady=0)
+            if i == 0:
+                self.prod_label0 = lab
+            spin = ttk.Spinbox(prod_row, from_=lo, to=hi, textvariable=var, width=CTL_W_NUM)
+            spin.grid(row=0, column=i * 3 + 1, sticky="w", pady=0)
+            ttk.Label(prod_row, text="%").grid(row=0, column=i * 3 + 2, sticky="w", padx=(2, 0))
+            if i == 0:
+                self.spin_cap = spin
 
-        self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
-                                  font=(self.family, BODY - 1), justify="left")
-        self.lbl_prod.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_prod = ttk.Label(card, text="", foreground=PROD,
+                                  font=(self.family, FONT_NOTE), justify="left")
+        self.lbl_prod.grid(row=9, column=0, columnspan=6, sticky="w", padx=PADX,
+                           pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_prod, card)
 
-        self.lbl_partner = ttk.Label(card, text="", foreground="#7A5C1E",
-                                     font=(self.family, BODY - 2), justify="left")
-        self.lbl_partner.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX)
+        # 「生产伙伴」经常是空的（分离口径且没换家）—— 空着也占一整行 38px，
+        # 看起来就是"生产侧"和"满级最优路线"之间莫名空一大块（用户 2026-10-12 问）。
+        # 有内容才显示：空 → grid_remove + 该行 minsize 归零。
+        self._partner_row = 10
+        self.lbl_partner = ttk.Label(card, text="", foreground=PROD,
+                                     font=(self.family, FONT_NOTE), justify="left")
+        self.lbl_partner.grid(row=self._partner_row, column=0, columnspan=6, sticky="w", padx=PADX,
+                              pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_partner, card)
 
-        self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
-                                       font=(self.family, BODY - 2), justify="left")
-        self.lbl_mio_route.grid(row=8, column=0, columnspan=6, sticky="w", padx=PADX)
+        self.lbl_mio_route = ttk.Label(card, text="", foreground=MUTED,
+                                       font=(self.family, FONT_NOTE), justify="left")
+        self.lbl_mio_route.grid(row=11, column=0, columnspan=6, sticky="w", padx=PADX,
+                                pady=(ROW_PAD, ROW_PAD))
+        self._wrap_to_card(self.lbl_mio_route, card)
 
         self.tree_mio = ttk.Treeview(card, columns=("lvl", "trait", "bonus"),
                                      show="headings", height=5)
@@ -587,10 +1157,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=9, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=12, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=10, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=13, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -608,7 +1178,7 @@ class App(tk.Tk):
             self.tree_traits.column(cid, width=w, anchor=anchor)
         self.tree_traits.grid(row=1, column=0, sticky="ew")
         self.tree_traits.bind("<Button-1>", self._on_trait_click)
-        self.tree_traits.tag_configure("locked", foreground="#A8AEB8")   # 现在点不了的特质
+        self.tree_traits.tag_configure("locked", foreground=DISABLED)   # 现在点不了的特质
         sb = ttk.Scrollbar(self.frm_traits, orient="vertical", command=self.tree_traits.yview)
         sb.grid(row=1, column=1, sticky="ns")
         self.tree_traits.configure(yscrollcommand=sb.set)
@@ -616,17 +1186,18 @@ class App(tk.Tk):
 
         # ⑤ 国家精神加成
         box = self._card(row, "⑤ 国家精神加成")
-        ttk.Label(box, text="国家精神（逗号分隔，可空）").grid(row=0, column=0, sticky="e",
-                                                              padx=(PADX, 4), pady=PADY)
+        ttk.Label(box, text="国家精神（逗号分隔，可空）").grid(row=0, column=0, sticky="w",
+                                                              padx=(PADX, 6),
+                                                              pady=(ROW_PAD, ROW_PAD))
         self.var_spirits = tk.StringVar(value=",".join(self.inputs.get("national_spirits") or []))
         ent_spirits = ttk.Entry(box, textvariable=self.var_spirits, width=64)
         ent_spirits.grid(row=0, column=1, sticky="w")
         # 国家精神也会影响"哪条路线/哪个方针最优"→ 填完（离开输入框）就重推一次
         ent_spirits.bind("<FocusOut>", lambda e: self._on_inputs_affecting_plan())
-        ttk.Button(box, text="预览国家精神总加成", command=self._refresh_totals).grid(
-            row=0, column=2, sticky="w", padx=PADX)
+        ttk.Button(box, text="预览国家精神总加成", command=self._refresh_totals,
+                   style="Tight.TButton").grid(row=0, column=2, sticky="w", padx=PADX)
         self.lbl_spirit = ttk.Label(box, text="—", foreground=ACCENT,
-                                    font=(self.family, BODY, "bold"), justify="left")
+                                    font=(self.family, FONT_FIELD, "bold"), justify="left")
         self.lbl_spirit.grid(row=1, column=0, columnspan=3, sticky="w", padx=PADX, pady=(0, PADY))
         self._wrap_to_card(self.lbl_spirit, box)
         row += 1
@@ -645,41 +1216,48 @@ class App(tk.Tk):
         self.frame_manual.grid(row=1, column=0, columnspan=2, sticky="ew")
         mods = self.inputs.get("manufacturer_modifiers") or {}
         self.mod_vars = {}
-        ttk.Label(self.frame_manual, text="单位：%（例 9 = +9%）").grid(row=0, column=8,
-                                                                     columnspan=2, sticky="w",
-                                                                     padx=PADX)
+        ttk.Label(self.frame_manual, text="单位：%（例 9 = +9%）", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=0, column=8, columnspan=2,
+                                                      sticky="w", padx=PADX)
         for i, (key, label) in enumerate(MOD_FIELDS):
             r, c = 1 + i // 5, (i % 5) * 2          # 2 行 × 5 列
-            ttk.Label(self.frame_manual, text=label).grid(row=r, column=c, sticky="e",
-                                                          padx=(PADX, 4), pady=2)
+            ttk.Label(self.frame_manual, text=label).grid(row=r, column=c, sticky="w",
+                                                          padx=(PADX, 6), pady=(4, 4))
             var = tk.StringVar(value=("%g" % (mods.get(key, 0) * 100)))
             self.mod_vars[key] = var
-            ttk.Entry(self.frame_manual, textvariable=var, width=7, justify="right").grid(
-                row=r, column=c + 1, sticky="w", padx=(0, PADX), pady=2)
+            ttk.Entry(self.frame_manual, textvariable=var, width=CTL_W_NUM,
+                      justify="right").grid(row=r, column=c + 1, sticky="w",
+                                            padx=(0, PADX), pady=(4, 4))
 
-        ttk.Label(card, text="合计").grid(row=2, column=0, sticky="e", padx=(PADX, 4),
+        ttk.Label(card, text="合计").grid(row=2, column=0, sticky="w", padx=(PADX, 6),
                                          pady=(0, PADY))
         self.lbl_overall = ttk.Label(card, text="—", foreground=ACCENT,
-                                     font=(self.family, BODY, "bold"), justify="left")
+                                     font=(self.family, FONT_FIELD, "bold"), justify="left")
         self.lbl_overall.grid(row=2, column=1, sticky="w", pady=(0, PADY))
         self._wrap_to_card(self.lbl_overall, card)
-        ttk.Button(card, text="预览总体加成", command=self._refresh_totals).grid(
-            row=2, column=2, sticky="w", padx=PADX, pady=(0, PADY))
+        ttk.Button(card, text="预览总体加成", command=self._refresh_totals,
+                   style="Tight.TButton").grid(row=2, column=2, sticky="w", padx=PADX,
+                                               pady=(0, PADY))
 
         row += 1
 
         # ⑦ 最终结果展示
         card = self._card(row, "⑦ 最终结果展示")
+        self.card_result = card           # 供"算完自动滚到结果区"用
         bar = ttk.Frame(card)
         bar.grid(row=0, column=0, sticky="ew", padx=PADX, pady=(PADY, 2))
 
         # 第一行：动作 + 输出路径。路径很长，单独占一行，否则会把下面的轴选择挤出框、点不到
         bar_btn = ttk.Frame(bar)
         bar_btn.pack(fill="x")
-        ttk.Button(bar_btn, text="计算", command=self.on_calculate).pack(side="left")
+        ttk.Button(bar_btn, text="计算",
+                   command=lambda: self.on_calculate(view_result=True)).pack(side="left")
         ttk.Button(bar_btn, text="导出 Excel", command=self.on_export).pack(side="left",
                                                                           padx=(6, 0))
-        ttk.Label(bar_btn, text="输出：%s" % run.DEFAULT_OUT).pack(side="left", padx=PADX)
+        ttk.Button(bar_btn, text="重置为默认", command=self._reset_to_default).pack(
+            side="left", padx=(6, 0))
+        ttk.Label(bar_btn, text="输出目录：%s" % os.path.basename(run.OUTPUT_DIR)).pack(
+            side="left", padx=PADX)
 
         # 第二行：帕累托图轴选择
         bar_axis = ttk.Frame(bar)
@@ -702,27 +1280,25 @@ class App(tk.Tk):
         bar2 = ttk.Frame(card)
         bar2.grid(row=1, column=0, sticky="ew", padx=PADX, pady=(0, 2))
         ttk.Label(bar2, text="筛选").pack(side="left", padx=(0, 6))
-        self.var_f_role = tk.StringVar(value="全部")
         self.var_f_year = tk.StringVar(value="全部")
         self.var_f_pareto = tk.StringVar(value="全部")
         self.var_filter = tk.StringVar(value="")
-        self.cb_f_role = ttk.Combobox(bar2, textvariable=self.var_f_role, width=9, state="readonly")
         self.cb_f_year = ttk.Combobox(bar2, textvariable=self.var_f_year, width=7, state="readonly")
         self.cb_f_pareto = ttk.Combobox(bar2, textvariable=self.var_f_pareto, width=10,
                                         state="readonly", values=["全部", "只看前沿", "只看被支配"])
-        for text, widget in (("用途", self.cb_f_role), ("年份", self.cb_f_year),
-                             ("帕累托", self.cb_f_pareto)):
+        # 用途改成单选以后，"用途筛选"就没意义了（一次只算一个用途）——去掉
+        for text, widget in (("年份", self.cb_f_year), ("帕累托", self.cb_f_pareto)):
             ttk.Label(bar2, text=text).pack(side="left", padx=(PADX, 2))
             widget.pack(side="left")
         ttk.Label(bar2, text="机型").pack(side="left", padx=(PADX, 2))
         ttk.Entry(bar2, textvariable=self.var_filter, width=14).pack(side="left")
         ttk.Label(bar2, text="（点表头排序；右上角下拉选轴）").pack(side="left", padx=PADX)
-        for var in (self.var_f_role, self.var_f_year, self.var_f_pareto, self.var_filter):
+        for var in (self.var_f_year, self.var_f_pareto, self.var_filter):
             var.trace_add("write", lambda *_: self._render_rows())
 
         self.tree_out = ttk.Treeview(card,
                                      columns=("role", "rank", "pareto", "plane", "pure",
-                                              "effect", "cost", "year", "weighted", "design"),
+                                              "effect", "cost", "weighted", "year", "design"),
                                      show="headings", height=12)
         for cid, text, w, anchor in (("role", "用途", 110, "w"), ("rank", "#", 36, "center"),
                                      ("pareto", "帕累托", 56, "center"),
@@ -730,13 +1306,14 @@ class App(tk.Tk):
                                      ("pure", "总分数（性能/造价）", 140, "e"),
                                      ("effect", "性能分数", 96, "e"),
                                      ("cost", "有效造价（IC）", 108, "e"),
-                                     ("year", "年份", 52, "center"),
                                      ("weighted", "飞机装配资源加权分（总分数/资源开销）", 210, "e"),
+                                     ("year", "年份", 52, "center"),
                                      ("design", "推荐改装（全称）", 430, "w")):
             self.tree_out.heading(cid, text=text,
                                   command=lambda c=cid: self._sort_by(c))
             self.tree_out.column(cid, width=w, anchor=anchor)
-        self.lbl_pareto = ttk.Label(card, text="", foreground=ACCENT, font=(self.family, BODY - 1))
+        self.lbl_pareto = ttk.Label(card, text="", foreground=ACCENT,
+                                    font=(self.family, FONT_NOTE))
         self.lbl_pareto.grid(row=3, column=0, sticky="w", padx=PADX, pady=(0, PADY))
         # 表格单元格不能换行，所以选中行时在下方（散点图上方）用**分块标签**显示明细：
         # 左边一栏是块名（推荐改装 / 改装属性 / 设计数值 / 性能分数 / 战斗比值），右边是内容。
@@ -744,8 +1321,10 @@ class App(tk.Tk):
         self.frm_design.grid(row=4, column=0, sticky="ew", padx=PADX, pady=(0, PADY))
         self.frm_design.columnconfigure(1, weight=1)
         self.tree_out.bind("<<TreeviewSelect>>", lambda e: self._show_design())
+        # 双击一行 = "我要看这架的细节"：选中它并把明细区滚进视野
+        self.tree_out.bind("<Double-1>", lambda e: self._show_design(scroll=True))
         self.canvas_plot = tk.Canvas(card, height=300, background="white", highlightthickness=1,
-                                     highlightbackground="#D0D7E5")
+                                     highlightbackground=GRID)
         self.canvas_plot.grid(row=5, column=0, sticky="ew", padx=PADX, pady=(0, PADY))
         self.canvas_plot.bind("<Configure>", lambda e: self._draw_chart())
         self.tree_out.grid(row=2, column=0, sticky="nsew", padx=PADX, pady=(2, PADY))
@@ -839,6 +1418,7 @@ class App(tk.Tk):
         # 换年份会刷新；之后手动改的勾选不再保留。
         years = self.data.get("tech_years") or {}
         year = int(self.var_year.get() or 1939)
+        self._tech_default_year = year          # 记住这份默认是按哪一年生成的
         unlocked = {t for t in self._relevant_techs() if (years.get(t) or 9999) <= year}
         flags_on = set(self.inputs.get("unlocked_flags") or [])
         self._group_items = {}
@@ -858,8 +1438,8 @@ class App(tk.Tk):
             self._group_items[group_text] = keys
             ttk.Checkbutton(cell, text=group_text, variable=gvar,
                             command=lambda g=group_text: self._toggle_group(g)).pack(side="left")
-            ttk.Label(cell, text="　需 " + need, foreground="#5A6472",
-                      font=(self.family, BODY - 2)).pack(side="left")
+            ttk.Label(cell, text="　需 " + need, foreground=MUTED,
+                      font=(self.family, FONT_NOTE)).pack(side="left")
 
     def _toggle_group(self, group_text):
         """勾/取消一个分组 = 把这组的前置科技（或特殊工程）一起置为同一状态。"""
@@ -889,10 +1469,24 @@ class App(tk.Tk):
         self._recommend_org()
 
     def _on_tech_year_changed(self):
-        """科技年份变了：候选机身（也就是改装/科技清单）跟着变。"""
+        """飞机科技年份变了：候选机身（→ 参考机型 / 改装 / ③ 科技清单）跟着变。
+
+        按 Spinbox 箭头走 `command=` 直接调这里；**直接键入**走 `_bind_live_refresh()`
+        里的 trace（带 400ms 防抖）后也调这里 —— 两条路的终点一致。
+        """
         self._plans.clear()
         self._build_tech_checks()
         self._refresh_country()
+
+    def _apply_tech_year_changed(self):
+        self._tech_job = None
+        self._on_tech_year_changed()
+
+    def _apply_override(self):
+        """手动指定机型键入完（防抖 400ms）：刷新对手，必要时重算结果表。"""
+        self._override_job = None
+        self._refresh_enemy()
+        self._on_inputs_affecting_plan()
 
     def _tech_usage(self):
         """{科技: ["改装：改良舱盖", "方针：完美抛光", ...]}——这项科技能启用什么（全称）。"""
@@ -959,10 +1553,14 @@ class App(tk.Tk):
         return out
 
     def _plan_key(self, inputs):
+        # 本机方案缓存（内存）的键。与 run.plan_key 同口径：**不含** unlocked_flags
+        # ——特殊工程标识只影响"哪些改装可选"，改装是实时算的；勾/不勾标识时
+        # 方针与特质路线完全一致（实测 12 组）。放进键里会让用户一勾标识就
+        # 把整表方案判失效、逐家现算。
         return (tuple(inputs["roles"]), inputs["tech_year"], inputs["current_year"],
                 tuple(sorted(inputs.get("unlocked_techs") or [])),
-                tuple(sorted(inputs.get("unlocked_flags") or [])),
                 float(inputs.get("range_cap") or 0),
+                float(inputs.get("range_band") or 0),      # 目标距离差也进键（口径 §50）
                 json.dumps(inputs.get("experience") or {}, sort_keys=True),
                 inputs.get("country"),
                 # 对手也进键：对手机动/速度直接参与评分，换对手必须重算路线
@@ -1101,7 +1699,7 @@ class App(tk.Tk):
             if rec is None:
                 pol, _chosen, mods, log, score, gain = engine.route_best_joint(
                     org, engine.MIO_MAX_LEVEL, ref, upgrade_map, ini_mods, enemy_values,
-                    inputs["roles"], inputs.get("range_cap"), policies=pols,
+                    inputs["roles"], run.range_spec(inputs), policies=pols,
                     experience=inputs.get("experience"),
                     techs=inputs.get("unlocked_techs") or [], cap_now=cap_now,
                     capacity_now=ca_now, available=tokens, fold=fold,
@@ -1190,6 +1788,7 @@ class App(tk.Tk):
         self._rec_apply = apply_org
         self._rec_queue = list(self._air_orgs()[0])
         self._rec_done = {}
+        self._rec_zero = []          # 算出方案、但分数是 0 的组织（航程够不到之类）
         self._rec_t0 = _t.time()
         self._rec_seq = getattr(self, "_rec_seq", 0) + 1
         self.after(1, self._recommend_step)
@@ -1202,8 +1801,11 @@ class App(tk.Tk):
         if queue:
             org = queue.pop(0)
             plan = self._org_plan(org, self._rec_inputs)
-            if plan and plan.get("score"):
-                self._rec_done[org["organization"]] = (org, plan)
+            if plan:
+                if plan.get("score"):
+                    self._rec_done[org["organization"]] = (org, plan)
+                else:
+                    self._rec_zero.append(org["organization"])
             self.after(1, lambda: self._recommend_step(seq))
             return
         self._recommend_finish()
@@ -1235,6 +1837,18 @@ class App(tk.Tk):
                 text="推荐：%s（满级 + %s%s）"
                      % (zh(self.loc, best["organization"]),
                         zh(self.loc, pol["token"]) if pol else "无方针", extra))
+            if len(orgs) <= 1:
+                # 只有一家可选时给不出"比次优高多少" —— 说明白，免得被当成"就这么定的"
+                self.lbl_org_rec.configure(
+                    text=self.lbl_org_rec.cget("text")
+                         + "〔该参考机型只适用 1 家 MIO，未作比较〕")
+            ref = self._ref_plane()
+            if ref:
+                self.lbl_org_rec.configure(
+                    text="参考机型：%s（%s）｜" % (zh(self.loc, ref["key"]) or ref["name"],
+                                              engine.CATEGORY_ZH.get(ref.get("category"),
+                                                                      ref.get("category")))
+                         + self.lbl_org_rec.cget("text"))
             # 只打一行汇总：以前每个组织打一行，一次操作能刷 5 行
             _dbg("MIO 路线：比较 %d 个组织（重算 %d，缓存命中 %d，用时 %.2fs）"
                  "→ 推荐「%s」，方针「%s」%s"
@@ -1242,8 +1856,18 @@ class App(tk.Tk):
                     zh(self.loc, best["organization"]),
                     zh(self.loc, pol["token"]) if pol else "无方针", extra))
         else:
-            self.lbl_org_rec.configure(text="推荐：（暂无可比较的军工组织）")
-            _dbg("MIO 路线：比较 %d 个组织 → 无可比较结果（用时 %.2fs）" % (len(orgs), spent))
+            zeros = getattr(self, "_rec_zero", [])
+            if zeros:
+                # 有方案但全是 0 分：多半是参考机型在这个距离口径下航程不够
+                ref = self._ref_plane()
+                self.lbl_org_rec.configure(
+                    text="⚠ 参考机型%s在该距离口径下最优方案也是 0 分（航程不够）"
+                         "—— 调小最远目标距离或调大目标距离差"
+                         % ("%s " % (zh(self.loc, ref["key"]) or ref["name"]) if ref else ""))
+            else:
+                self.lbl_org_rec.configure(text="推荐：（暂无可比较的军工组织）")
+            _dbg("MIO 路线：比较 %d 个组织 → 无可比较结果（0 分 %d 家，用时 %.2fs）"
+                 % (len(orgs), len(zeros), spent))
         if self._rec_apply:
             self._on_org_change()
 
@@ -1402,13 +2026,51 @@ class App(tk.Tk):
         if getattr(self, "rows", None):
             self.on_calculate()
 
+    def _on_alloc_mode_picked(self):
+        """用户**自己**在下来框里选了配点口径 → 之后就不再自动跟随推荐。"""
+        self._alloc_user_picked = True
+        self._on_alloc_mode_change()
+
     def _refresh_alloc_recommendation(self):
         """比较"分离 / 兼顾"哪个更优，写在配点口径右边（分块算，不阻塞界面）。
 
-        两个口径的计划都走同一套 `_org_plan`（表/缓存命中就瞬间出）。
+        两个口径都走 `_alloc_mode_top_score`：先用 `_org_plan`（表/缓存命中就瞬间出）
+        取该口径的路线，再用 `run.build_rows` 按**结果表同口径**算出"最好的那架飞机"
+        的总分数来比。见 `_alloc_mode_top_score` 里对旧口径的说明。
         """
         self._alloc_rec_seq = getattr(self, "_alloc_rec_seq", 0) + 1
         self.after(1, lambda: self._alloc_rec_step(self._alloc_rec_seq))
+
+    def _alloc_mode_top_score(self, org, inputs, mode):
+        """某配点口径下"表里第 1 名"的总分数（性能 ÷ 等效造价），含生产折算。
+
+        为什么不能直接比 `_org_plan` 的路线分数：那是**参考机型**在设计侧
+        `optimize` 出来的分 × 生产折算，而两条口径里"折算"的含义不同 ——
+        分离口径的 `_org_plan` 是 fold=False（gain 记 1.0），**压根没算**"生产换家"
+        那家伙伴的折算；兼顾口径才是自己的折算。于是 苏联 1944/1946 雅科夫列夫
+        两者都报 15.0341 → 界面写"高 0.00%"（用户实测质疑），
+        而结果表里同一次输入是 分离 22.8037 / 兼顾 21.3617（分离高 6.75%）。
+        现在两边都走 `run.build_rows`（和表里同一段代码）：分离自动带上生产伙伴的
+        gain，兼顾带上自己的 gain，比的就是用户实际会看到的"总分数"。
+
+        路线**钉住**该口径 `_org_plan` 的那条（与 ④ 预览、表里选中的路线一致）；
+        为此把 manual_traits 写进 probe，`resolve_manufacturer` 就不再自己搜一遍。
+        """
+        probe = dict(inputs)
+        probe["alloc_mode"] = mode
+        plan = self._org_plan(org, probe)
+        if not plan:
+            return None
+        mio = dict(probe.get("mio") or {})
+        mio["manual_traits"] = list(plan.get("route") or [])
+        probe["mio"] = mio
+        try:
+            rows, _mods, _enemy, _ev, _info = run.build_rows(probe, self.data)
+        except (Exception, SystemExit):      # noqa: BLE001
+            return None
+        if not rows:
+            return None
+        return max(float(r.get("score") or 0.0) for r in rows)
 
     def _alloc_rec_step(self, seq):
         if seq != getattr(self, "_alloc_rec_seq", -1):
@@ -1422,20 +2084,35 @@ class App(tk.Tk):
             return
         scores = {}
         for mode in ("split", "balanced"):
-            probe = dict(inputs)
-            probe["alloc_mode"] = mode
-            plan = self._org_plan(org, probe)
-            if plan and plan.get("score"):
-                scores[mode] = plan["score"]
+            score = self._alloc_mode_top_score(org, inputs, mode)
+            if score:
+                scores[mode] = score
         if len(scores) < 2:
             self.lbl_alloc_rec.configure(text="")
             return
         better = max(scores, key=scores.get)
         worse = min(scores, key=scores.get)
         gap = (scores[better] / scores[worse] - 1) * 100 if scores[worse] else 0.0
+        _dbg("配点口径：分离 %.4f vs 兼顾 %.4f（按表中第 1 名的总分数比）"
+             % (scores.get("split", 0.0), scores.get("balanced", 0.0)))
         # 不给"持平"这种话：总有一个更高的，把差距直接给出来，用户自己判断
-        short = dict(ALLOC_MODES)[better].split("（")[0]
-        self.lbl_alloc_rec.configure(text="推荐：%s（比另一种高 %.2f%%）" % (short, gap))
+        label = dict(ALLOC_MODES)[better]
+        short = label.split("（")[0]
+        if gap >= 0.005:
+            text = "推荐：%s（比另一种高 %.2f%%）" % (short, gap)
+        else:
+            # 两种口径可能落到**同一套特质**（常见于"本 MIO 就是本国最好的生产方"，
+            # 没有更优的生产伙伴可换）→ 表里两行逐位相同。这时写"高 0.00%"会被
+            # 当成"没算生产折算"的老毛病（用户 2026-10-12 就是这么质疑的）。
+            # 用户 2026-10-13 口径：**确实完全相同**就说持平，不硬凑一个赢家。
+            text = "推荐：%s（与另一种持平，差 <0.01%%，选哪个都一样）" % short
+        self.lbl_alloc_rec.configure(text=text)
+        # 用户还没自己选过 → 直接把默认口径也切到推荐那个
+        # （以前默认固定"分离"，新用户看到推荐"兼顾"却不知道要不要动）
+        if not getattr(self, "_alloc_user_picked", False) and self.var_alloc_mode.get() != label:
+            _dbg("配点口径：未手动选择 → 自动跟随推荐「%s」" % short)
+            self.var_alloc_mode.set(label)
+            self._on_alloc_mode_change()
 
     def _policy_ready(self, pol):
         """门槛（等级 + 科技）是否满足。"""
@@ -1469,6 +2146,9 @@ class App(tk.Tk):
             # 这些是组织级修正（经费/研究），**不影响飞机属性**，说清楚免得误读
             parts.append("组织（不影响飞机属性）：" + fmt_mods(
                 {k: v for k, v in org_mod.items() if v}, self.loc))
+        # 段与段之间用**全角空格**：宽的时候自然并成一行，窄了才在段与段之间折行
+        # （用户 2026-10-12 口径：不要固定三行）。Tk 对连续中文只在空格处断行，
+        # 所以这里的折行点正好落在语义分界上。
         return "　".join(parts)
 
     def _best_policy_token(self):
@@ -1502,7 +2182,7 @@ class App(tk.Tk):
             except (Exception, SystemExit):  # noqa: BLE001
                 continue
             score = engine.evaluate(ref, {t: 0 for t in tokens}, upgrade_map, mods, enemy_values,
-                                    base.get("range_cap"), base.get("experience"),
+                                    run.range_spec(base), base.get("experience"),
                                     accident_factor=acc_f)[2][score_key]
             if best_score is None or score > best_score:
                 best, best_score = pol["token"], score
@@ -1717,9 +2397,47 @@ class App(tk.Tk):
         self._refresh_enemy()
         self._on_inputs_affecting_plan()
 
+    def _swap_country_enemy(self):
+        """② 里的「⇄ 交换」：把"所选国家"和"对手国别"对调（省得两个下拉各点一次）。
+
+        顺序要和国家切换一致：先换国家（重建 ③ 前置清单、重挑军工组织/方针），
+        再换对手（② 的对手数值行、手填修正用对手国的 AI 判定值、路线重推）。
+        两边相同时不发操作、不重算（免得日志里多一条无意义记录）。
+        """
+        a = self.var_tag.get()          # 所选国家（中文名）
+        b = self.var_enemy_tag.get()    # 对手国别（中文名）
+        if not a or not b or a == b:
+            self.lbl_hint.configure(text="所选国家与对手国别相同，无需交换")
+            return
+        self.var_tag.set(b)
+        self.var_enemy_tag.set(a)
+        _dbg("操作：交换所选国家与对手国别 → %s ↔ %s" % (b, a))
+        self._refresh_country()         # 换国家：重建 ③、重挑军工组织与方针
+        self._on_enemy_change()         # 换对手：对手数值/路线重推
+        # 走和其它输入同一条"操作反馈"：算完状态行会写
+        # 「交换国家与对手 → 德国 ↔ 苏联」已生效：已重算 N 行…。
+        # ⚠ 必须放在上面两步**之后** —— `_refresh_country()` 会改军工组织下拉，
+        # 那个 trace 也会写 `_last_op`（实测被"改军工组织 → 梅赛施密特"顶掉）。
+        self._last_op = "交换国家与对手 → %s ↔ %s" % (b, a)
+        if getattr(self, "rows", None):
+            self.on_calculate()
+        else:
+            self.lbl_hint.configure(text="已交换：你 = %s，对手 = %s" % (b, a))
+
     def _on_rule_change(self):
         self._sync_rule()
         self._on_inputs_affecting_plan()
+
+    def _on_range_band_changed(self):
+        """改了「目标距离差」：航程覆盖率跟着变 → 重推路线/方针并重算结果表。"""
+        try:
+            band = float(self.var_band.get() or 0)
+        except (tk.TclError, ValueError):
+            return                            # 还在输入中
+        band = max(0.0, min(float(max(BAND_CHOICES)), band))
+        _dbg("操作：改目标距离差 → %g km" % band)
+        self._plans.clear()
+        self._on_inputs_affecting_plan(recalc=True)
 
     def _on_inputs_affecting_plan(self, recalc=False):
         """年份 / 距离 / 对手 / 国家精神这类输入变了：重挑方针 + 重算"推荐"那行。
@@ -1739,6 +2457,14 @@ class App(tk.Tk):
 
     def _apply_inputs_affecting_plan(self, recalc=False):
         self._plan_job = None
+        # 当前年份变了 → ③ 的前置默认要跟着重算（默认 = "到当前年份为止已完成"）；
+        # 以前只有换国家/改科技年份才重建，所以"切当前年份"看不到解锁变化。
+        try:
+            year = int(self.var_year.get())
+        except (tk.TclError, ValueError):
+            year = None
+        if year is not None and year != getattr(self, "_tech_default_year", None):
+            self._build_tech_checks()
         try:
             self._refresh_policies()
         except (Exception, SystemExit):       # noqa: BLE001
@@ -1754,8 +2480,42 @@ class App(tk.Tk):
 
     def _on_roles_changed(self):
         self._refresh_enemy()
+        self._sync_distance_choices()   # 距离挡位随用途变（舰载 1500 / 对海 3000 / 其余 2100）
         self._plans.clear()            # 用途变了，"满级最优"重新比较
         self._recommend_org()
+
+    def _on_role_click(self, key):
+        """用途**单选**（用户口径 2026-10-12）：选一个就把别的关掉；不允许一个都不选。
+
+        外观仍是 6 个勾选框（用户要求"不用变成一个选择槽"），只是行为互斥。
+        （勾选框自己会先把变量翻过去，所以这里要处理两种情况：选新的 / 点掉当前这个。）
+        """
+        if not self.role_vars[key].get():        # 取消动作 → 直接按回选中
+            self.role_vars[key].set(True)
+        self._syncing_roles = True
+        try:
+            for k, var in self.role_vars.items():
+                if k != key and var.get():
+                    var.set(False)
+        finally:
+            self._syncing_roles = False
+        self._on_roles_changed()
+
+    def _sync_distance_choices(self):
+        """按当前用途刷新「最远目标距离」的挡位；超出上限就收到该档上限。"""
+        roles = [k for k, v in self.role_vars.items() if v.get()] or ["air_far"]
+        opts = distances_for(roles)
+        try:
+            self.cb_distance.configure(values=opts)
+        except tk.TclError:
+            return
+        try:
+            cur = int(float(self.var_distance.get() or 0))
+        except (tk.TclError, ValueError):
+            cur = 0
+        if cur not in opts:
+            _dbg("距离挡位：当前用途上限 %d km → 距目标收到 %d" % (opts[-1], opts[-1]))
+            self.var_distance.set(str(opts[-1]))
 
     def _enemy_cfg(self):
         rule = self._rule_value()
@@ -1802,7 +2562,8 @@ class App(tk.Tk):
         """对手数值是哪来的：手填 / 按模组 AI 权重自动判定（写明 MIO 与机型）。"""
         country = self._enemy_tag()
         if ((self.inputs.get("enemy") or {}).get("by_country") or {}).get(country):
-            return "数值来源：界面手填（优先于 AI 自动判定）｜点『恢复 AI 自动值』回到自动判定值"
+            return ("数值来源：界面手填（优先于 AI 自动判定）\n"
+                    "　　（点『恢复 AI 自动值』可回到自动判定值）")
         seen = {}
         for role in roles:
             plane = picked.get(role, (None, None))[0]
@@ -1821,8 +2582,10 @@ class App(tk.Tk):
                          % ("" if len(roles) == 1 else "（%s）" % label,
                             "通用 " if fallback else "",
                             zh(self.loc, org) or org, zh(self.loc, plane_key) or plane_key, n))
-        return ("数值来源：按模组 AI 权重自动判定（AI 按「加成总和最大」点特质，不是战斗力最优）｜"
-                + "；".join(parts))
+        # 显式换行：Tk 对连续中文只在空格处断行，一条长句会被切在很怪的位置
+        # （实测"…（AI / 按「加成总和最大」…"），所以人工分行。
+        return ("数值来源：按模组 AI 权重自动判定（AI 按「加成总和最大」点特质，不是战斗力最优）\n"
+                "　　" + "\n　　".join(parts))
 
     def var_roles_are_carrier(self):
         """当前勾的用途是不是全是舰载（舰载对手不吃经验）。"""
@@ -1923,6 +2686,7 @@ class App(tk.Tk):
             "tech_year": int(self.var_tech.get()),
             "roles": roles,
             "range_cap": float(self.var_distance.get()),
+            "range_band": float(self.var_band.get() or 0),
             "pareto_x": self._axis_key(self.var_axis_x.get()),
             "pareto_y": self._axis_key(self.var_axis_y.get()),
             "modifier_source": source,
@@ -2068,20 +2832,20 @@ class App(tk.Tk):
         else:
             self.lbl_prod.configure(text=self._prod_text(prod, gain, parts))
         # 「分离」口径：把生产那家 MIO 与它需要的特质列出来（按卡片宽度换行）
-        self.lbl_partner.configure(text="")
+        self._set_partner("")
         if inputs.get("alloc_mode") == "split":
             ref = self._ref_plane()
             partner = run.best_production_plan(inputs, self.data, ref) if ref else None
             if partner and partner["organization"] != self._org_key():
-                self.lbl_partner.configure(
-                    text="　生产交给「%s」（满级 %d），需点：%s"
-                         % (zh(self.loc, partner["organization"]), partner.get("level", 14),
-                            " → ".join(zh(self.loc, t) for t in partner["tokens"])))
+                self._set_partner(
+                    "　生产交给「%s」（满级 %d），需点：%s"
+                    % (zh(self.loc, partner["organization"]), partner.get("level", 14),
+                       " → ".join(zh(self.loc, t) for t in partner["tokens"])))
             elif partner:
-                self.lbl_partner.configure(
-                    text="　生产：最优的一家就是本 MIO（换别家都不给产量加成）→ 用「兼顾」更合适")
+                self._set_partner("　生产：最优的一家就是本 MIO（换别家都不给产量加成）"
+                                  "→ 用「兼顾」更合适")
             else:
-                self.lbl_partner.configure(text="　生产：没有 MIO 能给产量加成")
+                self._set_partner("　生产：没有 MIO 能给产量加成")
 
     def _prod_of_tokens(self, org_name, tokens):
         """某 MIO + 指定特质列表的生产侧修正合计（分离口径下显示"生产伙伴"用）。"""
@@ -2113,16 +2877,27 @@ class App(tk.Tk):
             if not value:
                 continue
             label = PROD_ZH.get(key, key)
-            factor = (parts or {}).get(label, 1.0)
+            # 资源需求的"自己的倍率"就是 (1+修正)：−5% ⇒ ×0.95；其余用折算分项
+            factor = ((1.0 + value) if key == "production_resource_need_factor"
+                      else (parts or {}).get(label, 1.0))
             items.append("%s %+g%%%s" % (label, round(value * 100, 2),
                                          " ⇒ ×%.4f" % factor if abs(factor - 1.0) > 1e-9 else ""))
         text = head + "　".join(items)
-        if gain and abs(gain - 1.0) > 1e-9:
-            text += "　⇒ 合计 产能 ×%.4f（等效造价 ×%.4f）" % (gain, 1.0 / gain)
+        # 合计：产能倍率（产量/效率上限/生产产出花费）与资源消耗倍率（资源需求）分列，
+        # 等效造价 = (1 ÷ 合计产能) × 合计资源消耗 —— 不同方针/路线可以直接横向比。
+        # 换一行写：紧跟在上一条修正后面时，"⇒" 看着像那一条的倍率（用户反馈）。
+        need_total = 1.0 + float((prod or {}).get("production_resource_need_factor", 0.0) or 0.0)
+        text += "\n　⇒ 合计产能×%.4f，资源消耗×%.4f（等效造价 ×%.4f）" % (
+            gain or 1.0, need_total, (1.0 / (gain or 1.0)) * need_total)
         return text
 
-    def on_calculate(self):
-        """只计算并在界面里展示（不写文件）。"""
+    def on_calculate(self, view_result=False):
+        """只计算并在界面里展示（不写文件）。
+
+        `view_result=True` 只有"用户按了计算按钮"才传：算完把结果区滚进视野。
+        界面内部的自动重算（改口径/改对手/防抖后的重算）**不滚动**——不然用户
+        在 ① ② 改个输入，画面会自己跳走。
+        """
         try:
             inputs = self._with_route(self.collect())
             _dbg("计算：年份 %s/%s｜国家 %s｜用途 %s｜距离 %s｜来源 %s"
@@ -2158,7 +2933,24 @@ class App(tk.Tk):
         self._refresh_totals()
         self.lbl_overall.configure(text=fmt_mods(player_mods))
         self._render_rows()
-        self.lbl_hint.configure(text="已计算 %d 行；需要写文件时点「导出 Excel」" % len(rows))
+        # 全是 0 分时给一句人话：多半是"最远目标距离 / 目标距离差"组合下所有机型都飞不到
+        zeros = [r for r in rows if (r.get("values") or {}).get("range_factor", 1.0) <= 0]
+        op = getattr(self, "_last_op", None)      # 上一次改了什么（状态行用）
+        self._last_op = None
+        prefix = "「%s」已生效：" % op if op else ""
+        # 首次使用（还没有记忆文件）：状态行一直挂着"先看说明书"的提醒，
+        # 直到用户点开过操作记录小窗为止（不然首屏那一两秒就被算完了，根本看不到）。
+        suffix = ("｜首次使用？先看「开始使用前先看.txt」"
+                  if getattr(self, "_is_first_run", False) else "")
+        if rows and len(zeros) == len(rows):
+            self.lbl_hint.configure(
+                text=("%s⚠ 该「最远目标距离 / 目标距离差」下所有机型都飞不到（覆盖率 0）"
+                      "—— 调小最远目标距离或调大目标距离差%s" % (prefix, suffix)))
+        else:
+            self.lbl_hint.configure(text="%s已重算 %d 行；需要写文件时点「导出 Excel」%s"
+                                         % (prefix, len(rows), suffix))
+        if view_result:
+            self._scroll_to(self.card_result)  # 结果在折叠线以下，按了计算就带过去
 
     def on_export(self):
         """把当前结果写成工作簿；没算过就先算一次。"""
@@ -2167,14 +2959,14 @@ class App(tk.Tk):
             if not getattr(self, "_last", None):
                 return
         inputs, rows, player_mods, enemy, enemy_values, mfr_info = self._last
+        path = run.output_path(inputs)
         try:
-            run.write_workbook(run.DEFAULT_OUT, inputs, rows, player_mods, enemy, enemy_values,
-                               mfr_info)
+            run.write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_info)
         except (Exception, SystemExit) as exc:  # noqa: BLE001
             messagebox.showerror("导出出错", str(exc))
             return
-        _dbg("导出：%s（%d 行）" % (run.DEFAULT_OUT, len(rows)))
-        self.lbl_hint.configure(text="已导出 → %s" % os.path.basename(run.DEFAULT_OUT))
+        _dbg("导出：%s（%d 行）" % (path, len(rows)))
+        self.lbl_hint.configure(text="已导出 → %s" % os.path.basename(path))
 
     def _axis_key(self, label):
         for key, text in AXIS_CHOICES:
@@ -2184,6 +2976,70 @@ class App(tk.Tk):
 
     def _row_name(self, row):
         return zh(self.loc, row["airframe"]["key"]) or row["airframe"]["name"]
+
+    @staticmethod
+    def _short_name(full, limit=22):
+        """图上/窄处用的短名：**保留"制造商 + 型号"**，丢掉后面的类别与绰号。
+
+        用户 2026-10-13 报：德国 `梅塞施密特 Me 262 A "飞燕" 喷气式多用途战斗机`
+        在散点图上只显示了最后一个词"喷气式多用途战斗机"（原来取 `name.split()[-1]`），
+        苏联机型因为名字里没有空格才恰好正常。
+        规则：取到**最后一个含 ASCII 字母/数字的字段**为止 —— 类别后缀是纯中文
+        （"喷气式多用途战斗机"/"四式战斗机甲型"/"重型近距支援机"）自然被丢掉，
+        而 `Mk.I战斗机`（字母+中文混排）、`Ki-84`、`Me 262 A` 这些型号都会被保留。
+        实测：`梅塞施密特 Me 262 A "飞燕" 喷气式多用途战斗机` → `梅塞施密特 Me 262 A`；
+              `中岛 Ki-84 四式战斗机甲型 "疾风"` → `中岛 Ki-84`；
+              `超级马林"喷火" Mk.I战斗机` → 原样（型号那一段本身带中文）；
+              `雅克夫列夫 雅克-9U轻型战斗机` → 原样（和以前显示的一样）。
+        """
+        parts = [p for p in str(full or "").split() if p]
+        if not parts:
+            return ""
+        ascii_idx = [i for i, p in enumerate(parts)
+                     if any(c.isascii() and c.isalnum() for c in p)]
+        out = " ".join(parts[:ascii_idx[-1] + 1]) if ascii_idx else " ".join(parts)
+        return out[:limit] + "…" if len(out) > limit else out
+
+    @staticmethod
+    def _cjk_tail(text):
+        """取一段文字**最靠右的连续中文段**（"…“箭” 重型战斗机" → "重型战斗机"）。"""
+        out = []
+        for ch in reversed(str(text or "")):
+            if "\u4e00" <= ch <= "\u9fff" or ch == "·":
+                out.append(ch)
+            else:
+                break
+        return "".join(reversed(out))
+
+    def _short_label(self, row, limit=26):
+        """界面上用的**"游戏简称 + 飞机种类"**（用户 2026-10-13 口径）。
+
+        简称 = 装备的 `_short` 本地化 —— **游戏里就是这么叫的**
+        （`me_109_late_fighter_equipment_3_short:0 "Bf 109 G"`，用户从游戏里复制的就是它）。
+        种类 = 全名里**跟在简称后面的最靠右中文段**（用汉化自己的说法：
+        轰炸机 / 喷气式多用途战斗机 / 重型战斗机…），取不到就退回按 `category` 的中文名。
+
+        结果：`巴伐利亚 Bf 109 G-14 战斗机` → `Bf 109 G-14 战斗机`；
+              `超级马林“喷火” Mk.XIVe战斗机` → `“喷火” Mk.XIVe 战斗机`；
+              `梅塞施密特 Me 262 A “飞燕” 喷气式多用途战斗机` → `Me 262 A “飞燕” 喷气式多用途战斗机`；
+              `福克-沃尔夫 Ta 152 H-1`（短名后面没中文）→ `Ta 152 H-1 截击机`。
+        没有 `_short` 条目（约 54/953 架）时退回老的启发式短名，保证永远有字可显示。
+        """
+        frame = row.get("airframe") or {}
+        key, full = frame.get("key") or "", self._row_name(row)
+        short = zh(self.loc, key + "_short") if key else ""
+        if short == key + "_short":          # 没这条本地化时 zh() 会把 key 原样返回
+            short = ""
+        if not short:
+            return self._short_name(full, limit)
+        kind = ""
+        idx = full.find(short)
+        if idx >= 0:
+            kind = self._cjk_tail(full[idx + len(short):])
+        if not kind:
+            kind = engine.CATEGORY_ZH.get(frame.get("category"), "")
+        out = ("%s %s" % (short, kind)).strip()
+        return out[:limit] + "…" if len(out) > limit else out
 
     def _sort_value(self, row):
         key = getattr(self, "_sort_key", "rank")
@@ -2210,13 +3066,18 @@ class App(tk.Tk):
                     return          # Tk 写入同值也会触发，这里去重
                 last[label] = val
                 _dbg("操作：%s → %s" % (label, val))
+                # 记下"刚刚改了什么"：算完后状态行会写一句「XX 已生效：重算 N 行」，
+                # 免得用户改完输入不知道发生了什么、该看哪里（用户 2026-10-12 口径）
+                self._last_op = "%s → %s" % (label, val)
 
             last[label] = var.get()
             var.trace_add("write", on_change)
 
         for var, label in ((self.var_year, "改当前年份"), (self.var_tech, "改飞机科技年份"),
                            (self.var_tag, "改国家"), (self.var_enemy_tag, "改对手国别"),
-                           (self.var_rule, "改对手选取规则"), (self.var_distance, "改距离目标"),
+                           (self.var_rule, "改对手选取规则"),
+                           (self.var_distance, "改最远目标距离"),
+                           (self.var_band, "改目标距离差"),
                            (self.var_level, "改 MIO 等级"), (self.var_org, "改军工组织"),
                            (self.var_policy, "改方针"), (self.var_source, "改修正来源"),
                            (self.var_alloc, "改配点方式"), (self.var_spirits, "改国家精神"),
@@ -2229,7 +3090,7 @@ class App(tk.Tk):
         for key, rv in self.role_vars.items():
             watch(rv, "勾选用途 %s" % ROLE_SHORT.get(key, key))
         for var, label in ((self.var_filter, "改机型筛选"), (self.var_f_year, "改年份筛选"),
-                           (self.var_f_role, "改用途筛选"), (self.var_f_pareto, "改帕累托筛选"),
+                           (self.var_f_pareto, "改帕累托筛选"),
                            (self.var_axis_x, "改 X 轴"), (self.var_axis_y, "改 Y 轴")):
             watch(var, label)
 
@@ -2238,16 +3099,53 @@ class App(tk.Tk):
 
         Spinbox 的 `command=` 只在按上下箭头时触发，**直接键入年份不会触发**，
         于是出现过：debug 里对手已经是 Bf 109 G-14，② 那行还写着 109 D（旧年份的对手）。
+        同理，"飞机科技年份"键入时也不会重建 ③、不会重推 ④ —— 于是"参考机型"一直
+        停在旧年份那架（用户 2026-10-12 发现）。这两个输入现在都挂 trace + 防抖。
         """
         def on_year(*_a):
             try:
-                int(self.var_year.get())
+                val = int(self.var_year.get())
             except (tk.TclError, ValueError):
                 return                     # 还在输入中（例如只敲了 "19"）
+            if not (1930 <= val <= 1960):
+                return                     # 半截数字（"1"/"19"/"194"），等输完再算
             self._refresh_enemy()
             self._on_inputs_affecting_plan()   # 年份变了：重推路线与方针，别让下拉停在旧值
 
         self.var_year.trace_add("write", on_year)
+
+        # 飞机科技年份：候选机身（→ 参考机型 → MIO 过滤 → 3③ 的科技清单）都由它决定，
+        # 键入时必须和"按箭头"走同一条路：重建 ③ + 重推 ④ 的推荐与参考机型。
+        # 连敲（1→19→194→1944）只算最后一次。
+        def on_tech_year(*_a):
+            try:
+                val = int(self.var_tech.get())
+            except (tk.TclError, ValueError):
+                return
+            if not (1930 <= val <= 1960):
+                return
+            job = getattr(self, "_tech_job", None)
+            if job:
+                try:
+                    self.after_cancel(job)
+                except Exception:          # noqa: BLE001
+                    pass
+            self._tech_job = self.after(400, self._apply_tech_year_changed)
+
+        self.var_tech.trace_add("write", on_tech_year)
+
+        # 「手动指定机型」：同样是键入类输入，以前只有日志 trace → ② 那行不刷新
+        # （实测填了 me_109_late_fighter_equipment_4 还显示 1939 的 109 D）。
+        def on_override(*_a):
+            job = getattr(self, "_override_job", None)
+            if job:
+                try:
+                    self.after_cancel(job)
+                except Exception:          # noqa: BLE001
+                    pass
+            self._override_job = self.after(400, self._apply_override)
+
+        self.var_override.trace_add("write", on_override)
 
         # 生产折算的两个输入：改了要重算，但**必须防抖** —— 以前每敲一个字符
         # （例如输入 118 时先敲出 "1"）就整套重算，冷路径下要卡 2 秒以上。
@@ -2261,6 +3159,16 @@ class App(tk.Tk):
 
         for var in (self.var_cap, self.var_capacity):
             var.trace_add("write", on_prod)
+
+        # 「目标距离差」也是手打输入：键入时同样要重算（Spinbox 的 command 只在按箭头时触发）
+        def on_band(*_a):
+            try:
+                float(self.var_band.get() or 0)
+            except (tk.TclError, ValueError):
+                return
+            self._on_inputs_affecting_plan(recalc=True)   # 带 400ms 防抖
+
+        self.var_band.trace_add("write", on_band)
 
         # 对手修正/经验：改了立刻写回 by_country 并重算对手（写不进去 = 还在输入中）
         def on_enemy_mods(*_a):
@@ -2283,19 +3191,26 @@ class App(tk.Tk):
         _dbg("排序：按 %s %s" % (cid, "降序" if self._sort_desc else "升序"))
         self._render_rows()
 
-    def _show_design(self):
+    def _show_design(self, scroll=False):
         """表格下方（散点图上方）：选中行的明细，按【块】排版，方便扫读。"""
         for child in self.frm_design.winfo_children():
             child.destroy()
         sel = self.tree_out.selection()
         if not sel:
+            self._draw_chart()          # 取消选中 → 把图上的高亮圈也抹掉
             return
         values = self.tree_out.item(sel[0])["values"]
         if not values:
+            self._draw_chart()
             return
         row = getattr(self, "_row_by_iid", {}).get(sel[0])
         v = (row or {}).get("values") or {}
-        blocks = [("推荐改装", "%s：%s" % (values[3], values[-1]), "normal")]
+        blocks = []
+        # 2026-10-13：先给一行"游戏里的简称 + 飞机种类"（`_short` 本地化 + 种类），
+        # 方便对着游戏里的装备列表核对；数据里的全名仍在"推荐改装"那行里。
+        if row is not None:
+            blocks.append(("机型", self._short_label(row), "normal"))
+        blocks.append(("推荐改装", "%s：%s" % (values[3], values[-1]), "normal"))
         if v:
             blocks.extend(self._design_blocks(v))
             blocks.append(("", "", "sep"))
@@ -2308,12 +3223,24 @@ class App(tk.Tk):
                                   row["score"],
                                   row.get("effective_cost", 0.0) / row["production_gain"]),
                                "formula"))
+            # 资源加权分：把算式摊开（分子 = 纯设计分，分母 = 装配资源 ×(1+资源需求)）
+            need = (row.get("production") or {}).get("production_resource_need_factor", 0.0)
+            res_cost = (row.get("airframe") or {}).get("air_production") or 0
+            if res_cost and row.get("weighted"):
+                blocks.append(("资源加权分",
+                               "%.4f = 折算后总分数 %.4f ÷ （装配资源 %g × 资源消耗 %.4f）"
+                               % (row["weighted"], row.get("score", 0.0), res_cost,
+                                  1.0 + float(need or 0.0)),
+                               "formula"))
             combat = engine.combat_breakdown(row["role"], v, row.get("enemy_values"))
             if combat:
                 blocks.append(("", "", "sep"))
                 blocks.append(("战斗比值", combat[0].replace("战斗比值 ", "", 1), "formula"))
                 blocks.extend(("", text.lstrip("　"), "note") for text in combat[1:])
         self._render_design_blocks(blocks)
+        self._draw_chart()              # 选中的那架在帕累托图上圈出来（用户 2026-10-13 口径）
+        if scroll:
+            self._scroll_to(self.frm_design)
 
     def _design_blocks(self, v):
         """明细的前两块：① 这些改装改了哪些属性；② 最终**设计数值**（对照游戏「设计」界面）。
@@ -2341,6 +3268,8 @@ class App(tk.Tk):
 
         dv, parts = v.get("design_values") or {}, []
         cap = v.get("range_cap")
+        band = float(v.get("range_band") or 0)
+        near = max(0.0, float(cap or 0) - band) if band > 0 else None
         for key in DESIGN_SHOW:
             if key not in dv:
                 continue
@@ -2349,8 +3278,9 @@ class App(tk.Tk):
                        "naval_strike_targetting") and not value:
                 continue                      # 这个用途用不上的属性不占地方
             if key == "air_range" and cap and value > cap:
-                parts.append("%s %s（设计 %s，按目标截断）"
-                             % (name(key), engine.fmt_num(cap), engine.fmt_num(value)))
+                extra = "，近边 %s" % engine.fmt_num(near) if near is not None else ""
+                parts.append("%s %s（设计 %s，按最远目标距离截断%s）"
+                             % (name(key), engine.fmt_num(cap), engine.fmt_num(value), extra))
                 continue
             text = engine.fmt_num(value, 4) if abs(value) < 1 else engine.fmt_num(value)
             parts.append("%s %s" % (name(key), text))
@@ -2362,10 +3292,11 @@ class App(tk.Tk):
     def _render_design_blocks(self, blocks):
         """把 (块名, 内容, 样式) 列表画成两栏小表：左列块名（加粗深蓝），右列内容。"""
         styles = {
-            "header": dict(foreground=ACCENT, font=(self.family, BODY - 2, "bold")),
-            "normal": dict(foreground="#333333", font=(self.family, BODY - 1)),
-            "formula": dict(foreground="#1F4E79", font=(self.family, BODY - 1)),
-            "note": dict(foreground="#6B7280", font=(self.family, BODY - 2)),
+            # 明细区的三档字色/字号，与全局规范一致
+            "header": dict(foreground=ACCENT, font=(self.family, FONT_CARD, "bold")),
+            "normal": dict(foreground=INK, font=(self.family, FONT_FIELD)),
+            "formula": dict(foreground=ACCENT, font=(self.family, FONT_NOTE)),
+            "note": dict(foreground=MUTED, font=(self.family, FONT_NOTE)),
         }
         r = 0
         for header, text, kind in blocks:
@@ -2399,16 +3330,7 @@ class App(tk.Tk):
         # 年份下拉按当前候选动态生成
         years = sorted({str(r["airframe"].get("year")) for r in self.rows if r["airframe"].get("year")})
         self.cb_f_year.configure(values=["全部"] + years)
-        roles = []
-        for r in self.rows:
-            label = ROLE_SHORT.get(r["role"], r["role"])
-            if label not in roles:
-                roles.append(label)
-        self.cb_f_role.configure(values=["全部"] + roles)
-
-        if self.var_f_role.get() != "全部":
-            view = [r for r in view
-                    if ROLE_SHORT.get(r["role"], r["role"]) == self.var_f_role.get()]
+        # （用途已改成单选，一次只算一个用途 → 不再需要用途筛选）
         if self.var_f_year.get() != "全部":
             view = [r for r in view if str(r["airframe"].get("year")) == self.var_f_year.get()]
         mode = self.var_f_pareto.get()
@@ -2434,9 +3356,9 @@ class App(tk.Tk):
                 # 生产折算只体现在"总分数"与资源加权分上。
                 "{:,.1f}".format(row.get("score_raw", row["score"]) * row["effective_cost"]),
                 "%.2f" % row["effective_cost"],
-                row["airframe"].get("year", ""),
                 "{:,.2f}（装配 {}）".format(row["weighted"],
                                            row["airframe"].get("air_production", 0)),
+                row["airframe"].get("year", ""),
                 row["design"]))
             self._row_by_iid[iid] = row
         star = sum(1 for r in self.rows if r.get("pareto"))
@@ -2496,41 +3418,73 @@ class App(tk.Tk):
                 return "%.1f万" % (value / 10000.0)
             return "%.0f" % value
 
-        cv.create_line(left, top - 10, left, height - bottom, fill="#8A93A5")
-        cv.create_line(left, height - bottom, width - right, height - bottom, fill="#8A93A5")
+        cv.create_line(left, top - 10, left, height - bottom, fill=LINE)
+        cv.create_line(left, height - bottom, width - right, height - bottom, fill=LINE)
         x_year, y_year = x_key == "year", y_key == "year"
-        cv.create_text((left + width - right) / 2, height - bottom + 30, fill="#5A6472",
-                       font=(self.family, BODY - 2), text="%s（%s）"
+        cv.create_text((left + width - right) / 2, height - bottom + 30, fill=MUTED,
+                       font=(self.family, FONT_NOTE), text="%s（%s）"
                        % (self.var_axis_x.get(), "→ 越大越好" if xhigh else "← 越小越好"))
         # 纵轴标题竖排（angle=90）放在最左侧，避免横向挤占绘图区
-        cv.create_text(16, (top + height - bottom) / 2, angle=90, fill="#5A6472",
-                       font=(self.family, BODY - 2), text="%s（%s）"
+        cv.create_text(16, (top + height - bottom) / 2, angle=90, fill=MUTED,
+                       font=(self.family, FONT_NOTE), text="%s（%s）"
                        % (self.var_axis_y.get(), "越高越好 ↑" if yhigh else "越低越好 ↓"))
         for i in range(5):
             fx = x0 + (x1 - x0) * i / 4
             fy = y0 + (y1 - y0) * i / 4
             cv.create_text(px(fx), height - bottom + 11, text=tick(fx, x_year),
-                           fill="#5A6472", font=(self.family, BODY - 3))
+                           fill=MUTED, font=(self.family, FONT_NOTE))
             cv.create_text(left - 6, py(fy), anchor="e", text=tick(fy, y_year),
-                           fill="#5A6472", font=(self.family, BODY - 3))
-            cv.create_line(px(fx), height - bottom, px(fx), height - bottom + 3, fill="#8A93A5")
-            cv.create_line(left - 3, py(fy), left, py(fy), fill="#8A93A5")
+                           fill=MUTED, font=(self.family, FONT_NOTE))
+            cv.create_line(px(fx), height - bottom, px(fx), height - bottom + 3, fill=LINE)
+            cv.create_line(left - 3, py(fy), left, py(fy), fill=LINE)
 
         for i, (row, tx, ty) in enumerate(pts):
             cx, cy = px(tx), py(ty)
             if row.get("pareto"):
                 cv.create_oval(cx - 4, cy - 4, cx + 4, cy + 4, fill=ACCENT, outline=ACCENT)
-                name = self._row_name(row).split()[-1]
+                name = self._short_label(row)
                 cv.create_text(cx + 7, cy + (-12 if i % 2 == 0 else 12), anchor="w", text=name,
-                               fill=ACCENT, font=(self.family, BODY - 3, "bold"))
+                               fill=ACCENT, font=(self.family, FONT_NOTE, "bold"))
             else:
-                cv.create_oval(cx - 2, cy - 2, cx + 2, cy + 2, fill="#B9C2D0", outline="#B9C2D0")
+                cv.create_oval(cx - 2, cy - 2, cx + 2, cy + 2, fill=DOT, outline=DOT)
+
+        # 记下每个点的画布坐标：右键"复制机型名称"要按距离找最近的那架（见 _on_chart_copy）
+        self._chart_pts = [(row, px(xget(row)), py(yget(row))) for row, _tx, _ty in pts]
+
+        # 表格里**选中的那架**在图上圈出来（用户 2026-10-13 口径：想看自己那架在图里的位置）。
+        # 画在最后 = 压在所有点之上；标签带上"选中"，和帕累托前沿的名称标签区分开。
+        sel_row = self._selected_row()
+        if sel_row is not None:
+            sx, sy = px(xget(sel_row)), py(yget(sel_row))
+            cv.create_oval(sx - 7, sy - 7, sx + 7, sy + 7, outline=INK, width=2,
+                           tags="selhl")
+            # 十字准星：点被别的点盖住时也能一眼看到在哪
+            cv.create_line(sx - 11, sy, sx - 8, sy, fill=INK, tags="selhl")
+            cv.create_line(sx + 8, sy, sx + 11, sy, fill=INK, tags="selhl")
+            cv.create_line(sx, sy - 11, sx, sy - 8, fill=INK, tags="selhl")
+            cv.create_line(sx, sy + 8, sx, sy + 11, fill=INK, tags="selhl")
+            name = self._short_label(sel_row)
+            cv.create_text(sx, sy - 15, anchor="s", text="选中 %s" % name, fill=INK,
+                           font=(self.family, FONT_NOTE, "bold"), tags="selhl")
+
+    def _selected_row(self):
+        """表格里当前选中的那一行（没选中返回 None）。"""
+        tree = getattr(self, "tree_out", None)
+        if tree is None:
+            return None
+        try:
+            sel = tree.selection()
+        except tk.TclError:
+            return None
+        if not sel:
+            return None
+        return getattr(self, "_row_by_iid", {}).get(sel[0])
 
 
 if __name__ == "__main__":
     if not os.environ.get("DISPLAY") and os.name != "nt":
-        print("警告：DISPLAY 为空，图形界面无法显示。若在 WSL 里，请确认 WSLg 正常"
-              "（可先试 wsl --shutdown 再重开）。", file=sys.stderr)
+        print("警告：DISPLAY 为空，图形界面无法显示（当前环境没有可用的显示服务）。",
+              file=sys.stderr)
     _maybe_reexec()
     _say("启动中…正在加载数据与构建界面")
     App().mainloop()

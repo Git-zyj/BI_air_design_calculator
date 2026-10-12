@@ -166,6 +166,69 @@ def effect_score(mission, terms):
     return out
 GOLDEN_SHEET_CONSTANTS = True             # golden 回归时用表内（原版）系数，保持可比
 DEFAULT_RANGE_CAP = 900.0
+
+
+class RangeSpec(float):
+    """"最远目标距离 + 目标距离差"打包成一个 float 子类。
+
+    值 = **最远目标距离 d₁**（要完全覆盖目标区域、航程至少得够到这里）；
+    额外带 `band` = **目标距离差 Δ**（目标区域的纵深）→ 近边距离 d₀ = max(0, d₁ − Δ)。
+
+    为什么做成 float 子类：`range_cap` 这条参数在引擎里要穿过
+    `evaluate / optimize / route_best / route_best_joint / pick_mio_traits…`
+    十几个函数与调用点；做成 float 后所有老代码（`min(航程, range_cap)`、`÷ range_cap`…）
+    一行都不用改，只有真正需要"近边"的地方调 `range_coverage()` 取。
+    """
+
+    band = 0.0
+
+    def __new__(cls, cap, band=0.0):
+        obj = super().__new__(cls, float(cap or 0.0))
+        try:
+            obj.band = max(0.0, float(band or 0.0))
+        except (TypeError, ValueError):
+            obj.band = 0.0
+        return obj
+
+
+def range_band(range_cap):
+    """取"目标距离差"（老代码传进来的普通 float 没有 band → 0，等于旧口径）。"""
+    try:
+        return max(0.0, float(getattr(range_cap, "band", 0.0) or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def range_coverage(actual_range, range_cap):
+    """航程覆盖率（0~1）：一维版的"航程圆覆盖目标区域纵深"。
+
+    游戏里每个机翼 × 每个区域都有一个 `Coverage in this region: X%`
+    （本地化键 `AIRWING_REGION_COVERAGE`），没覆盖满就按缺口给效率惩罚
+    （`AIRBASE_DISTANCE_PENALTY_DETAIL`），一点都够不到就是
+    `Out of range of this Air Zone!`（等效 0 架）。
+
+    一维模拟（用户口径 2026-10-12）：
+        d₁ = 最远目标距离（= range_cap）、Δ = 目标距离差（区域纵深）
+        d₀ = max(0, d₁ − Δ)        ← 目标区域近边（不会跑到机场后面去）
+        depth = d₁ − d₀            ← 在我们这个距离口径里，区域真正占的纵深
+        覆盖率 = clamp((min(实际航程, d₁) − d₀) ÷ depth, 0, 1)
+
+    几个端点是自洽的（用户 2026-10-12 指出我先前写反了）：
+      Δ = 0   → depth = 0：区域缩成**最远目标距离上的一个点** → 二段式
+                （航程 ≥ d₁ 记 1，否则 0），**不是**旧口径；
+      Δ = d₁  → d₀ = 0、depth = d₁ → 就是旧口径 `min(航程, d₁) ÷ d₁`（近边在机场脚下）；
+      Δ > d₁  → 近边被夹到 0（区域有一截在机场"后面"，不算）→ 同样回到旧口径。
+    """
+    d1 = float(range_cap or 0.0)
+    if d1 <= 0:
+        return 1.0
+    rng = min(float(actual_range), d1)
+    d0 = max(0.0, d1 - range_band(range_cap))
+    depth = d1 - d0
+    if depth <= 0:                     # Δ ≤ 0：点目标 → 到不了就是 0，够得到就满分
+        return 1.0 if rng >= d1 else 0.0
+    covered = rng - d0
+    return max(0.0, min(1.0, covered / depth))
 GROUND_FLOOR = 0.0001
 
 ROLES = {
@@ -451,11 +514,15 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
                                     * (1 + coef.get("naval_strike_targetting", 0.0))
                                     + add.get("naval_strike_targetting", 0.0)),
     }
-    # 航程是"效率"而不是"产值"：航程不够时按 实际/目标 比例减成，够了封顶 1。
-    # 例：实际 450、目标 900 → 0.5。这样"远"用途的分数就是一个 0~1 的效率因子乘进去，
-    # 而不是乘一个 600~3600 的大数（以前那写法会让航程项主导整个分数）。
+    # 航程是"效率"而不是"产值"：航程不够时按覆盖率减成，够了封顶 1。
+    # 2026-10-12 改成一维覆盖模型（见 range_coverage()）：
+    #   d₁ = 最远目标距离、Δ = 目标距离差、d₀ = d₁ − Δ（目标区域近边）
+    #   覆盖率 = clamp((min(航程, d₁) − d₀) ÷ Δ, 0, 1)   ← 航程 ≤ d₀ 时是 0
+    # 老口径（近边 = 0，即区域从机场脚下一直铺到 d₁）是 Δ = d₁ 的特例：
+    #   实际 450、目标 900 → 0.5。
     values["range_cap"] = range_cap
-    values["range_factor"] = (values["range"] / range_cap) if range_cap else 1.0
+    values["range_band"] = range_band(range_cap)
+    values["range_factor"] = range_coverage(values["range"], range_cap)
 
     if bice_combat:
         a, s = COMBAT_AGILITY_DAMAGE_REDUCTION, COMBAT_SPEED_DAMAGE_INCREASE
@@ -523,7 +590,7 @@ def production_gain(prod, cap_now=100.0, capacity_now=200.0):
     p_ca = ((1 + ca + ca_add) / (1 + ca)) if (1 + ca) else 1.0
     cost_mod = float(prod.get("production_cost_factor", 0.0))
     p_cost = (1.0 / (1 + cost_mod)) if (1 + cost_mod) else 1.0
-    return p_cap * p_ca * p_cost, {"效率上限": p_cap, "产量": p_ca, "生产产出花费": p_cost}
+    return p_cap * p_ca * p_cost, {"生产效率上限": p_cap, "产量": p_ca, "生产产出花费": p_cost}
 
 
 def score_terms(role, values):
@@ -596,9 +663,22 @@ def score_breakdown(role, values, effective_cost=None):
         for label, value, expo in terms) or "1"
     lines = ["性能分数 %s = %s" % (fmt_num(pure), left)]
     if any(label == "航程效率" for label, _v, _e in terms):
-        lines.append("　航程效率 %s = 实际航程 %s ÷ 目标航程 %s（不够按比例减，够了封顶 1）"
-                     % (fmt_num(values.get("range_factor"), 4), fmt_num(values.get("range")),
-                        fmt_num(values.get("range_cap"))))
+        cap = float(values.get("range_cap") or 0.0)
+        band = float(values.get("range_band") or 0.0)
+        rng = values.get("range") or 0.0
+        if band > 0:
+            near = max(0.0, cap - band)
+            lines.append(
+                "　航程效率 %s = (min(实际航程 %s, 最远目标距离 %s) − 近边距离 %s) ÷ 目标距离差 %s"
+                "（航程不超过近边距离时记 0）"
+                % (fmt_num(values.get("range_factor"), 4), fmt_num(rng), fmt_num(cap),
+                   fmt_num(near), fmt_num(band)))
+            if values.get("range_factor", 0.0) <= 0:
+                lines.append("　　⚠ 航程 %s ≤ 近边距离 %s → 飞不到这个区域，效率记 0"
+                             % (fmt_num(rng), fmt_num(near)))
+        else:
+            lines.append("　航程效率 %s = 实际航程 %s ÷ 最远目标距离 %s（不够按比例减，够了封顶 1）"
+                         % (fmt_num(values.get("range_factor"), 4), fmt_num(rng), fmt_num(cap)))
     return lines
 
 
@@ -644,33 +724,76 @@ def combat_breakdown(role, values, enemy_values=None):
 def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,
              range_cap=DEFAULT_RANGE_CAP, experience=None, max_steps=60, accident_f=None,
              prod_mods=None):
-    """贪心：每步取边际性价比最高且 > 1 的改装加一级。"""
+    """贪心：每步取边际性价比最高且 > 1 的改装加一级。
+
+    ⚠ 2026-10-12 两次修正，都是为了"航程够不到近边 → 裸机分 0"这种情形：
+
+    1. 基线为 0 时不能再用 `gain = trial ÷ current`（0÷0 记 0 → 一步都不加），
+       改成**先看"拉满航程能不能过线"**：
+         · 拉满也过不了线 → 一个改装都不加（加了也是 0 分，只白花造价，明细显示"（无需改装）"）；
+         · 拉满能过线 → 按 **(分数, 航程)** 这个二元键逐步爬：单步还在 0 分时，
+           就先挑"航程涨得最多"的那一步，爬过线（分数 > 0）以后回到边际倍率规则。
+       （只比分数是不够的：副油箱 +120km、增程 +30km/级 这种**平添**航程的改装，
+        常常要连点两三级才能过线，单步分数一直是 0 → 旧逻辑会一步不加。）
+    2. 航程的"平添"部分（`add_stats.air_range`）也要算进"拉满能到多少"。
+    """
     tokens = [t for t in (available or SHEET_UPGRADES) if t in upgrade_map]
     levels = {t: 0 for t in tokens}
-    _, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                            accident_factor=accident_f, prod_mods=prod_mods)
+    values0, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
+                                 accident_factor=accident_f, prod_mods=prod_mods)
     current = scores[role]
+    # 近边距离（目标区域离机场最近的那条边）；过线 = 航程 > 近边
+    cap = float(range_cap or 0.0)
+    band = range_band(range_cap)
+    near = max(0.0, cap - band) if band > 0 else 0.0
+    reachable = True
+    if near > 0:
+        best_range = base["range"] * (1 + float((mods or {}).get("air_range", 0.0)))
+        for token in tokens:
+            up = upgrade_map[token]
+            m = (up.get("modifiers") or {}).get("air_range")
+            a = (up.get("add_stats") or {}).get("air_range")
+            # ⚠ 只累加**正向**的航程修正 —— 发动机/雷达那些是负航程，
+            # "把航程拉到最大"的人不会点它们（把它们算进来会低估上限，
+            # 实测曾因此把 MiG-9 误判成"拉满也过不了线"）。
+            if m and m > 0:
+                best_range += base["range"] * m * up["max_level"]
+            if a and a > 0:
+                best_range += a * up["max_level"]
+        reachable = best_range > near
     steps = []
     for _ in range(max_steps):
+        if not reachable:
+            break                       # 拉满也过不了线：不加改装，分数保持 0
         best = None
         for token in tokens:
             up = upgrade_map[token]
             if levels[token] >= up["max_level"]:
                 continue
             levels[token] += 1
-            _, _, trial = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                                   accident_factor=accident_f, prod_mods=prod_mods)
+            tv, _, trial = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
+                                    accident_factor=accident_f, prod_mods=prod_mods)
             levels[token] -= 1
-            gain = trial[role] / current if current else 0.0
-            if best is None or gain > best[0]:
-                best = (gain, token)
-        if not best or best[0] <= 1.0:
+            # current > 0：边际倍率（原规则）；current == 0：(分数, 航程) 双键起步
+            key = ((trial[role] / current) if current > 0
+                   else (float(trial[role]), float(tv.get("range", 0.0))))
+            if best is None or key > best[0]:
+                best = (key, token)
+        if not best:
             break
+        if current > 0:
+            if best[0] <= 1.0:
+                break
+        else:
+            # 分数还是 0（没过线）、航程也没涨 → 再点下去没意义
+            if best[0][0] <= 0.0 and best[0][1] <= float(values0.get("range", 0.0)) + 1e-9:
+                break
         levels[best[1]] += 1
-        _, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                                accident_factor=accident_f)
+        values0, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
+                                     accident_factor=accident_f)
         current = scores[role]
-        steps.append({"token": best[1], "gain": round(best[0], 6)})
+        gain = best[0][0] if isinstance(best[0], tuple) else best[0]
+        steps.append({"token": best[1], "gain": round(gain, 6)})
     values, eff_cost, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
                                         accident_factor=accident_f)
     return {"levels": levels, "values": values, "scores": scores,
@@ -729,6 +852,26 @@ MIO_MAX_LEVEL = 14
 # 路线搜索的粗筛规模：先用"不含改装"的廉价分取前 N 个可行集，再跑真实管线
 # （抽样验证：N=20~100 与全枚举结果完全一致；N=0 = 不粗筛/全枚举）
 ROUTE_TOP_K = 20
+# 机型类别的中文名（参考机型/对手信息里显示用）
+CATEGORY_ZH = {
+    "fighter": "战斗机", "light_fighter": "轻型战斗机", "heavy_fighter": "重型战斗机",
+    "multi_role": "多用途战斗机", "interceptor": "截击机", "night_fighter": "夜间战斗机",
+    "jet_fighter": "喷气式战斗机", "jet_mr_fighter": "喷气式多用途战斗机",
+    "rocket_interceptor": "火箭截击机", "cv_fighter": "舰载战斗机",
+    "cv_mr_fighter": "舰载多用途战斗机", "nav_bomber": "海军轰炸机",
+    "cv_nav_bomber": "舰载海军轰炸机", "cas": "近距支援机",
+    "naval_bomber": "海军轰炸机", "tac_bomber": "战术轰炸机",
+    "strat_bomber": "战略轰炸机", "scout_plane": "侦察机", "transport_plane": "运输机",
+    # 2026-10-13 补全：以前缺的这些类会直接显示成英文 key（如 cv_cas）。
+    # 说法按**汉化里全名末尾那一段**统计出来的（见 PLAN §50.22）。
+    "light_bomber": "轻型轰炸机", "quad_engine_bomber": "重型轰炸机",
+    "fast_bomber": "快速轰炸机", "cv_cas": "舰载近距支援机",
+    "twin_cas": "重型近距支援机", "flying_boat": "水上飞机",
+    "heavy_nav_bomber": "重型海军轰炸机", "nav_bomber_gb": "海军轰炸机（制导）",
+    "fighter_navy": "海军多用途战斗机", "interceptor_navy": "海军截击机",
+    "suicide_craft": "自杀攻击机", "jet_cas": "喷气式近距支援机",
+    "jet_tac_bomber": "喷气式轰炸机",
+}
 # 对手（AI）的满经验加成：机动 +20% / 速度 +5%（用户实测口径；可界面手填覆盖）
 ENEMY_EXPERIENCE = {"air_agility": 0.20, "maximum_speed": 0.05}
 # 空军 MIO 的装备类型关键字（判断一个组织是不是做飞机的）
@@ -1182,12 +1325,15 @@ def production_route(org, base, techs=(), cap_now=100.0, capacity_now=200.0,
     用在两种口径里：
       设计/生产分离 → 生产那家 MIO 就按它点这些特质；
       兼顾         → 拿它和"设计向路线"比折算后的总分数，谁高用谁。
-    返回 (token 列表, 该子集的生产折算倍率)；没有任何生产修正时返回 ([], 1.0)。
+    返回 (token 列表, 该子集的生产折算倍率, 该子集的生产修正合计)；
+    没有任何生产修正时是 ([], 1.0, {})。第三个值是给"资源加权分"用的
+    —— 它要把**生产那家**的生产资源需求也算进资源开销里。
     """
     groups = plane_groups((base or {}).get("archetype"))
     arche = (base or {}).get("archetype")
     order, masks = mio_feasible_sets(org, max_level, techs, groups, arche)
     best, best_gain, best_n = [], 1.0, 10 ** 9
+    best_prod = {}
     for mask in masks:
         picked, prod = [], {}
         for i, trait in enumerate(order):
@@ -1196,8 +1342,8 @@ def production_route(org, base, techs=(), cap_now=100.0, capacity_now=200.0,
                 prod = combine_modifiers(prod, trait.get("production") or {})
         gain = production_gain(prod, cap_now, capacity_now)[0]
         if gain > best_gain + 1e-9 or (abs(gain - best_gain) <= 1e-9 and len(picked) < best_n):
-            best, best_gain, best_n = picked, gain, len(picked)
-    return [order[i]["token"] for i in best], best_gain
+            best, best_gain, best_n, best_prod = picked, gain, len(picked), prod
+    return [order[i]["token"] for i in best], best_gain, best_prod
 
 
 def _mods_of(order, picked, mods0):

@@ -38,7 +38,91 @@ def app_dir():
 
 
 DEFAULT_OUT = os.path.abspath(os.path.join(app_dir(), "output", "BI_SOV_选型输出.xlsx"))
+OUTPUT_DIR = os.path.dirname(DEFAULT_OUT)
 INPUTS = os.path.join(app_dir(), "inputs.json")
+BUILD_INFO = os.path.join(engine.DATA_DIR, "build_info.json")
+
+
+def build_info():
+    """版本标识（分支 / 模组版本 / 工坊号）。
+
+    放在 `data/` 里而不是代码里：main 与 beta 两个分支的**代码是同一份**
+    （beta 用 `git checkout main -- <code>` 同步），只有 `data/` 各自不同。
+    """
+    try:
+        with open(BUILD_INFO, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:                       # noqa: BLE001
+        return {}
+
+
+def edition_label():
+    """给标题栏用的一行版本说明，例如「黑冰正式版 v12.1.0」。"""
+    info = build_info()
+    edition, ver = info.get("edition") or "", info.get("mod_version") or ""
+    if edition and ver:
+        return "%s v%s" % (edition, ver)
+    return edition or ("v%s" % ver if ver else "（未标注版本）")
+
+
+# 用途 → 导出文件名里用的短名
+ROLE_FILE = {"air_near": "对空", "air_far": "对空", "air_cv": "对空舰载",
+             "ground_near": "对地近", "ground_far": "对地远",
+             "naval_near": "对海近", "naval_far": "对海远", "naval_cv": "对海舰载",
+             "recon": "侦察运输"}
+
+
+def output_path(inputs):
+    """导出文件名：带上国家/年份/用途，免得连续导出几份分不清。
+
+    例：`output\\飞机选型_SOV_1944年_科技1944_对空.xlsx`
+    """
+    roles = inputs.get("roles") or []
+    names = []
+    for r in roles:
+        n = ROLE_FILE.get(r, r)
+        if n not in names:
+            names.append(n)
+    parts = ["飞机选型", str(inputs.get("country") or "?"),
+             "%s年" % (inputs.get("current_year") or ""),
+             "科技%s" % (inputs.get("tech_year") or "")]
+    if names:
+        parts.append("+".join(names))
+    return os.path.abspath(os.path.join(OUTPUT_DIR, "_".join(parts) + ".xlsx"))
+
+
+def last_inputs_path():
+    """上次输入的"记忆文件"。
+
+    优先 `%LOCALAPPDATA%\\BI_air_design_calculator\\`（exe 目录可能是只读的，
+    比如放在 Program Files 或解压到只读盘），写不进去才退回 exe 同目录。
+    """
+    base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+    if base:
+        folder = os.path.join(base, "BI_air_design_calculator")
+        try:
+            os.makedirs(folder, exist_ok=True)
+            return os.path.join(folder, "last_inputs.json")
+        except OSError:
+            pass
+    return os.path.join(app_dir(), "last_inputs.json")
+
+
+def save_last_inputs(inputs):
+    try:
+        with open(last_inputs_path(), "w", encoding="utf-8") as fh:
+            json.dump(inputs, fh, ensure_ascii=False, indent=1)
+        return True
+    except Exception:                       # noqa: BLE001
+        return False
+
+
+def clear_last_inputs():
+    try:
+        os.remove(last_inputs_path())
+        return True
+    except OSError:
+        return False
 
 # ---------- 路线方案（方针 × 特质）的表与缓存 ----------
 # 离线预计算表随工具发布（只读）；运行时新算出来的方案写进用户机器上的缓存文件。
@@ -53,7 +137,11 @@ PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓�
 #   v4 = 生产侧可靠并进有效造价（与设计侧可靠同效）+ 路线搜索改"廉价分粗筛 top-K
 #        → 分数会变（粗筛经抽样验证与全枚举结果一致）
 #   v5 = 粗筛 top-K 从 50 调到 20（用户口径；抽样验证与全枚举一致）+ 表内"生产花费"改名
-PLAN_CACHE_VERSION = 5
+#   v6 = 航程改成一维覆盖模型（最远目标距离 d₁ + 目标距离差 Δ，近边 d₀ = d₁ − Δ）：
+#        航程 ≤ d₀ 时覆盖率记 0（以前是 min(航程,d₁)/d₁，永远 > 0）→ 路线/改装最优解会变
+#   v7 = 贪心改装加"起步"：基线分数为 0（航程够不到近边）时先按**绝对分**挑第一步，
+#        否则 0÷0 会被记成 0、一步都不加 → "拉满航程就能到"的机型也被判 0 分
+PLAN_CACHE_VERSION = 7
 
 
 def plan_key(inputs, org_name, ref_key):
@@ -66,13 +154,24 @@ def plan_key(inputs, org_name, ref_key):
         str(inputs.get("current_year") or ""),
         ",".join(inputs.get("roles") or []),
         ",".join(sorted(inputs.get("unlocked_techs") or [])),
-        ",".join(sorted(inputs.get("unlocked_flags") or [])),
+        # 【方案 D 2026-10-12】特殊工程标识（unlocked_flags）**不进方案键**。
+        # 它只决定"哪些改装可选"，而改装是**实时**算的，不参与 (方针 + 特质路线) 的
+        # 搜索；实测 苏/德/美/日 × 1941/1944/1946 共 12 组，勾与不勾标识的
+        # MIO 与方针 12/12 完全一致、分数也相同（只有部分机型的改装配方多一项
+        # 「空对空火箭弹」）。留在键里会让勾了标识的用户 100% 打不中离线表 →
+        # 每次开界面都要现算 1~2 秒/家。
+        # 这里**故意留一个空占位段**：分片的键是整串拼接（"|" 连接），删掉一段会让
+        # 已发布的 12 个离线分片全部作废（要重跑 ~35 分钟）；留空占位后"没勾标识"
+        # （绝大多数用户）的键字符串与老分片逐字相同，命中照旧。
+        "",
         # 只有"要和对手交互"的用途才把对手放进键：对地/对海/侦察/对海（舰载）
         # 的分数只用自身属性（打分公式里没有战斗比值）→ 换对手不该让它们的方案作废。
         (json.dumps(inputs.get("enemy") or {}, sort_keys=True)
          if set(inputs.get("roles") or []) & {"air_near", "air_far", "air_cv"} else "-"),
         json.dumps(inputs.get("experience") or {}, sort_keys=True),
         str(inputs.get("range_cap") or ""),
+        # 目标距离差也影响航程覆盖率 → 必须进键（否则改了差值会读到旧方案）
+        str(inputs.get("range_band") if inputs.get("range_band") is not None else ""),
         str(inputs.get("alloc_mode") or "split"),
         # 生产堆叠只影响"兼顾"（分离口径的路线与分数跟堆叠无关）→
         # 分离时用默认值入键，这样改效率上限/产量加成不会把分离那条计划也判失效。
@@ -179,8 +278,11 @@ def upgrade_label(token):
 
 DEFAULT_INPUTS = {
     "country": "SOV",                       # 当前国家 tag（决定候选机身与可用 MIO）
-    "current_year": 1939,                   # 示例默认：1939 年起步
-    "tech_year": 1939,
+    # 出厂示例默认 1941/1942（用户口径 2026-10-12）：配合新的航程覆盖口径，
+    # 1939 年那批机型在"最远 900 / 差值 300"下大半飞不到（覆盖率 0），
+    # 示例看起来像坏了；1941/1942 这一档机型航程够用、候选也齐（14 架里只有 2 架覆盖率 0）。
+    "current_year": 1941,
+    "tech_year": 1942,
     "roles": ["air_far"],                   # 界面不再区分远近，统一按"远"算，距离由 range_cap 决定
     "manufacturer_mode": "manual",          # "manual" = 直接给修正；"traits" = 选 MIO 特质
     "manufacturer_modifiers": {
@@ -190,7 +292,8 @@ DEFAULT_INPUTS = {
     },
     "national_spirits": ["SOV_improved_designs", "SOV_USA_aid_air"],   # 示例默认：苏联的两个
     "extra_modifiers": {},
-    "unlocked_techs": ["advanced_machine_tools", "computing_machine"],  # 1939 年前完成的科技
+    "unlocked_techs": ["advanced_machine_tools", "computing_machine",   # 1941 年前完成的科技
+                       "assembly_line_production", "Ltaircraft_industry2", "worker_training"],
     "unlocked_flags": [],
     # 我方联队经验**不建模**（= 0）：表口径是"设计值"，经验只在对手段单独建模
     # （engine.ENEMY_EXPERIENCE）。留这个键只是为了兼容旧 inputs.json 的写法。
@@ -200,6 +303,9 @@ DEFAULT_INPUTS = {
     "enemy": {"country": "GER", "rule": "previous_year", "override_key": None,
               "by_country": {}},
     "range_cap": 900.0,                     # 距离目标（航程上限）默认 900；600 起每 300 一档
+    # 目标距离差 Δ = 目标区域纵深（近边距离 d₀ = range_cap − Δ）。默认 300：
+    # 航程 ≤ 900−300 = 600 的飞机对"最远 900"的区域完全够不到 → 效率记 0。
+    "range_band": 300.0,
     "efficiency_cap_now": 100,              # 当前生产效率上限（%）——生产折算用
     "capacity_bonus_now": 200,              # 当前产能加成（%）——生产折算用
     "mio": {"organization": "", "level": 14, "manual_traits": None},   # 军工组织默认满级
@@ -262,34 +368,47 @@ CARRIER_ARCHETYPES = ("cv_fighter_equipment", "cv_mr_fighter_equipment",
 
 
 def pick_reference_plane(pool, inputs, data, upgrade_map, enemy_by_role):
-    """路线优化 / 装备类型过滤用的"参考机型"：
-    **该用途下"空修正"分数最高的候选**（陆基用途优先非舰载机型）。
+    """参考机型 = **该国 AI 在该用途下的主力机型**（按 `priority`，用户口径 2026-10-12）。
 
-    以前直接取 `max(pool, key=year)`：1939 会挑到舰载机 I-153k、1944 会挑到重型战斗机 MiG-5
-    —— 按它们的装备组去过滤 MIO，下拉和特质表都会带偏（雅科夫列夫就被误删过）。
-    用"谁分最高"当代表，和工具自己的口径一致。
+    ⚠️ 不能直接取 priority 全局最大：喷气机/夜间战斗机那一档的数字天生更高
+    （10000~13000，日间战斗机只有 1000~2000），会把参考机型带到夜间机/重型机上
+    —— 实测苏联 1939/1941 被带到 Ip-1（重型）→ 装备组只被雅科夫列夫覆盖 →
+    "比较 1 个组织"。所以先限定类别：
+      对空 → fighter / light_fighter（其次 multi_role、heavy_fighter）
+      舰载 → cv_fighter / cv_mr_fighter（其次上面两类）
+    再按 priority 取最高。与"对手选取"同一口径（对手那边已验证 德国 1944 = Bf 109 G-14）。
     """
     if not pool:
         return None
-    carrier_role = any(r in engine.CARRIER_ROLES for r in (inputs.get("roles") or ()))
-    cands = pool if carrier_role else (
-        [a for a in pool if a.get("archetype") not in CARRIER_ARCHETYPES] or pool)
     role = (inputs.get("roles") or ["air_far"])[0]
-    _enemy, enemy_values = enemy_by_role.get(role, (None, None))
-    score_key = engine.score_role(role)
-    acc_f = engine.accident_factor(role in engine.CARRIER_ROLES)
-    best, best_score = cands[0], None
-    for airframe in cands:
-        tokens = engine.available_upgrades(
-            airframe["category"], data, techs=inputs.get("unlocked_techs") or [],
-            flags=inputs.get("unlocked_flags") or [], archetype=airframe.get("archetype"))[0]
-        result = engine.optimize(airframe, upgrade_map, {}, enemy_values, score_key,
-                                 available=tokens, range_cap=inputs.get("range_cap"),
-                                 experience=inputs.get("experience"), accident_f=acc_f)
-        value = result["scores"].get(score_key, 0.0)
-        if best_score is None or value > best_score:
-            best, best_score = airframe, value
-    return best
+    preferred = {
+        "air_near": ("fighter", "light_fighter", "fighter_alt"),
+        "air_far": ("fighter", "light_fighter", "fighter_alt"),
+        "air_cv": ("cv_fighter", "cv_mr_fighter", "fighter", "light_fighter"),
+        "naval_cv": ("cv_nav_bomber", "nav_bomber", "naval_bomber"),
+    }.get(role, ())
+    for cats in (preferred, ("multi_role", "heavy_fighter", "interceptor"), None):
+        cands = list(pool) if not cats else [a for a in pool if a.get("category") in cats]
+        if cands:
+            return max(cands, key=lambda a: ((a.get("priority") or 0), a.get("year") or 0))
+    return pool[0]
+
+
+#: 候选池的"年式窗口"（用户口径 2026-10-12）：科技年份 N 只算**最近 3 个年式**
+#: （N−2、N−1、N）—— 1942 年就只看 1940/1941/1942 的机型，1936 年的 I-16
+#: 不会再出现在 1944 的候选名单里。想放宽/收紧改这一个数就行。
+POOL_WINDOW = 3
+
+
+def range_spec(inputs):
+    """把「最远目标距离 + 目标距离差」打包成 `engine.RangeSpec` 传给引擎。
+
+    2026-10-12 航程改成一维覆盖模型（见 §50）：近边距离 d₀ = 最远目标距离 − 目标距离差；
+    航程不超过 d₀ 的飞机对该区域**完全够不到**（覆盖率 0）。老 inputs.json 没有
+    `range_band` 时按 0 处理 → 退化成旧口径（近边 = 0）。
+    """
+    return engine.RangeSpec(inputs.get("range_cap") or engine.DEFAULT_RANGE_CAP,
+                            inputs.get("range_band") or 0.0)
 
 
 def candidate_pool(inputs, data):
@@ -297,12 +416,22 @@ def candidate_pool(inputs, data):
 
     用途只决定"能用哪一类飞机"：对空挑战斗机族、对地挑 CAS 族、对海挑海军轰炸机族、
     侦察/运输挑侦察机与运输机。这样对地不会再选出一架多用途战斗机。
+
+    年份窗口：只保留**最近 `POOL_WINDOW` 个年式**（N−2 / N−1 / N）。
+    窗口锚在"该用途下**实际最新**的可用年式"上，而不是死的科技年份——有些国家/机种
+    在科技年份那一年根本没有新机（例如德国 1948 的对空、苏联 1947 的对地），
+    用科技年份当锚会算出空窗口、只能退回"全部 ≤ 科技年份"（等于没限制）。
+    锚在最新可用年式上，既能保住"只看最近三个年式"，又不会出现空候选池。
     """
     archetypes = engine.role_archetypes(inputs["roles"])
-    return [a for a in data["airframes_all"]
-            if a.get("country") == inputs.get("country")
-            and (a.get("year") or 0) <= inputs["tech_year"]
-            and a.get("archetype") in archetypes]
+    all_ok = [a for a in data["airframes_all"]
+              if a.get("country") == inputs.get("country")
+              and (a.get("year") or 0) <= inputs["tech_year"]
+              and a.get("archetype") in archetypes]
+    if not all_ok:
+        return []
+    newest = max((a.get("year") or 0) for a in all_ok)
+    return [a for a in all_ok if (a.get("year") or 0) >= newest - (POOL_WINDOW - 1)]
 
 
 def build_rows(inputs, data):
@@ -310,6 +439,9 @@ def build_rows(inputs, data):
     if inputs.get("modifier_source") == "manual":
         inputs = dict(inputs)
         inputs["manufacturer_mode"] = "manual"
+    # 航程参数打包成 RangeSpec（float 子类，额外带"目标距离差"）—— 引擎里所有
+    # range_cap 的小数运算照旧，"近边距离"只有 range_coverage() 会用到。
+    rng = range_spec(inputs)
     upgrade_map = engine.upgrades_by_key(data["upgrades"])
     candidates = candidate_pool(inputs, data)
     # 对手按用途分别取（参考机型与每行都要用，所以先算）
@@ -360,14 +492,23 @@ def build_rows(inputs, data):
             acc_f = engine.accident_factor(role in engine.CARRIER_ROLES)
             result = engine.optimize(airframe, upgrade_map, player_mods, role_enemy_values,
                                      score_key,
-                                     available=tokens, range_cap=inputs.get("range_cap"),
+                                     available=tokens, range_cap=rng,
                                      experience=inputs.get("experience"), accident_f=acc_f,
                                      # 生产侧可靠与设计侧同效（修正装备当前可靠性）→ 进有效造价
                                      prod_mods=mfr_info.get("production"))
             # 资源加权分：把该路线/方针的"生产资源需求"修正折算进除数
             # （需求 −5% ⇒ 等效资源开销 ×0.95 ⇒ 资源加权分变高）
-            _need = (mfr_info.get("production") or {}).get("production_resource_need_factor", 0.0)
-            weighted = engine.resource_weighted(result["scores"], airframe, need_factor=_need)
+            if "production_need_override" in mfr_info:
+                # 「分离」：生产交给生产伙伴，资源开销按**那家**的资源需求算
+                _need = float(mfr_info.get("production_need_override") or 0.0)
+                _prod_view = {"production_resource_need_factor": _need}
+            else:
+                _prod_view = mfr_info.get("production") or {}
+                _need = _prod_view.get("production_resource_need_factor", 0.0)
+            # 分子给的是**纯设计分**；生产折算在下面写行时统一乘 gain，
+            # 这样 资源加权分 = 折算后总分数 ÷ 资源开销，和表里的总分数同口径。
+            weighted = engine.resource_weighted(result["scores"], airframe,
+                                                need_factor=_need)
             design = " ".join(
                 "%s×%d" % (upgrade_label(t), n)
                 for t, n in result["levels"].items() if n
@@ -379,6 +520,8 @@ def build_rows(inputs, data):
                 "score": result["scores"][score_key] * gain,       # 生产折算后（÷ 等效造价）
                 "weighted": weighted.get(score_key, 0.0) * gain,
                 "production_gain": gain,
+                # 该路线实际生效的生产侧修正：明细里摊开"资源加权分"算式时用同一个资源需求值
+                "production": _prod_view,
                 "enemy": role_enemy,
                 "enemy_values": role_enemy_values,
                 "airframe": airframe,
@@ -422,7 +565,7 @@ def route_value(org, plane, tokens, mods0, upgrade_map, data, inputs, enemy_valu
         flags=inputs.get("unlocked_flags") or [], archetype=plane.get("archetype"))[0]
     key = engine.score_role(role)
     result = engine.optimize(plane, upgrade_map, mods, enemy_values, key, available=avail,
-                             range_cap=inputs.get("range_cap"),
+                             range_cap=range_spec(inputs),
                              experience=inputs.get("experience"),
                              accident_f=engine.accident_factor(role in engine.CARRIER_ROLES))
     gain = engine.production_gain(prod, inputs.get("efficiency_cap_now", 100),
@@ -448,14 +591,14 @@ def best_production_plan(inputs, data, plane):
         types = set(org.get("equipment_types") or [])
         if groups and not (types & groups):
             continue
-        tokens, gain = engine.production_route(org, plane, techs, cap, ca)
+        tokens, gain, mods = engine.production_route(org, plane, techs, cap, ca)
         if gain <= 1.0 + 1e-9:
             continue
         better = (best is None or gain > best["gain"] + 1e-9
                   or (abs(gain - best["gain"]) <= 1e-9 and len(tokens) < len(best["tokens"])))
         if better:
             best = {"organization": org["organization"], "tokens": tokens, "gain": gain,
-                    "level": engine.MIO_MAX_LEVEL}
+                    "level": engine.MIO_MAX_LEVEL, "mods": mods}
     return best
 
 
@@ -528,10 +671,11 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
             _fold = (inputs.get("alloc_mode") or "split") == "balanced"
             _ckey = (org["organization"], level, ref.get("key"), _fold, _cap, _ca,
                      tuple(sorted(inputs.get("unlocked_techs") or [])),
-                     tuple(inputs["roles"]), float(inputs.get("range_cap") or 0))
+                     tuple(inputs["roles"]), float(inputs.get("range_cap") or 0),
+                     float(inputs.get("range_band") or 0))
             _chosen, mods, log = engine.route_best(
                 org, level, ref, upgrade_map, base_mods, _enemy_values, inputs["roles"],
-                inputs.get("range_cap"), inputs.get("experience"),
+                range_spec(inputs), inputs.get("experience"),
                 techs=inputs.get("unlocked_techs") or [], cap_now=_cap, capacity_now=_ca,
                 available=avail, fold=_fold, cache_key=_ckey)
             for item in log:
@@ -554,6 +698,10 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
                 and partner["organization"] != org["organization"]):
             info["production_partner"] = partner
             info["production_gain_override"] = partner["gain"]
+            # 生产那家的"生产资源需求"要一起进资源加权分的除数
+            # （否则 ④ 面板写着"资源消耗×0.95"，明细里却按 1.0000 算）
+            info["production_need_override"] = (partner.get("mods") or {}).get(
+                "production_resource_need_factor", 0.0)
             prod = {}                  # 本 MIO 只做设计，生产不算它的
             info["alloc_mode"] = "split→生产换家"
         else:
@@ -740,7 +888,10 @@ def write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_inf
         ("对手设计商加成（机动/速度）", _enemy_mod_line(inputs, "modifiers")),
         ("对手联队经验加成（机动/速度）", _enemy_mod_line(inputs, "experience")),
         ("对手修正来源", _enemy_source_line(inputs)),
-        ("航程上限", inputs.get("range_cap")),
+        ("最远目标距离 d₁", inputs.get("range_cap")),
+        ("目标距离差 Δ（区域纵深）", inputs.get("range_band")),
+        ("目标区域近边距离 d₀（= d₁ − Δ）",
+         max(0.0, float(inputs.get("range_cap") or 0) - float(inputs.get("range_band") or 0))),
         ("事故年损失率 f", engine.ACCIDENT_FACTOR),
         ("事故年损失率 f（舰载，× ACCIDENT_CHANCE_CARRIER_MULT）",
          "%.6f（= %.6f × %.2f）" % (engine.ACCIDENT_FACTOR_CARRIER, engine.ACCIDENT_FACTOR,

@@ -1,7 +1,7 @@
 {
   "country": "SOV",
-  "current_year": 1939,
-  "tech_year": 1939,
+  "current_year": 1941,
+  "tech_year": 1942,
   "roles": ["air_far"],
   "manufacturer_mode": "manual",
   "modifier_source": "mio",
@@ -18,7 +18,7 @@
   },
   "national_spirits": ["SOV_improved_designs", "SOV_USA_aid_air"],
   "extra_modifiers": {},
-  "unlocked_techs": ["advanced_machine_tools", "computing_machine"],
+  "unlocked_techs": ["advanced_machine_tools", "computing_machine", "assembly_line_production", "Ltaircraft_industry2", "worker_training"],
   "unlocked_flags": [],
   "experience": {},
   "enemy": {

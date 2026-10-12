@@ -9,3 +9,7 @@ release/
 *.spec
 # 运行时方案缓存（本机生成，随包发布的离线表是 data/route_table.json）
 route_cache.json
+# 自检/调试的临时产物（不进版本库；_ui_out.txt 是 selftest_ui 重定向输出，
+# _probe_*.py 是我排查用的探针脚本。踩过：`git add -A` 把它们顺手提交了）
+_ui_out.txt
+_probe_*.py
