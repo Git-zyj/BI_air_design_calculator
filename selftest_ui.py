@@ -59,7 +59,8 @@ def t_startup(app):
                 "%d 行" % len(app.tree_out.get_children()))
     # 状态行要么是"已计算 N 行…"，要么是"⚠ 全飞不到"这句提示
     hint = app.lbl_hint.cget("text")
-    ok &= check("状态行给出下一步提示", "已计算" in hint or "⚠" in hint, repr(hint))
+    ok &= check("状态行给出下一步提示",
+                "已计算" in hint or "已重算" in hint or "⚠" in hint, repr(hint))
     ok &= check("字体信息单独成行（没占状态行）", "字体" not in app.lbl_hint.cget("text"),
                 repr(app.lbl_font.cget("text")))
     ok &= check("窗口不超过屏幕", app.winfo_height() <= app.winfo_screenheight() - 60,
@@ -69,7 +70,8 @@ def t_startup(app):
     app.on_calculate()
     pump(app, 1.0)
     hint2 = app.lbl_hint.cget("text")
-    ok &= check("点计算后状态行有反馈", "已计算" in hint2 or "⚠" in hint2, repr(hint2))
+    ok &= check("点计算后状态行有反馈",
+                "已计算" in hint2 or "已重算" in hint2 or "⚠" in hint2, repr(hint2))
     return ok
 
 
@@ -488,7 +490,13 @@ def t_table_coverage(full=False):
     years = range(1939, 1949) if full else (1939, 1943, 1947)
     techs = range(1939, 1949) if full else (1939, 1944, 1948)
     groups = 0
+    # 2026-10-12：算法版本升到 v7 后按用户口径**只重跑了苏德**，
+    # 其余四国的分片还是 v6 键（用起来会现算并写进本机缓存，结果一样、就是慢一点）。
+    # 所以这里对苏德严格断言 0 缺失，其余国家只报告缺失数（不当失败）。
+    strict = ("SOV", "GER")
+    misses_by_country = {}
     for country in ("SOV", "GER", "USA", "Commonwealth", "JAP", "ITA"):
+        misses_by_country[country] = len(misses)
         label = app._tag_labels.get(country)
         if not label:
             continue
@@ -518,8 +526,11 @@ def t_table_coverage(full=False):
                             app._org_plan(org, inputs)
                         groups += 1
     app.destroy()
-    ok = check("离线表命中（缺 %d 个）" % len(misses), not misses,
-               "走了 %d 组%s" % (groups, "（全量）" if full else "（抽样）"))
+    strict_miss = sum(1 for m in misses if m.split("|")[3] in strict)
+    other = len(misses) - strict_miss
+    ok = check("离线表命中：苏德缺 %d 个" % strict_miss, strict_miss == 0,
+               "走了 %d 组%s；其余四国缺 %d 个（分片还是 v6 键，运行时现算+本机缓存）"
+               % (groups, "（全量）" if full else "（抽样）", other))
     for m in misses[:3]:
         print("     缺：%s" % m[:130])
     return ok

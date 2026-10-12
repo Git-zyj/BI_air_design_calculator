@@ -1545,6 +1545,7 @@ class App(tk.Tk):
         self._rec_apply = apply_org
         self._rec_queue = list(self._air_orgs()[0])
         self._rec_done = {}
+        self._rec_zero = []          # 算出方案、但分数是 0 的组织（航程够不到之类）
         self._rec_t0 = _t.time()
         self._rec_seq = getattr(self, "_rec_seq", 0) + 1
         self.after(1, self._recommend_step)
@@ -1557,8 +1558,11 @@ class App(tk.Tk):
         if queue:
             org = queue.pop(0)
             plan = self._org_plan(org, self._rec_inputs)
-            if plan and plan.get("score"):
-                self._rec_done[org["organization"]] = (org, plan)
+            if plan:
+                if plan.get("score"):
+                    self._rec_done[org["organization"]] = (org, plan)
+                else:
+                    self._rec_zero.append(org["organization"])
             self.after(1, lambda: self._recommend_step(seq))
             return
         self._recommend_finish()
@@ -1609,8 +1613,18 @@ class App(tk.Tk):
                     zh(self.loc, best["organization"]),
                     zh(self.loc, pol["token"]) if pol else "无方针", extra))
         else:
-            self.lbl_org_rec.configure(text="推荐：（暂无可比较的军工组织）")
-            _dbg("MIO 路线：比较 %d 个组织 → 无可比较结果（用时 %.2fs）" % (len(orgs), spent))
+            zeros = getattr(self, "_rec_zero", [])
+            if zeros:
+                # 有方案但全是 0 分：多半是参考机型在这个距离口径下航程不够
+                ref = self._ref_plane()
+                self.lbl_org_rec.configure(
+                    text="⚠ 参考机型%s在该距离口径下最优方案也是 0 分（航程不够）"
+                         "—— 调小最远目标距离或调大目标距离差"
+                         % ("%s " % (zh(self.loc, ref["key"]) or ref["name"]) if ref else ""))
+            else:
+                self.lbl_org_rec.configure(text="推荐：（暂无可比较的军工组织）")
+            _dbg("MIO 路线：比较 %d 个组织 → 无可比较结果（0 分 %d 家，用时 %.2fs）"
+                 % (len(orgs), len(zeros), spent))
         if self._rec_apply:
             self._on_org_change()
 

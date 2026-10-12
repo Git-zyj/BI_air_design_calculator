@@ -724,7 +724,15 @@ def combat_breakdown(role, values, enemy_values=None):
 def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,
              range_cap=DEFAULT_RANGE_CAP, experience=None, max_steps=60, accident_f=None,
              prod_mods=None):
-    """贪心：每步取边际性价比最高且 > 1 的改装加一级。"""
+    """贪心：每步取边际性价比最高且 > 1 的改装加一级。
+
+    ⚠ 2026-10-12 修：**基线分数为 0 时要先"起步"**。
+    航程覆盖模型下，一架航程够不到近边的飞机"裸机分"就是 0，而旧代码算的是
+        gain = trial ÷ current = 0 ÷ 0 → 记 0 → 一步都不加 → 永远 0
+    —— 于是"加满副油箱/航程改装就能到"的机型也被判 0 分（用户实测：最远 1200、
+    1946 科技时全变 0，连 MIO 都没得比）。现在基线为 0 时改用**绝对分数**比大小，
+    先让它"够得着"；一旦分数 > 0 就回到原来的边际倍率规则。
+    """
     tokens = [t for t in (available or SHEET_UPGRADES) if t in upgrade_map]
     levels = {t: 0 for t in tokens}
     _, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
@@ -741,10 +749,13 @@ def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,
             _, _, trial = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
                                    accident_factor=accident_f, prod_mods=prod_mods)
             levels[token] -= 1
-            gain = trial[role] / current if current else 0.0
+            # current > 0：边际倍率（原规则）；current == 0：先比**绝对分**起步
+            gain = (trial[role] / current) if current > 0 else float(trial[role])
             if best is None or gain > best[0]:
                 best = (gain, token)
-        if not best or best[0] <= 1.0:
+        if not best:
+            break
+        if (current > 0 and best[0] <= 1.0) or (current <= 0 and best[0] <= 0.0):
             break
         levels[best[1]] += 1
         _, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,

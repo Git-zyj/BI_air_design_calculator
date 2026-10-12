@@ -139,7 +139,9 @@ PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓�
 #   v5 = 粗筛 top-K 从 50 调到 20（用户口径；抽样验证与全枚举一致）+ 表内"生产花费"改名
 #   v6 = 航程改成一维覆盖模型（最远目标距离 d₁ + 目标距离差 Δ，近边 d₀ = d₁ − Δ）：
 #        航程 ≤ d₀ 时覆盖率记 0（以前是 min(航程,d₁)/d₁，永远 > 0）→ 路线/改装最优解会变
-PLAN_CACHE_VERSION = 6
+#   v7 = 贪心改装加"起步"：基线分数为 0（航程够不到近边）时先按**绝对分**挑第一步，
+#        否则 0÷0 会被记成 0、一步都不加 → "拉满航程就能到"的机型也被判 0 分
+PLAN_CACHE_VERSION = 7
 
 
 def plan_key(inputs, org_name, ref_key):

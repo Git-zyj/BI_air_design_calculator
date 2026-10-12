@@ -194,6 +194,24 @@ def t_range_coverage(data):
     ok &= check("Δ=300 会压低短航程飞机的覆盖率", bool(lowered),
                 "%d 架覆盖率被压低（其中 %d 架为 0）"
                 % (len(lowered), sum(1 for k in lowered if fb[k] <= 0)))
+    # 起步（2026-10-12 修）：裸机航程 < 近边、但加航程改装后能到的机型，不该被判 0 分。
+    # 1941/科技 1942 @900/300：修前 LaGG-1（588）、MiG-1（571）都是 0 分。
+    rows_c, *_ = run.build_rows(inputs_for("SOV", "air_far", 1942, 1941), data)
+    rc = [r for r in rows_c if r["role"] == "air_far"]
+    zero_c = [r for r in rc if r["values"]["range_factor"] <= 0]
+    ok &= check("裸机够不到、加改装能到的机型不再被判 0（1941/科技1942）", not zero_c,
+                "0 分：%s" % [r["airframe"]["name"] for r in zero_c])
+    # 远距离口径：够得到的要有分、够不到的就得是 0（1946 @ 最远 1200 / 差值 300）
+    rows_d, *_ = run.build_rows(inputs_for("SOV", "air_far", 1946, 1946,
+                                           range_cap=1200.0, range_band=300.0), data)
+    rd = [r for r in rows_d if r["role"] == "air_far"]
+    top_d = rd[0]
+    blocked = sum(1 for r in rd if r["values"]["range_factor"] <= 0)
+    ok &= check("1946 @ 最远 1200/差值 300：够得到的有分、够不到的 0 分",
+                top_d["score"] > 0 and top_d["values"]["range_factor"] > 0 and blocked > 0,
+                "首名 %s 分 %.3f 覆盖率 %.3f；0 分 %d/%d 架"
+                % (top_d["airframe"]["name"], top_d["score"],
+                   top_d["values"]["range_factor"], blocked, len(rd)))
     return ok
 
 
