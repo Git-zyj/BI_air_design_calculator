@@ -892,10 +892,18 @@ class App(tk.Tk):
         self._recommend_org()
 
     def _on_tech_year_changed(self):
-        """科技年份变了：候选机身（也就是改装/科技清单）跟着变。"""
+        """飞机科技年份变了：候选机身（→ 参考机型 / 改装 / ③ 科技清单）跟着变。
+
+        按 Spinbox 箭头走 `command=` 直接调这里；**直接键入**走 `_bind_live_refresh()`
+        里的 trace（带 400ms 防抖）后也调这里 —— 两条路的终点一致。
+        """
         self._plans.clear()
         self._build_tech_checks()
         self._refresh_country()
+
+    def _apply_tech_year_changed(self):
+        self._tech_job = None
+        self._on_tech_year_changed()
 
     def _tech_usage(self):
         """{科技: ["改装：改良舱盖", "方针：完美抛光", ...]}——这项科技能启用什么（全称）。"""
@@ -2266,16 +2274,40 @@ class App(tk.Tk):
 
         Spinbox 的 `command=` 只在按上下箭头时触发，**直接键入年份不会触发**，
         于是出现过：debug 里对手已经是 Bf 109 G-14，② 那行还写着 109 D（旧年份的对手）。
+        同理，"飞机科技年份"键入时也不会重建 ③、不会重推 ④ —— 于是"参考机型"一直
+        停在旧年份那架（用户 2026-10-12 发现）。这两个输入现在都挂 trace + 防抖。
         """
         def on_year(*_a):
             try:
-                int(self.var_year.get())
+                val = int(self.var_year.get())
             except (tk.TclError, ValueError):
                 return                     # 还在输入中（例如只敲了 "19"）
+            if not (1930 <= val <= 1960):
+                return                     # 半截数字（"1"/"19"/"194"），等输完再算
             self._refresh_enemy()
             self._on_inputs_affecting_plan()   # 年份变了：重推路线与方针，别让下拉停在旧值
 
         self.var_year.trace_add("write", on_year)
+
+        # 飞机科技年份：候选机身（→ 参考机型 → MIO 过滤 → 3③ 的科技清单）都由它决定，
+        # 键入时必须和"按箭头"走同一条路：重建 ③ + 重推 ④ 的推荐与参考机型。
+        # 连敲（1→19→194→1944）只算最后一次。
+        def on_tech_year(*_a):
+            try:
+                val = int(self.var_tech.get())
+            except (tk.TclError, ValueError):
+                return
+            if not (1930 <= val <= 1960):
+                return
+            job = getattr(self, "_tech_job", None)
+            if job:
+                try:
+                    self.after_cancel(job)
+                except Exception:          # noqa: BLE001
+                    pass
+            self._tech_job = self.after(400, self._apply_tech_year_changed)
+
+        self.var_tech.trace_add("write", on_tech_year)
 
         # 生产折算的两个输入：改了要重算，但**必须防抖** —— 以前每敲一个字符
         # （例如输入 118 时先敲出 "1"）就整套重算，冷路径下要卡 2 秒以上。
