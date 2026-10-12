@@ -471,7 +471,7 @@ class App(tk.Tk):
             pass
 
     def _pop_to_front(self):
-        """把窗口顶到最前——WSLg 开的新窗口常常落在其它窗口后面，看起来像"没弹出来"。"""
+        """把窗口顶到最前——新开的窗口偶尔会落在其它窗口后面，看起来像"没弹出来"。"""
         try:
             self.deiconify()
             self.lift()
@@ -480,7 +480,7 @@ class App(tk.Tk):
             self.focus_force()
             _say("窗口已显示（标题：%s）。若仍看不到，检查是否有窗口挡在前面；"
                  % self.title() +
-                 "或执行 wsl --shutdown 后重开 WSL 再试。")
+                 "也可以在任务栏里找一下这个窗口。")
         except tk.TclError:
             pass
 
@@ -666,7 +666,7 @@ class App(tk.Tk):
         # 右侧：字体信息单列一个小标签，别占着"状态行"
         font_hint = "字体：%s" % self.family
         if not self.font_ok:
-            font_hint += "（当前 Tk 不支持 TTF 中文，请用 gui.sh 启动）"
+            font_hint += "（当前 Tk 不支持 TTF 中文，中文可能显示成宋体/位图字）"
         self.lbl_font = tk.Label(banner, text=font_hint, background=BANNER_BG,
                                  foreground=BANNER_SUB, font=(self.family, FONT_NOTE), padx=PADX)
         self.lbl_font.pack(side="right")
@@ -3186,8 +3186,8 @@ class App(tk.Tk):
 
 if __name__ == "__main__":
     if not os.environ.get("DISPLAY") and os.name != "nt":
-        print("警告：DISPLAY 为空，图形界面无法显示。若在 WSL 里，请确认 WSLg 正常"
-              "（可先试 wsl --shutdown 再重开）。", file=sys.stderr)
+        print("警告：DISPLAY 为空，图形界面无法显示（当前环境没有可用的显示服务）。",
+              file=sys.stderr)
     _maybe_reexec()
     _say("启动中…正在加载数据与构建界面")
     App().mainloop()
