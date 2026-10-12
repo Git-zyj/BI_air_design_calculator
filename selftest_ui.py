@@ -270,6 +270,41 @@ def t_wrapping(app):
 
 
 # ----------------------------------------------------- 10. 离线表覆盖（抽样）
+def t_card4_layout(app):
+    """④ 卡片的排版一致性：字段名左对齐 + 行距一致（用户 2026-10-12 反馈）。"""
+    print("[12] ④ 排版：字段名对齐 + 行距一致")
+    app.geometry("1280x980")
+    pump(app, 0.8)
+    card = app.lbl_policy.master
+    texts = {}
+    rows = {}
+    for child in card.winfo_children():
+        gi = child.grid_info()
+        if not gi:
+            continue
+        try:
+            texts[child.cget("text")] = child
+        except Exception:                    # noqa: BLE001
+            pass
+        r = int(gi["row"])
+        rows[r] = min(rows.get(r, 10 ** 6), child.winfo_y())
+    xs = [texts[t].winfo_x() for t in ("配点方式", "军工组织", "方针", "等级") if t in texts]
+    ok = check("四个字段名左对齐（同一个 x）", len(xs) == 4 and len(set(xs)) == 1, str(xs))
+    # 行距用**单元格**量（grid_bbox）：子控件在不同行高里会被垂直居中，
+    # 拿子控件的 y 去比会假抖动 ±3px（实测 35~40），单元格才是真正的排版节奏。
+    heights = []
+    for r in range(0, 9):
+        try:
+            _x, _y, _w, h = card.grid_bbox(0, r)
+        except Exception:                    # noqa: BLE001
+            h = -1
+        heights.append(h)
+    ok &= check("前 9 行行高完全一致", len(set(heights)) == 1 and heights[0] > 0,
+                "行高 %s" % heights)
+    return ok
+
+
+# ----------------------------------------------------- 10. 离线表覆盖（抽样）
 def t_table_coverage(full=False):
     print("[10] 离线表覆盖（方案键命中率）")
     app = new_app()
@@ -337,6 +372,7 @@ def main():
     t_export(app)
     t_small_window(app)
     t_wrapping(app)
+    t_card4_layout(app)
     app.destroy()
     t_memory()
     t_table_coverage(args.full)
