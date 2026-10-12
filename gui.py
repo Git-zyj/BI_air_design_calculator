@@ -18,6 +18,7 @@ import os
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
+from datetime import datetime
 from tkinter import ttk, messagebox
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -212,8 +213,21 @@ def _maybe_reexec():
     os.execv(BISOV_PY, [BISOV_PY, os.path.abspath(__file__)] + sys.argv[1:])
 
 
+# 本次会话的日志（右上角状态栏点开可看、可导出）：不管有没有控制台都记，
+# 这样发行版（--windowed，没有 stdout）的用户也能把"我做了什么"导出来报错。
+LOG_MAX = 4000
+LOG = []
+
+
+def _log_line(text):
+    LOG.append("%s  %s" % (datetime.now().strftime("%H:%M:%S"), text))
+    if len(LOG) > LOG_MAX:
+        del LOG[:len(LOG) - LOG_MAX]
+
+
 def _say(text):
     """启动阶段提示（打印到终端，方便"窗口没弹出来"时定位卡在哪一步）。"""
+    _log_line("启动：" + text)
     if getattr(sys, "stdout", None) is None:
         return          # 打包成 --windowed 的 exe 时没有控制台
     print("[BI_SOV] %s" % text)
@@ -225,6 +239,7 @@ DEBUG = bool(getattr(sys, "stdout", None)) or ("-v" in sys.argv)
 
 def _dbg(text):
     """调试信息：只有带控制台（调试版 exe / 命令行）时才打印，发行版静默。"""
+    _log_line(text)
     if DEBUG and getattr(sys, "stdout", None) is not None:
         print("[DEBUG] %s" % text)
         sys.stdout.flush()
@@ -258,6 +273,9 @@ class App(tk.Tk):
                 self.inputs.update(json.load(fh))
         # 「记住上次输入」：有记忆文件就用它覆盖示例默认值（用户口径 2026-10-12）
         self._last_inputs_path = run.last_inputs_path()
+        # ⚠ 属性名别叫 `_first_run` —— 那是"首屏自动算一次"的**方法**名，
+        # 同名会把方法覆盖成 bool，`after(200, self._first_run)` 直接 TypeError。
+        self._is_first_run = not os.path.exists(self._last_inputs_path)  # 首次使用（没记忆文件）
         if os.path.exists(self._last_inputs_path):
             try:
                 with open(self._last_inputs_path, encoding="utf-8") as fh:
@@ -354,6 +372,88 @@ class App(tk.Tk):
         _dbg("重置为默认：%s / %s" % (self.var_tag.get(), self.var_year.get()))
         self.lbl_hint.configure(text="已重置为默认输入（%s / %s）"
                                      % (self.var_tag.get(), self.var_year.get()))
+
+    # ---------- 操作记录 / 日志小窗（右上角状态栏点开）----------
+    def _log_header(self):
+        """日志开头的一段"环境信息"：报错时维护者一眼能看出是哪套数据/环境。"""
+        try:
+            info = run.build_info()
+        except Exception:                      # noqa: BLE001
+            info = {}
+        return [
+            "=== BI_SOV 飞机选型 · 操作记录 ===",
+            "版本：%s（工坊 %s）｜游戏 %s" % (run.edition_label(), info.get("workshop_id", "?"),
+                                          info.get("game_version", "?")),
+            "数据指纹：%s" % engine.data_fingerprint(),
+            "Python：%s｜Tk 字体：%s" % (sys.version.split()[0], self.family),
+            "日志：%d 行（最多保留 %d 行）" % (len(LOG), LOG_MAX),
+            "-" * 60,
+        ]
+
+    def _refresh_log_text(self):
+        txt = getattr(self, "_log_text", None)
+        if txt is None or not txt.winfo_exists():
+            return
+        txt.configure(state="normal")
+        txt.delete("1.0", "end")
+        txt.insert("end", "\n".join(self._log_header() + LOG))
+        txt.see("end")
+        txt.configure(state="disabled")
+
+    def _open_log_window(self):
+        """点状态栏弹出的小窗：本次会话干了什么（可导出给维护者报错）。"""
+        self._is_first_run = False        # 看过操作记录 = 已经"上手"了，别再挂提醒
+        win = getattr(self, "_log_win", None)
+        if win is not None and win.winfo_exists():
+            self._refresh_log_text()
+            win.deiconify()
+            win.lift()
+            return
+        win = tk.Toplevel(self)
+        self._log_win = win
+        win.title("操作记录 / 日志")
+        win.geometry("860x480")
+        win.configure(background=PAGE_BG)
+        bar = ttk.Frame(win)
+        bar.pack(fill="x", padx=PADX, pady=(PADX, 4))
+        ttk.Label(bar, text="这里是本次打开后的操作与计算记录（按时间顺序）。"
+                            "遇到问题就点右边「导出 log」，把文件发给维护者。").pack(side="left")
+        ttk.Button(bar, text="导出 log", command=self._export_log,
+                   style="Tight.TButton").pack(side="right")
+        ttk.Button(bar, text="刷新", command=self._refresh_log_text,
+                   style="Tight.TButton").pack(side="right", padx=(0, 6))
+        ttk.Button(bar, text="清空", command=self._clear_log,
+                   style="Tight.TButton").pack(side="right", padx=(0, 6))
+        box = ttk.Frame(win)
+        box.pack(fill="both", expand=True, padx=PADX, pady=(0, PADX))
+        txt = tk.Text(box, wrap="none", font=(self.family, FONT_NOTE),
+                      background="white", foreground=INK)
+        sb = ttk.Scrollbar(box, orient="vertical", command=txt.yview)
+        txt.configure(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        txt.pack(side="left", fill="both", expand=True)
+        self._log_text = txt
+        self._refresh_log_text()
+        _dbg("打开操作记录窗口（%d 行）" % len(LOG))
+
+    def _clear_log(self):
+        del LOG[:]
+        self._refresh_log_text()
+        self.lbl_hint.configure(text="已清空本次的操作记录")
+
+    def _export_log(self):
+        """把日志导出到 output\\BI_SOV_log_时间戳.txt。"""
+        os.makedirs(run.OUTPUT_DIR, exist_ok=True)
+        path = os.path.join(run.OUTPUT_DIR,
+                            "BI_SOV_log_%s.txt" % datetime.now().strftime("%Y%m%d-%H%M%S"))
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(self._log_header() + LOG))
+        except OSError as exc:
+            messagebox.showerror("导出 log 失败", str(exc))
+            return
+        _dbg("导出日志：%s" % path)
+        self.lbl_hint.configure(text="已导出 log → %s" % os.path.basename(path))
 
     def _scroll_to(self, widget, pad=6):
         """把某一块滚动到可视区（算完滚到结果区、双击行滚到明细区）。"""
@@ -570,10 +670,16 @@ class App(tk.Tk):
         self.lbl_font = tk.Label(banner, text=font_hint, background=BANNER_BG,
                                  foreground=BANNER_SUB, font=(self.family, FONT_NOTE), padx=PADX)
         self.lbl_font.pack(side="right")
-        # 状态行（"点计算"/"已计算 N 行"/"已导出 …"）
-        self.lbl_hint = tk.Label(banner, text="正在准备…", background=BANNER_BG,
-                                 foreground=BANNER_SUB, font=(self.family, FONT_NOTE))
+        # 状态行（"点计算"/"已计算 N 行"/"已导出 …"）；**点一下能看操作记录**（用户口径）
+        self.lbl_hint = tk.Label(
+            banner,
+            text=("首次使用？建议先看同目录的「开始使用前先看.txt」"
+                  "｜点这里看操作记录 / 导出 log" if getattr(self, "_is_first_run", False)
+                  else "正在准备…（点这里看操作记录 / 导出 log）"),
+            background=BANNER_BG, foreground=BANNER_SUB, font=(self.family, FONT_NOTE),
+            cursor="hand2")
         self.lbl_hint.pack(side="right")
+        self.lbl_hint.bind("<Button-1>", lambda _e: self._open_log_window())
 
         # 整页可上下滚动（卡片多、屏幕矮时不至于看不到底部）
         outer = tk.Frame(self, background=PAGE_BG)
@@ -606,11 +712,15 @@ class App(tk.Tk):
         # 看上去就像"有两个对空、少了一个对海"。子框之后，它们不可能再互相覆盖。
         roles_bar = ttk.Frame(box)
         roles_bar.grid(row=0, column=1, columnspan=4, sticky="w", pady=(ROW_PAD, ROW_PAD))
+        # 用途**单选**（用户口径 2026-10-12）：外观仍是 6 个勾选框，但只能选一个。
+        # 多选用会导致"分数线混在一起"，而且表里的用途筛选/帕累托比较也失去意义。
+        cur_role = (cur_roles or ["air_far"])[0]
         for key, label in ROLE_CHOICES:
-            v = tk.BooleanVar(value=key in cur_roles)
+            v = tk.BooleanVar(value=(key == cur_role))
             self.role_vars[key] = v
             ttk.Checkbutton(roles_bar, text=label, variable=v,
-                            command=self._on_roles_changed).pack(side="left", padx=(0, PADX))
+                            command=lambda k=key: self._on_role_click(k)).pack(
+                side="left", padx=(0, PADX))
         # 第 1 行：两对"字段块"（标签 + 控件紧贴，和 ②④ 一个规矩）——
         # 直接放在卡片网格里的话，下面那条长说明（跨 5 列）会把列宽撑开，
         # "最远目标距离"到它自己的下拉框就被拉出老远（用户 2026-10-12 报）。
@@ -1048,27 +1158,25 @@ class App(tk.Tk):
         bar2 = ttk.Frame(card)
         bar2.grid(row=1, column=0, sticky="ew", padx=PADX, pady=(0, 2))
         ttk.Label(bar2, text="筛选").pack(side="left", padx=(0, 6))
-        self.var_f_role = tk.StringVar(value="全部")
         self.var_f_year = tk.StringVar(value="全部")
         self.var_f_pareto = tk.StringVar(value="全部")
         self.var_filter = tk.StringVar(value="")
-        self.cb_f_role = ttk.Combobox(bar2, textvariable=self.var_f_role, width=9, state="readonly")
         self.cb_f_year = ttk.Combobox(bar2, textvariable=self.var_f_year, width=7, state="readonly")
         self.cb_f_pareto = ttk.Combobox(bar2, textvariable=self.var_f_pareto, width=10,
                                         state="readonly", values=["全部", "只看前沿", "只看被支配"])
-        for text, widget in (("用途", self.cb_f_role), ("年份", self.cb_f_year),
-                             ("帕累托", self.cb_f_pareto)):
+        # 用途改成单选以后，"用途筛选"就没意义了（一次只算一个用途）——去掉
+        for text, widget in (("年份", self.cb_f_year), ("帕累托", self.cb_f_pareto)):
             ttk.Label(bar2, text=text).pack(side="left", padx=(PADX, 2))
             widget.pack(side="left")
         ttk.Label(bar2, text="机型").pack(side="left", padx=(PADX, 2))
         ttk.Entry(bar2, textvariable=self.var_filter, width=14).pack(side="left")
         ttk.Label(bar2, text="（点表头排序；右上角下拉选轴）").pack(side="left", padx=PADX)
-        for var in (self.var_f_role, self.var_f_year, self.var_f_pareto, self.var_filter):
+        for var in (self.var_f_year, self.var_f_pareto, self.var_filter):
             var.trace_add("write", lambda *_: self._render_rows())
 
         self.tree_out = ttk.Treeview(card,
                                      columns=("role", "rank", "pareto", "plane", "pure",
-                                              "effect", "cost", "year", "weighted", "design"),
+                                              "effect", "cost", "weighted", "year", "design"),
                                      show="headings", height=12)
         for cid, text, w, anchor in (("role", "用途", 110, "w"), ("rank", "#", 36, "center"),
                                      ("pareto", "帕累托", 56, "center"),
@@ -1076,8 +1184,8 @@ class App(tk.Tk):
                                      ("pure", "总分数（性能/造价）", 140, "e"),
                                      ("effect", "性能分数", 96, "e"),
                                      ("cost", "有效造价（IC）", 108, "e"),
-                                     ("year", "年份", 52, "center"),
                                      ("weighted", "飞机装配资源加权分（总分数/资源开销）", 210, "e"),
+                                     ("year", "年份", 52, "center"),
                                      ("design", "推荐改装（全称）", 430, "w")):
             self.tree_out.heading(cid, text=text,
                                   command=lambda c=cid: self._sort_by(c))
@@ -2183,6 +2291,23 @@ class App(tk.Tk):
         self._plans.clear()            # 用途变了，"满级最优"重新比较
         self._recommend_org()
 
+    def _on_role_click(self, key):
+        """用途**单选**（用户口径 2026-10-12）：选一个就把别的关掉；不允许一个都不选。
+
+        外观仍是 6 个勾选框（用户要求"不用变成一个选择槽"），只是行为互斥。
+        （勾选框自己会先把变量翻过去，所以这里要处理两种情况：选新的 / 点掉当前这个。）
+        """
+        if not self.role_vars[key].get():        # 取消动作 → 直接按回选中
+            self.role_vars[key].set(True)
+        self._syncing_roles = True
+        try:
+            for k, var in self.role_vars.items():
+                if k != key and var.get():
+                    var.set(False)
+        finally:
+            self._syncing_roles = False
+        self._on_roles_changed()
+
     def _sync_distance_choices(self):
         """按当前用途刷新「最远目标距离」的挡位；超出上限就收到该档上限。"""
         roles = [k for k, v in self.role_vars.items() if v.get()] or ["air_far"]
@@ -2620,13 +2745,17 @@ class App(tk.Tk):
         op = getattr(self, "_last_op", None)      # 上一次改了什么（状态行用）
         self._last_op = None
         prefix = "「%s」已生效：" % op if op else ""
+        # 首次使用（还没有记忆文件）：状态行一直挂着"先看说明书"的提醒，
+        # 直到用户点开过操作记录小窗为止（不然首屏那一两秒就被算完了，根本看不到）。
+        suffix = ("｜首次使用？先看「开始使用前先看.txt」"
+                  if getattr(self, "_is_first_run", False) else "")
         if rows and len(zeros) == len(rows):
             self.lbl_hint.configure(
                 text=("%s⚠ 该「最远目标距离 / 目标距离差」下所有机型都飞不到（覆盖率 0）"
-                      "—— 调小最远目标距离或调大目标距离差" % prefix))
+                      "—— 调小最远目标距离或调大目标距离差%s" % (prefix, suffix)))
         else:
-            self.lbl_hint.configure(text="%s已重算 %d 行；需要写文件时点「导出 Excel」"
-                                         % (prefix, len(rows)))
+            self.lbl_hint.configure(text="%s已重算 %d 行；需要写文件时点「导出 Excel」%s"
+                                         % (prefix, len(rows), suffix))
         if view_result:
             self._scroll_to(self.card_result)  # 结果在折叠线以下，按了计算就带过去
 
@@ -2704,7 +2833,7 @@ class App(tk.Tk):
         for key, rv in self.role_vars.items():
             watch(rv, "勾选用途 %s" % ROLE_SHORT.get(key, key))
         for var, label in ((self.var_filter, "改机型筛选"), (self.var_f_year, "改年份筛选"),
-                           (self.var_f_role, "改用途筛选"), (self.var_f_pareto, "改帕累托筛选"),
+                           (self.var_f_pareto, "改帕累托筛选"),
                            (self.var_axis_x, "改 X 轴"), (self.var_axis_y, "改 Y 轴")):
             watch(var, label)
 
@@ -2936,16 +3065,7 @@ class App(tk.Tk):
         # 年份下拉按当前候选动态生成
         years = sorted({str(r["airframe"].get("year")) for r in self.rows if r["airframe"].get("year")})
         self.cb_f_year.configure(values=["全部"] + years)
-        roles = []
-        for r in self.rows:
-            label = ROLE_SHORT.get(r["role"], r["role"])
-            if label not in roles:
-                roles.append(label)
-        self.cb_f_role.configure(values=["全部"] + roles)
-
-        if self.var_f_role.get() != "全部":
-            view = [r for r in view
-                    if ROLE_SHORT.get(r["role"], r["role"]) == self.var_f_role.get()]
+        # （用途已改成单选，一次只算一个用途 → 不再需要用途筛选）
         if self.var_f_year.get() != "全部":
             view = [r for r in view if str(r["airframe"].get("year")) == self.var_f_year.get()]
         mode = self.var_f_pareto.get()
@@ -2971,9 +3091,9 @@ class App(tk.Tk):
                 # 生产折算只体现在"总分数"与资源加权分上。
                 "{:,.1f}".format(row.get("score_raw", row["score"]) * row["effective_cost"]),
                 "%.2f" % row["effective_cost"],
-                row["airframe"].get("year", ""),
                 "{:,.2f}（装配 {}）".format(row["weighted"],
                                            row["airframe"].get("air_production", 0)),
+                row["airframe"].get("year", ""),
                 row["design"]))
             self._row_by_iid[iid] = row
         star = sum(1 for r in self.rows if r.get("pareto"))

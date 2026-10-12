@@ -193,6 +193,9 @@ def t_memory():
                    and int(app.var_tech.get()) == 1942,
                    "%s / %s / 科技 %s" % (app.var_tag.get(), app.var_year.get(),
                                           app.var_tech.get()))
+        ok &= check("首次打开时状态栏提示先看说明书",
+                    "开始使用前先看.txt" in app.lbl_hint.cget("text"),
+                    repr(app.lbl_hint.cget("text"))[:70])
         app.var_tag.set("德国")
         app.var_year.set(1944)
         pump(app, 0.8)
@@ -507,6 +510,56 @@ def t_distance_choices(app):
     return ok
 
 
+def t_role_single_and_log(app):
+    """用途单选 + 表格列顺序 + 状态栏日志小窗（用户口径 2026-10-12）。"""
+    print("[15] 用途单选 / 表格列顺序 / 操作记录小窗")
+    ok = True
+    # 用途单选：点别的就只剩它；点自己不会变成"一个都不选"
+    for k, v in app.role_vars.items():
+        v.set(k == "air_far")
+    app._on_role_click("naval_far")
+    pump(app, 0.8)
+    chosen = [k for k, v in app.role_vars.items() if v.get()]
+    ok &= check("点'对海'后只剩它选中", chosen == ["naval_far"], str(chosen))
+    app._on_role_click("naval_far")
+    pump(app, 0.6)
+    ok &= check("再点自己不会变成全不选",
+                [k for k, v in app.role_vars.items() if v.get()] == ["naval_far"])
+    app._on_role_click("air_far")
+    pump(app, 0.8)
+    ok &= check("再点'对空'只切到对空",
+                [k for k, v in app.role_vars.items() if v.get()] == ["air_far"])
+    # 用途筛选控件应该已经没了
+    ok &= check("表头筛选里不再有'用途'", not hasattr(app, "var_f_role"))
+    # 列顺序：资源加权分 在 年份 之前
+    cols = [app.tree_out.heading(c)["text"] for c in app.tree_out.cget("columns")]
+    i_w = next(i for i, t in enumerate(cols) if t.startswith("飞机装配资源加权分"))
+    i_y = next(i for i, t in enumerate(cols) if t == "年份")
+    ok &= check("资源加权分列在年份列之前", i_w < i_y, "第 %d 列 vs 第 %d 列" % (i_w, i_y))
+    # 状态栏点开日志窗、能导出
+    app._open_log_window()
+    pump(app, 0.5)
+    ok &= check("日志小窗能打开", app._log_win.winfo_exists())
+    body = app._log_text.get("1.0", "end")
+    ok &= check("日志里有环境信息与操作行",
+                "操作记录" in body and "数据指纹" in body and "操作：" in body,
+                "日志 %d 字符" % len(body))
+    import glob
+    before = set(glob.glob(os.path.join(run.OUTPUT_DIR, "BI_SOV_log_*.txt")))
+    app._export_log()
+    pump(app, 0.4)
+    new = set(glob.glob(os.path.join(run.OUTPUT_DIR, "BI_SOV_log_*.txt"))) - before
+    ok &= check("能导出 log 文件", bool(new) and "已导出 log" in app.lbl_hint.cget("text"),
+                (sorted(new)[0].split(os.sep)[-1] if new else "没生成文件"))
+    for f in new:                     # 自检不留垃圾
+        try:
+            os.remove(f)
+        except OSError:
+            pass
+    app._log_win.destroy()
+    return ok
+
+
 def t_table_coverage(full=False):
     print("[10] 离线表覆盖（方案键命中率）")
     app = new_app()
@@ -586,6 +639,7 @@ def main():
     t_card4_layout(app)
     t_style(app)
     t_distance_choices(app)
+    t_role_single_and_log(app)
     app.destroy()
     t_memory()
     t_table_coverage(args.full)
