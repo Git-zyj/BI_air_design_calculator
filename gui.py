@@ -426,11 +426,15 @@ class App(tk.Tk):
                    style="Tight.TButton").pack(side="right", padx=(0, 6))
         box = ttk.Frame(win)
         box.pack(fill="both", expand=True, padx=PADX, pady=(0, PADX))
+        # wrap="none"：日志里有很长的单行（制造商来源 JSON、操作明细），
+        # 所以纵向之外还要**横向**滚动条，否则右半截被裁掉看不到。
         txt = tk.Text(box, wrap="none", font=(self.family, FONT_NOTE),
                       background="white", foreground=INK)
         sb = ttk.Scrollbar(box, orient="vertical", command=txt.yview)
-        txt.configure(yscrollcommand=sb.set)
+        hb = ttk.Scrollbar(box, orient="horizontal", command=txt.xview)
+        txt.configure(yscrollcommand=sb.set, xscrollcommand=hb.set)
         sb.pack(side="right", fill="y")
+        hb.pack(side="bottom", fill="x")
         txt.pack(side="left", fill="both", expand=True)
         self._log_text = txt
         self._refresh_log_text()
@@ -1431,9 +1435,12 @@ class App(tk.Tk):
         return out
 
     def _plan_key(self, inputs):
+        # 本机方案缓存（内存）的键。与 run.plan_key 同口径：**不含** unlocked_flags
+        # ——特殊工程标识只影响"哪些改装可选"，改装是实时算的；勾/不勾标识时
+        # 方针与特质路线完全一致（实测 12 组）。放进键里会让用户一勾标识就
+        # 把整表方案判失效、逐家现算。
         return (tuple(inputs["roles"]), inputs["tech_year"], inputs["current_year"],
                 tuple(sorted(inputs.get("unlocked_techs") or [])),
-                tuple(sorted(inputs.get("unlocked_flags") or [])),
                 float(inputs.get("range_cap") or 0),
                 float(inputs.get("range_band") or 0),      # 目标距离差也进键（口径 §50）
                 json.dumps(inputs.get("experience") or {}, sort_keys=True),
@@ -1909,10 +1916,43 @@ class App(tk.Tk):
     def _refresh_alloc_recommendation(self):
         """比较"分离 / 兼顾"哪个更优，写在配点口径右边（分块算，不阻塞界面）。
 
-        两个口径的计划都走同一套 `_org_plan`（表/缓存命中就瞬间出）。
+        两个口径都走 `_alloc_mode_top_score`：先用 `_org_plan`（表/缓存命中就瞬间出）
+        取该口径的路线，再用 `run.build_rows` 按**结果表同口径**算出"最好的那架飞机"
+        的总分数来比。见 `_alloc_mode_top_score` 里对旧口径的说明。
         """
         self._alloc_rec_seq = getattr(self, "_alloc_rec_seq", 0) + 1
         self.after(1, lambda: self._alloc_rec_step(self._alloc_rec_seq))
+
+    def _alloc_mode_top_score(self, org, inputs, mode):
+        """某配点口径下"表里第 1 名"的总分数（性能 ÷ 等效造价），含生产折算。
+
+        为什么不能直接比 `_org_plan` 的路线分数：那是**参考机型**在设计侧
+        `optimize` 出来的分 × 生产折算，而两条口径里"折算"的含义不同 ——
+        分离口径的 `_org_plan` 是 fold=False（gain 记 1.0），**压根没算**"生产换家"
+        那家伙伴的折算；兼顾口径才是自己的折算。于是 苏联 1944/1946 雅科夫列夫
+        两者都报 15.0341 → 界面写"高 0.00%"（用户实测质疑），
+        而结果表里同一次输入是 分离 22.8037 / 兼顾 21.3617（分离高 6.75%）。
+        现在两边都走 `run.build_rows`（和表里同一段代码）：分离自动带上生产伙伴的
+        gain，兼顾带上自己的 gain，比的就是用户实际会看到的"总分数"。
+
+        路线**钉住**该口径 `_org_plan` 的那条（与 ④ 预览、表里选中的路线一致）；
+        为此把 manual_traits 写进 probe，`resolve_manufacturer` 就不再自己搜一遍。
+        """
+        probe = dict(inputs)
+        probe["alloc_mode"] = mode
+        plan = self._org_plan(org, probe)
+        if not plan:
+            return None
+        mio = dict(probe.get("mio") or {})
+        mio["manual_traits"] = list(plan.get("route") or [])
+        probe["mio"] = mio
+        try:
+            rows, _mods, _enemy, _ev, _info = run.build_rows(probe, self.data)
+        except (Exception, SystemExit):      # noqa: BLE001
+            return None
+        if not rows:
+            return None
+        return max(float(r.get("score") or 0.0) for r in rows)
 
     def _alloc_rec_step(self, seq):
         if seq != getattr(self, "_alloc_rec_seq", -1):
@@ -1926,21 +1966,29 @@ class App(tk.Tk):
             return
         scores = {}
         for mode in ("split", "balanced"):
-            probe = dict(inputs)
-            probe["alloc_mode"] = mode
-            plan = self._org_plan(org, probe)
-            if plan and plan.get("score"):
-                scores[mode] = plan["score"]
+            score = self._alloc_mode_top_score(org, inputs, mode)
+            if score:
+                scores[mode] = score
         if len(scores) < 2:
             self.lbl_alloc_rec.configure(text="")
             return
         better = max(scores, key=scores.get)
         worse = min(scores, key=scores.get)
         gap = (scores[better] / scores[worse] - 1) * 100 if scores[worse] else 0.0
+        _dbg("配点口径：分离 %.4f vs 兼顾 %.4f（按表中第 1 名的总分数比）"
+             % (scores.get("split", 0.0), scores.get("balanced", 0.0)))
         # 不给"持平"这种话：总有一个更高的，把差距直接给出来，用户自己判断
         label = dict(ALLOC_MODES)[better]
         short = label.split("（")[0]
-        self.lbl_alloc_rec.configure(text="推荐：%s（比另一种高 %.2f%%）" % (short, gap))
+        if gap >= 0.005:
+            text = "推荐：%s（比另一种高 %.2f%%）" % (short, gap)
+        else:
+            # 两种口径可能落到**同一套特质**（常见于"本 MIO 就是本国最好的生产方"，
+            # 没有更优的生产伙伴可换）→ 表里两行逐位相同。这时写"高 0.00%"会被
+            # 当成"没算生产折算"的老毛病（用户 2026-10-12 就是这么质疑的），
+            # 所以直接说明"同解"，不写 0.00%。
+            text = "推荐：%s（比另一种高 <0.01%%，两种口径同解）" % short
+        self.lbl_alloc_rec.configure(text=text)
         # 用户还没自己选过 → 直接把默认口径也切到推荐那个
         # （以前默认固定"分离"，新用户看到推荐"兼顾"却不知道要不要动）
         if not getattr(self, "_alloc_user_picked", False) and self.var_alloc_mode.get() != label:

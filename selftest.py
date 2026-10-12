@@ -276,6 +276,39 @@ def t_table_files(data):
     return ok
 
 
+# ------------------------------------------- 7b. 方案键布局（方案 D：标识不进键）
+def t_plan_key_layout():
+    """方案键是**整串**比对、且 precompute 按下标取段 —— 段数与段位不能变。
+
+    2026-10-12「方案 D」把特殊工程标识（unlocked_flags）移出方案键：它只影响
+    "哪些改装可选"，改装是实时算的，不进 (方针 + 特质路线) 的搜索。为了**不让
+    已发布的 12 个离线分片全部作废**（键是整串拼接，删一段全会变），
+    `run.plan_key` 里保留了一个**空占位段**（下标 8）。
+    这条自检就是钉住这件事：谁要是把占位段删了、或又把标识塞回键里，这里立刻红。
+    """
+    print("[7b] 方案键布局（方案 D：特殊工程标识不进键）")
+    i = inputs_for("SOV", "air_far", 1944, 1944)
+    i_flag = dict(i, unlocked_flags=["unlock_plane_anti_air_rocket_upgrade"])
+    k0 = run.plan_key(i, "SOV_yakovlev_design_bureau_organization", "yakovlev_9u_equipment")
+    k1 = run.plan_key(i_flag, "SOV_yakovlev_design_bureau_organization", "yakovlev_9u_equipment")
+    ok = check("勾/不勾特殊工程标识 → 同一串键（离线表照旧命中）", k0 == k1,
+               "长度 %d vs %d" % (len(k0), len(k1)))
+    parts = k0.split("|")
+    # plan_key 本身 18 段（下标 0~17）；离线表存的是它 + "|pol:..." 共 19 段
+    ok &= check("段数仍是 18 段（下标 0~17；离线表键 = 本键 + 方针段）", len(parts) == 18,
+                "%d 段" % len(parts))
+    ok &= check("占位段（下标 8）为空串", len(parts) > 8 and parts[8] == "",
+                repr(parts[8] if len(parts) > 8 else None))
+    # precompute_routes 的兜底自检按下标取 cap/band；动了段位它就会误报
+    ok &= check("最远目标距离/目标距离差仍在下标 11/12",
+                len(parts) > 12
+                and parts[11] == str(float(run.DEFAULT_INPUTS["range_cap"]))
+                and parts[12] == str(float(run.DEFAULT_INPUTS["range_band"])),
+                "%s / %s" % (parts[11] if len(parts) > 12 else None,
+                             parts[12] if len(parts) > 12 else None))
+    return ok
+
+
 # ------------------------------------------------------------ 8. 导出工作簿
 def t_workbook(data):
     print("[8] 导出工作簿（写临时文件）")
@@ -319,6 +352,7 @@ def main():
     t_range_coverage(data)
     t_naming(data)
     t_table_files(data)
+    t_plan_key_layout()
     if not args.quick:
         t_workbook(data)
     bad = [n for n, ok, _d in RESULTS if not ok]

@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 import time
+from tkinter import ttk
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -544,6 +545,13 @@ def t_role_single_and_log(app):
     ok &= check("日志里有环境信息与操作行",
                 "操作记录" in body and "数据指纹" in body and "操作：" in body,
                 "日志 %d 字符" % len(body))
+    # 日志里有很长的单行（制造商来源 JSON、操作明细）→ 必须能左右滑
+    bars = [w for w in app._log_text.master.winfo_children()
+            if isinstance(w, ttk.Scrollbar)]
+    horiz = [w for w in bars if str(w.cget("orient")) == "horizontal"]
+    ok &= check("日志小窗有横向滚动条且接上 xview",
+                bool(horiz) and bool(app._log_text.cget("xscrollcommand")),
+                "滚动条 %d 个，横向 %d 个" % (len(bars), len(horiz)))
     import glob
     before = set(glob.glob(os.path.join(run.OUTPUT_DIR, "BI_SOV_log_*.txt")))
     app._export_log()
@@ -560,12 +568,92 @@ def t_role_single_and_log(app):
     return ok
 
 
+def t_alloc_recommendation():
+    """配点口径推荐必须比"结果表同口径的总分数"（含生产折算）。
+
+    用户实测质疑：苏联 1944 / 科技 1946 / 雅科夫列夫，界面写"高 0.00%"。根因是当时
+    直接比 `_org_plan` 的路线分数 —— 分离那条是 fold=False（gain 记 1.0、**没算**
+    生产换家那家的折算），兼顾那条才是折算后分数，两者概念不同却放在一起比。
+    现在两边都走 `run.build_rows`（与结果表同一段代码）。
+    """
+    print("[16] 配点口径推荐（按表中第 1 名的总分数）")
+    ok = True
+    # 前面的组动过距离/口径 → 这里新起一个纯默认状态的实例（含"记住上次输入"隔离）
+    tmp = os.path.join(tempfile.gettempdir(), "_selftest_ui_alloc.json")
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    orig_last = run.last_inputs_path
+    run.last_inputs_path = lambda: tmp
+    try:
+        app = new_app()
+    finally:
+        run.last_inputs_path = orig_last
+    app.var_distance.set(str(int(run.DEFAULT_INPUTS["range_cap"])))   # 900
+    app.var_band.set(str(int(run.DEFAULT_INPUTS["range_band"])))       # 300
+    app.var_tag.set(app._tag_labels["SOV"])
+    app._refresh_country()
+    for k, v in app.role_vars.items():
+        v.set(k == "air_far")
+    app._on_roles_changed()
+    app.var_enemy_tag.set(app._tag_labels["GER"])
+    app._on_enemy_change()
+    app.var_tech.set(1946)
+    app._on_tech_year_changed()
+    app.var_year.set(1944)
+    app._build_tech_checks()
+    label = next(l for l, k in app._org_keys.items()
+                 if k == "SOV_yakovlev_design_bureau_organization")
+    app.var_org.set(label)
+    app._on_org_change()
+    pump(app, 3.0)
+    org = app._org()
+    inputs = app.collect()
+    # 逐口径断言：推荐里的数 = 结果表（同口径、同路线）里第 1 名的总分数
+    seen = {}
+    for cap in (900, 1200):               # 900：两种口径路线不同、分数不同；1200：同解
+        app.var_distance.set(str(cap))
+        app._on_inputs_affecting_plan()   # 真实用户是选下拉框触发的
+        pump(app, 2.0)
+        inputs = app.collect()
+        s = {}
+        for mode in ("split", "balanced"):
+            s[mode] = app._alloc_mode_top_score(org, inputs, mode) or 0.0
+            probe = dict(inputs, alloc_mode=mode)
+            plan = app._org_plan(org, probe)
+            mio = dict(probe.get("mio") or {})
+            mio["manual_traits"] = list((plan or {}).get("route") or [])
+            probe["mio"] = mio
+            rows, _m, _e, _ev, _info = run.build_rows(probe, app.data)
+            top = max(rows, key=lambda r: r.get("score") or 0.0)
+            ok &= check("最远 %d：%s 推荐值 = 表里第 1 名总分数" % (cap, mode),
+                        s[mode] > 0 and abs(top["score"] - s[mode]) <= 1e-6,
+                        "表 %.4f vs 推荐 %.4f（%s）"
+                        % (top["score"], s[mode], top["airframe"]["name"]))
+        seen[cap] = s
+        text = app.lbl_alloc_rec.cget("text")
+        lo, hi = min(s["split"], s["balanced"]), max(s["split"], s["balanced"])
+        gap = (hi / lo - 1) * 100 if lo else 0.0
+        want = ("%.2f%%" % gap) if gap >= 0.005 else "<0.01%"
+        ok &= check("最远 %d：界面差距 = 两分数之比（%.4f vs %.4f）"
+                    % (cap, s["split"], s["balanced"]),
+                    want in text and ("推荐：" in text), text)
+        ok &= check("最远 %d：不写'高 0.00%%'" % cap, "0.00%" not in text, text)
+    # 这条是为了钉住"不能只在某个距离下偶然不相等"：至少有一个距离下两种口径**确实不同**
+    gaps = {c: abs(v["split"] - v["balanced"]) for c, v in seen.items()}
+    ok &= check("至少一个距离下两种口径分数不同（证明比的是真数）",
+                max(gaps.values()) > 1e-9,
+                "900 差 %.4f / 1200 差 %.4f" % (gaps[900], gaps[1200]))
+    app.destroy()
+    return ok
+
+
 def t_table_coverage(full=False):
     print("[10] 离线表覆盖（方案键命中率）")
-    # ⚠ 离线表只按**出厂默认**生成（口径 + ③ 的默认勾选，含"空对空火箭弹"这个特殊工程
-    # 标识默认为关）。本机"记住上次输入"里若把这个标识勾上了，键里 flags 段就不同 →
-    # 全部未命中（用户实测就是这么发现"卡"的）。所以这里先把记忆文件指到空路径，
+    # ⚠ 离线表只按**出厂默认**生成（口径 + ③ 的默认勾选）。本机"记住上次输入"里若
+    # 改过最远目标距离/差值等口径，键就不同 → 未命中。所以这里先把记忆文件指到空路径，
     # 用纯默认状态验表。
+    # （2026-10-12「方案 D」起，特殊工程标识 unlocked_flags **不再进键** —— 勾了
+    #  "空对空火箭弹"也照样命中，见本函数末尾的回归。）
     tmp = os.path.join(tempfile.gettempdir(), "_selftest_ui_no_memory.json")
     if os.path.exists(tmp):
         os.remove(tmp)
@@ -617,12 +705,50 @@ def t_table_coverage(full=False):
                         for org in app._air_orgs()[0]:
                             app._org_plan(org, inputs)
                         groups += 1
+    # —— 方案 D 回归：勾上"空对空火箭弹"（特殊工程）后照样命中离线表 ——
+    # 以前键里带 flags 段，一勾就整片未命中 → 每次开界面逐家现算 1~2 秒（用户实测的"卡"）。
+    flag_miss, flag_tried = [], 0
+    FLAG = "unlock_plane_anti_air_rocket_upgrade"
+    app.var_tag.set(app._tag_labels["SOV"])
+    app._refresh_country()
+    for k, v in app.role_vars.items():
+        v.set(k == "air_far")
+    app._on_roles_changed()
+    app.var_enemy_tag.set(app._tag_labels["GER"])
+    app._on_enemy_change()
+    for flag_on in (False, True):
+        for ty, y in ((1941, 1941), (1944, 1944), (1946, 1946)):
+            app.var_tech.set(ty)
+            app._on_tech_year_changed()
+            app.var_year.set(y)
+            app._build_tech_checks()
+            for alloc in ("split", "balanced"):
+                app.var_alloc_mode.set(dict(gui.ALLOC_MODES)[alloc])
+                app._alloc_user_picked = True
+                job = getattr(app, "_plan_job", None)
+                if job:
+                    app.after_cancel(job)
+                    app._plan_job = None
+                if FLAG in getattr(app, "flag_vars", {}):
+                    app.flag_vars[FLAG].set(flag_on)      # 只改勾选，不重建 ③（重建会按默认回填）
+                inputs = app.collect()
+                ref = app._ref_plane_of(inputs, run.candidate_pool(inputs, app.data))
+                for org in app._air_orgs()[0]:
+                    flag_tried += 1
+                    dk = app._disk_plan_key(inputs, org, ref, app._plan_policies(org, inputs))
+                    if orig(dk) is None:                  # 用未被计数的原查找
+                        flag_miss.append("%s|flag=%s|%s|%s|%s"
+                                         % (org["organization"], flag_on, ty, y, alloc))
     app.destroy()
     # 12 片全部按出厂默认口径（v7 / 最远 900 / 差值 300）重跑过 → 这里应当 0 缺失
     ok = check("离线表命中（缺 %d 个）" % len(misses), not misses,
                "走了 %d 组%s" % (groups, "（全量）" if full else "（抽样）"))
     for m in misses[:3]:
         print("     缺：%s" % m[:130])
+    ok &= check("勾/不勾特殊工程标识都命中（缺 %d / %d）" % (len(flag_miss), flag_tried),
+                not flag_miss, "方案 D：标识不进方案键")
+    for m in flag_miss[:3]:
+        print("     缺：%s" % m)
     return ok
 
 
@@ -645,6 +771,7 @@ def main():
     t_distance_choices(app)
     t_role_single_and_log(app)
     app.destroy()
+    t_alloc_recommendation()
     t_memory()
     t_table_coverage(args.full)
     bad = [n for n, ok, _d in RESULTS if not ok]
