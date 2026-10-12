@@ -533,7 +533,7 @@ class App(tk.Tk):
         frm_alloc.grid(row=2, column=3, columnspan=3, sticky="w")
         ttk.Label(frm_alloc, text="配点口径").grid(row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
-        self.cb_alloc_mode = ttk.Combobox(card, textvariable=self.var_alloc_mode, width=24,
+        self.cb_alloc_mode = ttk.Combobox(frm_alloc, textvariable=self.var_alloc_mode, width=24,
                                           state="readonly",
                                           values=[label for _k, label in ALLOC_MODES])
         self.cb_alloc_mode.grid(row=0, column=1, sticky="w")
