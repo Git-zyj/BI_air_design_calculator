@@ -562,7 +562,19 @@ def t_role_single_and_log(app):
 
 def t_table_coverage(full=False):
     print("[10] 离线表覆盖（方案键命中率）")
-    app = new_app()
+    # ⚠ 离线表只按**出厂默认**生成（口径 + ③ 的默认勾选，含"空对空火箭弹"这个特殊工程
+    # 标识默认为关）。本机"记住上次输入"里若把这个标识勾上了，键里 flags 段就不同 →
+    # 全部未命中（用户实测就是这么发现"卡"的）。所以这里先把记忆文件指到空路径，
+    # 用纯默认状态验表。
+    tmp = os.path.join(tempfile.gettempdir(), "_selftest_ui_no_memory.json")
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    orig_last = run.last_inputs_path
+    run.last_inputs_path = lambda: tmp
+    try:
+        app = new_app()
+    finally:
+        run.last_inputs_path = orig_last
     misses = []
     orig = app._lookup_plan
 

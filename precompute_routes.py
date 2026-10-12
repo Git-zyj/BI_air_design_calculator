@@ -71,6 +71,11 @@ def main():
     if args.force:
         app._plan_table = {}
         app._plan_runtime = {}
+        # ⚠ `--force` 必须连**磁盘上的分片**也屏蔽掉，否则 `_lookup_plan()` 会立刻
+        # 把旧分片重新读进来、命中旧记录 → 根本不重算（实测：口径没变时 `--force`
+        # 的整轮只跑了 0.7 分钟，一片没更新）。
+        run.load_plan_table = lambda *a, **k: {}
+        run._TABLE_SHARD_CACHE.clear()
     # ⚠ 生成离线表必须**强制用出厂默认的那几个口径**，不能吃"本机上次输入"
     # （app 启动时会读 %LOCALAPPDATA%\...\last_inputs.json）。
     # 踩过的坑：苏德两片曾被按"最远目标距离 1200"生成 —— 因为当时维护者本机

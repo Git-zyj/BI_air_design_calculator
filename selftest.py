@@ -212,6 +212,31 @@ def t_range_coverage(data):
                 "首名 %s 分 %.3f 覆盖率 %.3f；0 分 %d/%d 架"
                 % (top_d["airframe"]["name"], top_d["score"],
                    top_d["values"]["range_factor"], blocked, len(rd)))
+    # 多步起步（2026-10-12 二次修）：裸机分 0、且**单步过不了线**的机型也不能被判 0 ——
+    # 航程改装里有"平添"部分（增程 +30/级、副油箱 +120），常常要连点两三级才够到近边。
+    # 场景：无 MIO 的苏联 1939 @900/300（近边 600）：修前 7 架里 5 架是 0。
+    base6 = inputs_for("SOV", "air_far", 1939, 1939, manufacturer_mode="manual",
+                       manufacturer_modifiers={}, modifier_source="manual")
+    rows_e, *_ = run.build_rows(base6, data)
+    re_ = [r for r in rows_e if r["role"] == "air_far"]
+    top_e = re_[0]
+    ok &= check("多步起步：连点航程改装能过线的机型要有正覆盖率",
+                top_e["score"] > 0 and top_e["values"]["range_factor"] > 0
+                and ("燃料容量" in top_e["design"] or "副油箱" in top_e["design"]),
+                "首名 %s 分 %.3f 覆盖率 %.3f 配方 %s"
+                % (top_e["airframe"]["name"], top_e["score"],
+                   top_e["values"]["range_factor"], top_e["design"]))
+    # 用户实测复现：苏联 1944 / 科技 1946 / 最远 1200（近边 900）/ 航程 +4%（拉沃契金档）
+    # —— MiG-9 修前 0 分（贪心一步不加），修后应拿到正覆盖率（942 km → 0.14）。
+    mig = inputs_for("SOV", "air_far", 1946, 1944, range_cap=1200.0, range_band=300.0,
+                     manufacturer_mode="manual", manufacturer_modifiers={"air_range": 0.04},
+                     modifier_source="manual")
+    rows_f, *_ = run.build_rows(mig, data)
+    rf = [r for r in rows_f if "Mikoyan-Gurevich 9" in r["airframe"]["name"]]
+    ok &= check("MiG-9 @1946/最远1200 不再是 0 分",
+                bool(rf) and rf[0]["values"]["range_factor"] > 0,
+                ("覆盖率 %.3f 航程 %.0f" % (rf[0]["values"]["range_factor"], rf[0]["values"]["range"])
+                 if rf else "候选里没找到 MiG-9"))
     return ok
 
 

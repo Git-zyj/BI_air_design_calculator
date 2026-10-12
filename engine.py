@@ -726,42 +726,74 @@ def optimize(base, upgrade_map, mods, enemy, role="air_near", available=None,
              prod_mods=None):
     """贪心：每步取边际性价比最高且 > 1 的改装加一级。
 
-    ⚠ 2026-10-12 修：**基线分数为 0 时要先"起步"**。
-    航程覆盖模型下，一架航程够不到近边的飞机"裸机分"就是 0，而旧代码算的是
-        gain = trial ÷ current = 0 ÷ 0 → 记 0 → 一步都不加 → 永远 0
-    —— 于是"加满副油箱/航程改装就能到"的机型也被判 0 分（用户实测：最远 1200、
-    1946 科技时全变 0，连 MIO 都没得比）。现在基线为 0 时改用**绝对分数**比大小，
-    先让它"够得着"；一旦分数 > 0 就回到原来的边际倍率规则。
+    ⚠ 2026-10-12 两次修正，都是为了"航程够不到近边 → 裸机分 0"这种情形：
+
+    1. 基线为 0 时不能再用 `gain = trial ÷ current`（0÷0 记 0 → 一步都不加），
+       改成**先看"拉满航程能不能过线"**：
+         · 拉满也过不了线 → 一个改装都不加（加了也是 0 分，只白花造价，明细显示"（无需改装）"）；
+         · 拉满能过线 → 按 **(分数, 航程)** 这个二元键逐步爬：单步还在 0 分时，
+           就先挑"航程涨得最多"的那一步，爬过线（分数 > 0）以后回到边际倍率规则。
+       （只比分数是不够的：副油箱 +120km、增程 +30km/级 这种**平添**航程的改装，
+        常常要连点两三级才能过线，单步分数一直是 0 → 旧逻辑会一步不加。）
+    2. 航程的"平添"部分（`add_stats.air_range`）也要算进"拉满能到多少"。
     """
     tokens = [t for t in (available or SHEET_UPGRADES) if t in upgrade_map]
     levels = {t: 0 for t in tokens}
-    _, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                            accident_factor=accident_f, prod_mods=prod_mods)
+    values0, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
+                                 accident_factor=accident_f, prod_mods=prod_mods)
     current = scores[role]
+    # 近边距离（目标区域离机场最近的那条边）；过线 = 航程 > 近边
+    cap = float(range_cap or 0.0)
+    band = range_band(range_cap)
+    near = max(0.0, cap - band) if band > 0 else 0.0
+    reachable = True
+    if near > 0:
+        best_range = base["range"] * (1 + float((mods or {}).get("air_range", 0.0)))
+        for token in tokens:
+            up = upgrade_map[token]
+            m = (up.get("modifiers") or {}).get("air_range")
+            a = (up.get("add_stats") or {}).get("air_range")
+            # ⚠ 只累加**正向**的航程修正 —— 发动机/雷达那些是负航程，
+            # "把航程拉到最大"的人不会点它们（把它们算进来会低估上限，
+            # 实测曾因此把 MiG-9 误判成"拉满也过不了线"）。
+            if m and m > 0:
+                best_range += base["range"] * m * up["max_level"]
+            if a and a > 0:
+                best_range += a * up["max_level"]
+        reachable = best_range > near
     steps = []
     for _ in range(max_steps):
+        if not reachable:
+            break                       # 拉满也过不了线：不加改装，分数保持 0
         best = None
         for token in tokens:
             up = upgrade_map[token]
             if levels[token] >= up["max_level"]:
                 continue
             levels[token] += 1
-            _, _, trial = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                                   accident_factor=accident_f, prod_mods=prod_mods)
+            tv, _, trial = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
+                                    accident_factor=accident_f, prod_mods=prod_mods)
             levels[token] -= 1
-            # current > 0：边际倍率（原规则）；current == 0：先比**绝对分**起步
-            gain = (trial[role] / current) if current > 0 else float(trial[role])
-            if best is None or gain > best[0]:
-                best = (gain, token)
+            # current > 0：边际倍率（原规则）；current == 0：(分数, 航程) 双键起步
+            key = ((trial[role] / current) if current > 0
+                   else (float(trial[role]), float(tv.get("range", 0.0))))
+            if best is None or key > best[0]:
+                best = (key, token)
         if not best:
             break
-        if (current > 0 and best[0] <= 1.0) or (current <= 0 and best[0] <= 0.0):
-            break
+        if current > 0:
+            if best[0] <= 1.0:
+                break
+        else:
+            # 分数还是 0（没过线）、航程也没涨 → 再点下去没意义
+            if best[0][0] <= 0.0 and best[0][1] <= float(values0.get("range", 0.0)) + 1e-9:
+                break
         levels[best[1]] += 1
-        _, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
-                                accident_factor=accident_f)
+        values0, _, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
+                                     accident_factor=accident_f)
         current = scores[role]
-        steps.append({"token": best[1], "gain": round(best[0], 6)})
+        gain = best[0][0] if isinstance(best[0], tuple) else best[0]
+        steps.append({"token": best[1], "gain": round(gain, 6)})
     values, eff_cost, scores = evaluate(base, levels, upgrade_map, mods, enemy, range_cap, experience,
                                         accident_factor=accident_f)
     return {"levels": levels, "values": values, "scores": scores,
