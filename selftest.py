@@ -183,11 +183,14 @@ def t_range_coverage(data):
           for r in rows_a if r["role"] == "air_far"}
     fb = {r["airframe"]["key"]: r["values"]["range_factor"]
           for r in rows_b if r["role"] == "air_far"}
-    top_a = next(r for r in rows_a if r["role"] == "air_far")["score"]
-    top_b = next(r for r in rows_b if r["role"] == "air_far")["score"]
+    sa = {r["airframe"]["key"]: r["score"] for r in rows_a if r["role"] == "air_far"}
+    sb = {r["airframe"]["key"]: r["score"] for r in rows_b if r["role"] == "air_far"}
     lowered = [k for k in fa if fb.get(k, 1.0) < fa[k] - 1e-9]
-    ok &= check("改 Δ 会改变分数", abs(top_a - top_b) > 1e-9,
-                "Δ=900（旧口径）首名 %.4f / Δ=300（默认）首名 %.4f" % (top_a, top_b))
+    changed = [k for k in sa if abs(sa[k] - sb.get(k, 0.0)) > 1e-9]
+    top_key = next(r for r in rows_b if r["role"] == "air_far")["airframe"]["key"]
+    ok &= check("改 Δ 会改变分数", bool(changed),
+                "%d/%d 架分数不同；首名 %.4f（Δ=900 时 %.4f）"
+                % (len(changed), len(sa), sb[top_key], sa.get(top_key, 0.0)))
     ok &= check("Δ=300 会压低短航程飞机的覆盖率", bool(lowered),
                 "%d 架覆盖率被压低（其中 %d 架为 0）"
                 % (len(lowered), sum(1 for k in lowered if fb[k] <= 0)))

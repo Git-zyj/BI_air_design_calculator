@@ -267,8 +267,11 @@ def upgrade_label(token):
 
 DEFAULT_INPUTS = {
     "country": "SOV",                       # 当前国家 tag（决定候选机身与可用 MIO）
-    "current_year": 1939,                   # 示例默认：1939 年起步
-    "tech_year": 1939,
+    # 出厂示例默认 1941/1942（用户口径 2026-10-12）：配合新的航程覆盖口径，
+    # 1939 年那批机型在"最远 900 / 差值 300"下大半飞不到（覆盖率 0），
+    # 示例看起来像坏了；1941/1942 这一档机型航程够用、候选也齐（14 架里只有 2 架覆盖率 0）。
+    "current_year": 1941,
+    "tech_year": 1942,
     "roles": ["air_far"],                   # 界面不再区分远近，统一按"远"算，距离由 range_cap 决定
     "manufacturer_mode": "manual",          # "manual" = 直接给修正；"traits" = 选 MIO 特质
     "manufacturer_modifiers": {
@@ -278,7 +281,8 @@ DEFAULT_INPUTS = {
     },
     "national_spirits": ["SOV_improved_designs", "SOV_USA_aid_air"],   # 示例默认：苏联的两个
     "extra_modifiers": {},
-    "unlocked_techs": ["advanced_machine_tools", "computing_machine"],  # 1939 年前完成的科技
+    "unlocked_techs": ["advanced_machine_tools", "computing_machine",   # 1941 年前完成的科技
+                       "assembly_line_production", "Ltaircraft_industry2", "worker_training"],
     "unlocked_flags": [],
     # 我方联队经验**不建模**（= 0）：表口径是"设计值"，经验只在对手段单独建模
     # （engine.ENEMY_EXPERIENCE）。留这个键只是为了兼容旧 inputs.json 的写法。

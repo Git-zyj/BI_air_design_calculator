@@ -57,7 +57,7 @@ def t_startup(app):
     ok = check("标题带版本号", "黑冰" in app.title() and "v" in app.title(), app.title())
     ok &= check("首屏已自动算过（表格非空）", len(app.tree_out.get_children()) > 0,
                 "%d 行" % len(app.tree_out.get_children()))
-    # 状态行要么是"已计算 N 行…"，要么是"⚠ 全飞不到"这句提示（默认 1939 + Δ=300 时会触发）
+    # 状态行要么是"已计算 N 行…"，要么是"⚠ 全飞不到"这句提示
     hint = app.lbl_hint.cget("text")
     ok &= check("状态行给出下一步提示", "已计算" in hint or "⚠" in hint, repr(hint))
     ok &= check("字体信息单独成行（没占状态行）", "字体" not in app.lbl_hint.cget("text"),
@@ -186,9 +186,11 @@ def t_memory():
     run.last_inputs_path = lambda: tmp
     try:
         app = new_app()
-        ok = check("干净环境下用示例默认（苏联/1939）",
-                   app.var_tag.get() == "苏联" and int(app.var_year.get()) == 1939,
-                   "%s / %s" % (app.var_tag.get(), app.var_year.get()))
+        ok = check("干净环境下用示例默认（苏联/1941，科技 1942）",
+                   app.var_tag.get() == "苏联" and int(app.var_year.get()) == 1941
+                   and int(app.var_tech.get()) == 1942,
+                   "%s / %s / 科技 %s" % (app.var_tag.get(), app.var_year.get(),
+                                          app.var_tech.get()))
         app.var_tag.set("德国")
         app.var_year.set(1944)
         pump(app, 0.8)
@@ -200,8 +202,8 @@ def t_memory():
                     "%s / %s" % (app2.var_tag.get(), app2.var_year.get()))
         app2._reset_to_default()
         pump(app2, 1.2)
-        ok &= check("「重置为默认」立刻回到苏联/1939（不用重启）",
-                    app2.var_tag.get() == "苏联" and int(app2.var_year.get()) == 1939,
+        ok &= check("「重置为默认」立刻回到苏联/1941（不用重启）",
+                    app2.var_tag.get() == "苏联" and int(app2.var_year.get()) == 1941,
                     "%s / %s" % (app2.var_tag.get(), app2.var_year.get()))
         ok &= check("「重置为默认」清掉了记忆文件", not os.path.exists(tmp))
         app2.destroy()
