@@ -2136,12 +2136,17 @@ class App(tk.Tk):
             if not value:
                 continue
             label = PROD_ZH.get(key, key)
-            factor = (parts or {}).get(label, 1.0)
+            # 资源需求的"自己的倍率"就是 (1+修正)：−5% ⇒ ×0.95；其余用折算分项
+            factor = ((1.0 + value) if key == "production_resource_need_factor"
+                      else (parts or {}).get(label, 1.0))
             items.append("%s %+g%%%s" % (label, round(value * 100, 2),
                                          " ⇒ ×%.4f" % factor if abs(factor - 1.0) > 1e-9 else ""))
         text = head + "　".join(items)
-        if gain and abs(gain - 1.0) > 1e-9:
-            text += "　⇒ 合计 产能 ×%.4f（等效造价 ×%.4f）" % (gain, 1.0 / gain)
+        # 合计：产能倍率（产量/效率上限/生产产出花费）与资源消耗倍率（资源需求）分列，
+        # 等效造价 = (1 ÷ 合计产能) × 合计资源消耗 —— 不同方针/路线可以直接横向比。
+        need_total = 1.0 + float((prod or {}).get("production_resource_need_factor", 0.0) or 0.0)
+        text += "　⇒ 合计产能×%.4f，资源消耗×%.4f（等效造价 ×%.4f）" % (
+            gain or 1.0, need_total, (1.0 / (gain or 1.0)) * need_total)
         return text
 
     def on_calculate(self):
@@ -2330,6 +2335,15 @@ class App(tk.Tk):
                                % (row["production_gain"], row.get("score_raw", 0.0),
                                   row["score"],
                                   row.get("effective_cost", 0.0) / row["production_gain"]),
+                               "formula"))
+            # 资源加权分：把算式摊开（分子 = 纯设计分，分母 = 装配资源 ×(1+资源需求)）
+            need = (row.get("production") or {}).get("production_resource_need_factor", 0.0)
+            res_cost = (row.get("airframe") or {}).get("air_production") or 0
+            if res_cost and row.get("weighted"):
+                blocks.append(("资源加权分",
+                               "%.4f = 纯 %.4f ÷ （装配资源 %g × 资源消耗 %.4f）"
+                               % (row["weighted"], row.get("score_raw", 0.0), res_cost,
+                                  1.0 + float(need or 0.0)),
                                "formula"))
             combat = engine.combat_breakdown(row["role"], v, row.get("enemy_values"))
             if combat:
