@@ -40,8 +40,32 @@ PADX, PADY = 12, 8
 # ④ 卡片（字段最多的那张）的统一行高与行内边距：行距一致 = 每行一样高、上下留白一样
 # 行高取"最高那种控件行"的自然高度（按钮 28 + 上下各 5 = 38），文字行用 minsize 补到一样高
 ROW_H, ROW_PAD = 38, 5
-ACCENT = "#1F4E79"
-CARD_BG = "#F7F7F7"
+
+# ── 视觉规范（2026-10-12 统一：字体只 4 档、颜色只一套语义色）──────────────
+# 字体档位：整个界面只允许这四种字号（加粗算同一档）
+FONT_TITLE = BODY + 4      # 顶栏标题
+FONT_CARD = BODY           # 卡片标题 / 表头
+FONT_FIELD = BODY          # 字段名 / 正文 / 明细正文
+FONT_NOTE = BODY - 1       # 说明、次要信息、明细算式、图表刻度
+# 语义色：不再各处写十六进制
+ACCENT = "#1F4E79"         # 标题、强调数值、卡片标题、表格选中
+MUTED = "#5A6472"          # 说明文字、坐标轴标题
+INFO = "#44506B"           # "数值来源"这类过程说明
+PROD = "#7A5C1E"           # 生产侧
+INK = "#333333"            # 明细正文
+LINE = "#8A93A5"           # 图表坐标轴 / 刻度
+DOT = "#B9C2D0"            # 图表里被支配的点
+GRID = "#D0D7E5"           # 卡片边框 / 图表边框
+DISABLED = "#A8AEB8"       # 置灰（点不了的特质）
+PAGE_BG = "#EDF1F7"        # 页面底色
+CARD_BG = "#F7F7F7"        # 卡片底色
+BANNER_BG = ACCENT
+BANNER_FG = "#FFFFFF"
+BANNER_SUB = "#C9D8EC"     # 顶栏次要文字（字体提示 / 状态行）
+# 控件宽度：同类控件同宽
+CTL_W_TEXT = 22            # 文本型下拉（军工组织 / 方针 / 配点口径）
+CTL_W_TAG = 14             # 国家名下拉
+CTL_W_NUM = 7              # 数值输入（年份 / 修正百分比）
 
 ROLE_LABELS = engine.ROLES
 MOD_ZH = {
@@ -352,17 +376,18 @@ class App(tk.Tk):
         except tk.TclError:
             pass
         style.configure(".", font=(self.family, BODY), background=CARD_BG)
-        style.configure("TLabelframe", background=CARD_BG, bordercolor="#D0D7E5",
+        style.configure("TLabelframe", background=CARD_BG, bordercolor=GRID,
                         relief="solid", borderwidth=1)
         style.configure("TLabelframe.Label", background=CARD_BG, foreground=ACCENT,
-                        font=(self.family, BODY, "bold"))
+                        font=(self.family, FONT_CARD, "bold"))
         style.configure("TButton", padding=(10, 5))
         # 紧凑按钮：默认按钮比 Combobox 高一截，同一行里会把这行顶高
         # （④ 的"等级 / 预览军工组织总加成"那行实测 36px，旁边的行只有 21~26px）
         style.configure("Tight.TButton", padding=(7, 1))
-        style.configure("Treeview", rowheight=24, font=(self.family, BODY - 1), background="white")
-        style.configure("Treeview.Heading", font=(self.family, BODY - 1, "bold"))
-        self.configure(background="#EDF1F7")
+        style.configure("Treeview", rowheight=26, font=(self.family, FONT_NOTE),
+                        background="white", fieldbackground="white")
+        style.configure("Treeview.Heading", font=(self.family, FONT_CARD, "bold"))
+        self.configure(background=PAGE_BG)
 
     def _card(self, row, title, **kw):
         box = ttk.LabelFrame(self.inner, text=" " + title + " ")
@@ -436,7 +461,9 @@ class App(tk.Tk):
             while node is not None and node is not card:
                 x += node.winfo_x()
                 node = node.master
-            width = int(max(avail - x - PADX - 6, 200))
+            # 同一行里排在它右边的控件（按钮/输入框）要把宽度让出来，
+            # 否则长文本会把这一行顶出卡片右缘（实测 ⑥ 的"合计"行 1294 > 1266）。
+            width = int(max(avail - x - self._row_reserve(label) - PADX - 6, 200))
             cur = int(float(label.cget("wraplength") or 0))
             if cur != width:
                 label.configure(wraplength=width)
@@ -444,6 +471,26 @@ class App(tk.Tk):
             # 明细区重建时会先 destroy 子控件，队列里残留的事件可能拿到已销毁的控件
             # （"invalid command name"），直接跳过。
             return
+
+    def _row_reserve(self, label):
+        """同一 grid 行里排在 label 右边的控件宽度合计（换行时要让出这么多）。"""
+        try:
+            gi = label.grid_info()
+            card = label.master
+            if not gi or not card:
+                return 0
+            row = int(gi.get("row", 0))
+            col = int(gi.get("column", 0)) + int(gi.get("columnspan", 1))
+            used = 0
+            for sib in card.winfo_children():
+                si = sib.grid_info()
+                if not si or sib is label:
+                    continue
+                if int(si.get("row", -1)) == row and int(si.get("column", 0)) >= col:
+                    used += sib.winfo_width() + PADX
+            return used
+        except Exception:                         # noqa: BLE001
+            return 0
 
     def _rewrap_all(self, _event=None):
         self._rewrap_job = None
@@ -474,25 +521,25 @@ class App(tk.Tk):
         banner = tk.Frame(self, background=ACCENT)
         banner.grid(row=0, column=0, sticky="ew")
         tk.Label(banner, text="飞机设计计算器 · %s" % run.edition_label(),
-                 background=ACCENT, foreground="white",
-                 font=(self.family, BODY + 4, "bold"), padx=PADX, pady=5).pack(side="left")
+                 background=BANNER_BG, foreground=BANNER_FG,
+                 font=(self.family, FONT_TITLE, "bold"), padx=PADX, pady=5).pack(side="left")
         # 右侧：字体信息单列一个小标签，别占着"状态行"
         font_hint = "字体：%s" % self.family
         if not self.font_ok:
             font_hint += "（当前 Tk 不支持 TTF 中文，请用 gui.sh 启动）"
-        self.lbl_font = tk.Label(banner, text=font_hint, background=ACCENT,
-                                 foreground="#9FB4CE", font=(self.family, BODY - 2), padx=PADX)
+        self.lbl_font = tk.Label(banner, text=font_hint, background=BANNER_BG,
+                                 foreground=BANNER_SUB, font=(self.family, FONT_NOTE), padx=PADX)
         self.lbl_font.pack(side="right")
         # 状态行（"点计算"/"已计算 N 行"/"已导出 …"）
-        self.lbl_hint = tk.Label(banner, text="正在准备…", background=ACCENT,
-                                 foreground="#C9D8EC", font=(self.family, BODY - 1))
+        self.lbl_hint = tk.Label(banner, text="正在准备…", background=BANNER_BG,
+                                 foreground=BANNER_SUB, font=(self.family, FONT_NOTE))
         self.lbl_hint.pack(side="right")
 
         # 整页可上下滚动（卡片多、屏幕矮时不至于看不到底部）
-        outer = tk.Frame(self, background="#EDF1F7")
+        outer = tk.Frame(self, background=PAGE_BG)
         outer.grid(row=1, column=0, sticky="nsew")
         self.rowconfigure(1, weight=1)
-        self.canvas = tk.Canvas(outer, background="#EDF1F7", highlightthickness=0)
+        self.canvas = tk.Canvas(outer, background=PAGE_BG, highlightthickness=0)
         vsb = ttk.Scrollbar(outer, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=vsb.set)
         vsb.pack(side="right", fill="y")
@@ -511,25 +558,33 @@ class App(tk.Tk):
         box = self._card(row, "① 用途")
         self.role_vars = {}
         cur_roles = self.inputs.get("roles") or ["air_far"]
-        ttk.Label(box, text="用途").grid(row=0, column=0, sticky="e", padx=(PADX, 4), pady=PADY)
+        # 字段名一律**左对齐**（右对齐时不同字数的名字会顶到不同起点，看着像缩进）
+        ttk.Label(box, text="用途").grid(row=0, column=0, sticky="w",
+                                     padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         # 六个勾选框放进自己的子框：以前直接排在 box 的第 1..6 列，正好和"距离目标"
         # 那一列撞车 —— 对空（舰载）被标签压掉半截、对海（舰载）被下拉框整个盖住，
         # 看上去就像"有两个对空、少了一个对海"。子框之后，它们不可能再互相覆盖。
         roles_bar = ttk.Frame(box)
-        roles_bar.grid(row=0, column=1, sticky="w", pady=PADY)
+        roles_bar.grid(row=0, column=1, columnspan=4, sticky="w", pady=(ROW_PAD, ROW_PAD))
         for key, label in ROLE_CHOICES:
             v = tk.BooleanVar(value=key in cur_roles)
             self.role_vars[key] = v
             ttk.Checkbutton(roles_bar, text=label, variable=v,
                             command=self._on_roles_changed).pack(side="left", padx=(0, PADX))
-        ttk.Label(box, text="距离目标").grid(row=0, column=2, sticky="e", padx=(PADX * 2, 4))
+        # 「距离目标」单独一行：跟六个勾选框挤在同一行时整行 1035px，
+        # 窗口缩到 1000px 就会被右缘裁掉
+        ttk.Label(box, text="距离目标").grid(row=1, column=0, sticky="w",
+                                         padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_distance = tk.StringVar(
             value=str(int(self.inputs.get("range_cap") or DEFAULT_DISTANCE)))
-        dbox = ttk.Combobox(box, textvariable=self.var_distance, width=8, state="readonly",
+        dbox = ttk.Combobox(box, textvariable=self.var_distance, width=CTL_W_NUM + 1,
+                            state="readonly",
                             values=DISTANCES)
-        dbox.grid(row=0, column=3, sticky="w")
+        dbox.grid(row=1, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
         dbox.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
-        ttk.Label(box, text="（= 航程上限，600 起每 300 一档）").grid(row=0, column=4, sticky="w")
+        ttk.Label(box, text="（= 航程上限，600 起每 300 一档）", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=1, column=2, columnspan=3, sticky="w",
+                                                      padx=(PADX, 0))
         row += 1
 
         # ② 年份 + 所选国家与主要对手（先定国家和年份，后面才谈前置科技）
@@ -542,34 +597,37 @@ class App(tk.Tk):
         self.frm_fields = fields          # 供后续核对布局（前两行的列宽只看它自己）
         self.var_year = tk.IntVar(value=self.inputs["current_year"])
         self.var_tech = tk.IntVar(value=self.inputs["tech_year"])
-        ttk.Label(fields, text="当前年份").grid(row=0, column=0, sticky="e", padx=PADX, pady=PADY)
-        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_year, width=6,
+        ttk.Label(fields, text="当前年份").grid(row=0, column=0, sticky="w",
+                                            padx=(0, 6), pady=(ROW_PAD, ROW_PAD))
+        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_year, width=CTL_W_NUM,
                     command=self._refresh_enemy).grid(row=0, column=1, sticky="w")
         ttk.Label(fields, text="（决定对手机型）").grid(row=0, column=2, sticky="w")
-        ttk.Label(fields, text="飞机科技年份").grid(row=0, column=3, sticky="e", padx=PADX)
-        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_tech, width=6,
+        ttk.Label(fields, text="飞机科技年份").grid(row=0, column=3, sticky="w",
+                                               padx=(PADX * 2, 6))
+        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_tech, width=CTL_W_NUM,
                     command=self._on_tech_year_changed).grid(row=0, column=4, sticky="w")
         ttk.Label(fields, text="（决定我方可用机身，可超前研究）").grid(row=0, column=5, sticky="w")
 
-        ttk.Label(fields, text="所选国家").grid(row=1, column=0, sticky="e",
-                                             padx=(PADX, 4), pady=PADY)
+        ttk.Label(fields, text="所选国家").grid(row=1, column=0, sticky="w",
+                                             padx=(0, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
-        cb = ttk.Combobox(fields, textvariable=self.var_tag, width=10,
+        cb = ttk.Combobox(fields, textvariable=self.var_tag, width=CTL_W_TAG,
                           state="readonly")
         cb.grid(row=1, column=1, sticky="w")
         cb.bind("<<ComboboxSelected>>", lambda e: self._refresh_country())
         cb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_tag.set(self._tag_labels.get(self.inputs.get("country") or "SOV", "苏联"))
-        ttk.Label(fields, text="对手国别").grid(row=1, column=2, sticky="e", padx=(PADX, 4))
+        ttk.Label(fields, text="对手国别").grid(row=1, column=2, sticky="w",
+                                            padx=(PADX * 2, 6))
         enemy = self.inputs.get("enemy") or {}
         self.var_enemy_tag = tk.StringVar(value=enemy.get("country", "GER"))
-        eb = ttk.Combobox(fields, textvariable=self.var_enemy_tag, width=10,
+        eb = ttk.Combobox(fields, textvariable=self.var_enemy_tag, width=CTL_W_TAG,
                           state="readonly")
         eb.grid(row=1, column=3, sticky="w")
         eb.bind("<<ComboboxSelected>>", lambda e: self._on_enemy_change())
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
-        ttk.Label(fields, text="选取规则").grid(row=1, column=4, sticky="e", padx=(PADX, 4))
+        ttk.Label(fields, text="选取规则").grid(row=1, column=4, sticky="w", padx=(PADX * 2, 6))
         # 旧写法 dict(RULE_LABELS).get(key) 方向反了（表是"显示名 → key"），
         # 不管 inputs.json 写什么都会显示成"当前年份−1"。
         cur_rule = RULE_KEYS.get(enemy.get("rule", "previous_year"), "当前年份−1")
@@ -598,25 +656,28 @@ class App(tk.Tk):
             row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_enemy_mod_agi = tk.StringVar()
         self.var_enemy_mod_spd = tk.StringVar()
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_agi, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_agi, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=1, sticky="w")
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_spd, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_mod_spd, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=2, sticky="w", padx=(2, PADX))
         ttk.Label(self.frm_enemy_mods, text="对手联队经验加成（机动/速度，%）").grid(
             row=0, column=3, sticky="e", padx=(PADX, 4))
         self.var_enemy_exp_agi = tk.StringVar()
         self.var_enemy_exp_spd = tk.StringVar()
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_agi, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_agi, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=4, sticky="w")
-        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_spd, width=6,
+        ttk.Entry(self.frm_enemy_mods, textvariable=self.var_enemy_exp_spd, width=CTL_W_NUM,
                   justify="right").grid(row=0, column=5, sticky="w", padx=(2, 4))
         ttk.Button(self.frm_enemy_mods, text="恢复 AI 自动值",
-                   command=self._reset_enemy_mods).grid(row=0, column=6, sticky="w", padx=PADX)
-        self.lbl_enemy_src = ttk.Label(self.frm_enemy_mods, text="", foreground="#44506B")
+                   command=self._reset_enemy_mods,
+                   style="Tight.TButton").grid(row=0, column=6, sticky="w", padx=PADX)
+        self.lbl_enemy_src = ttk.Label(self.frm_enemy_mods, text="", foreground=INFO,
+                                       font=(self.family, FONT_NOTE))
         self.lbl_enemy_src.grid(row=1, column=0, columnspan=7, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_enemy_src, self.frm_enemy_mods)
 
-        self.lbl_enemy = ttk.Label(box, text="", foreground=ACCENT, font=(self.family, BODY, "bold"))
+        self.lbl_enemy = ttk.Label(box, text="", foreground=ACCENT,
+                                   font=(self.family, FONT_FIELD, "bold"))
         self.lbl_enemy.grid(row=4, column=0, sticky="w", padx=PADX, pady=(0, PADY))
         self._wrap_to_card(self.lbl_enemy, box)
         row += 1
@@ -662,7 +723,7 @@ class App(tk.Tk):
 
         # 参考机型 + MIO 推荐：紧跟军工组织那一行（用户指定位置；原来挂在"配点方式"右边）
         self.lbl_org_rec = ttk.Label(card, text="", foreground=ACCENT,
-                                     font=(self.family, BODY - 1, "bold"), justify="left")
+                                     font=(self.family, FONT_FIELD, "bold"), justify="left")
         self.lbl_org_rec.grid(row=2, column=0, columnspan=6, sticky="w", padx=PADX,
                               pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_org_rec, card)
@@ -670,13 +731,14 @@ class App(tk.Tk):
         ttk.Label(card, text="方针").grid(row=3, column=0, sticky="w",
                                       padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_policy = tk.StringVar(value="（不选）")
-        self.cb_policy = ttk.Combobox(card, textvariable=self.var_policy, width=26, state="readonly")
+        self.cb_policy = ttk.Combobox(card, textvariable=self.var_policy, width=CTL_W_TEXT,
+                                      state="readonly")
         self.cb_policy.grid(row=3, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
         self.cb_policy.bind("<<ComboboxSelected>>", lambda e: self._on_policy_change())
         # 方针的「前置 / 加成 / 组织」说明：单独占一整行，段与段用全角空格分隔 ——
         # 宽的时候自然**并成一行**，窄了才在段与段之间折行（用户口径 2026-10-12）
         self.lbl_policy = ttk.Label(card, text="", foreground="#5A6472",
-                                    font=(self.family, BODY - 2), justify="left")
+                                    font=(self.family, FONT_NOTE), justify="left")
         self.lbl_policy.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX,
                              pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_policy, card)
@@ -699,19 +761,20 @@ class App(tk.Tk):
                        pady=(ROW_PAD, ROW_PAD))
         ttk.Label(frm_alloc, text="配点口径").grid(row=0, column=0, sticky="e", padx=(PADX, 4))
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
-        self.cb_alloc_mode = ttk.Combobox(frm_alloc, textvariable=self.var_alloc_mode, width=24,
+        self.cb_alloc_mode = ttk.Combobox(frm_alloc, textvariable=self.var_alloc_mode,
+                                          width=CTL_W_TEXT,
                                           state="readonly",
                                           values=[label for _k, label in ALLOC_MODES])
         self.cb_alloc_mode.grid(row=0, column=1, sticky="w")
         self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_picked())
         self.lbl_alloc_rec = ttk.Label(frm_alloc, text="", foreground=ACCENT,
-                                       font=(self.family, BODY - 2, "bold"), justify="left")
+                                       font=(self.family, FONT_NOTE, "bold"), justify="left")
         self.lbl_alloc_rec.grid(row=0, column=2, sticky="w", padx=PADX)
         self._wrap_to_card(self.lbl_alloc_rec, frm_alloc)
 
         # 累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
-                                       font=(self.family, BODY, "bold"), justify="left")
+                                       font=(self.family, FONT_FIELD, "bold"), justify="left")
         self.lbl_mio_total.grid(row=7, column=0, columnspan=6, sticky="w", padx=PADX,
                                 pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_mio_total, card)
@@ -739,19 +802,19 @@ class App(tk.Tk):
             ttk.Label(prod_row, text="%").grid(row=0, column=col * 3 + 2, sticky="w", padx=(1, 0))
 
         self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
-                                  font=(self.family, BODY - 1), justify="left")
+                                  font=(self.family, FONT_NOTE), justify="left")
         self.lbl_prod.grid(row=9, column=0, columnspan=6, sticky="w", padx=PADX,
                            pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_prod, card)
 
         self.lbl_partner = ttk.Label(card, text="", foreground="#7A5C1E",
-                                     font=(self.family, BODY - 2), justify="left")
+                                     font=(self.family, FONT_NOTE), justify="left")
         self.lbl_partner.grid(row=10, column=0, columnspan=6, sticky="w", padx=PADX,
                               pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_partner, card)
 
         self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
-                                       font=(self.family, BODY - 2), justify="left")
+                                       font=(self.family, FONT_NOTE), justify="left")
         self.lbl_mio_route.grid(row=11, column=0, columnspan=6, sticky="w", padx=PADX,
                                 pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_mio_route, card)
@@ -783,7 +846,7 @@ class App(tk.Tk):
             self.tree_traits.column(cid, width=w, anchor=anchor)
         self.tree_traits.grid(row=1, column=0, sticky="ew")
         self.tree_traits.bind("<Button-1>", self._on_trait_click)
-        self.tree_traits.tag_configure("locked", foreground="#A8AEB8")   # 现在点不了的特质
+        self.tree_traits.tag_configure("locked", foreground=DISABLED)   # 现在点不了的特质
         sb = ttk.Scrollbar(self.frm_traits, orient="vertical", command=self.tree_traits.yview)
         sb.grid(row=1, column=1, sticky="ns")
         self.tree_traits.configure(yscrollcommand=sb.set)
@@ -791,17 +854,18 @@ class App(tk.Tk):
 
         # ⑤ 国家精神加成
         box = self._card(row, "⑤ 国家精神加成")
-        ttk.Label(box, text="国家精神（逗号分隔，可空）").grid(row=0, column=0, sticky="e",
-                                                              padx=(PADX, 4), pady=PADY)
+        ttk.Label(box, text="国家精神（逗号分隔，可空）").grid(row=0, column=0, sticky="w",
+                                                              padx=(PADX, 6),
+                                                              pady=(ROW_PAD, ROW_PAD))
         self.var_spirits = tk.StringVar(value=",".join(self.inputs.get("national_spirits") or []))
         ent_spirits = ttk.Entry(box, textvariable=self.var_spirits, width=64)
         ent_spirits.grid(row=0, column=1, sticky="w")
         # 国家精神也会影响"哪条路线/哪个方针最优"→ 填完（离开输入框）就重推一次
         ent_spirits.bind("<FocusOut>", lambda e: self._on_inputs_affecting_plan())
-        ttk.Button(box, text="预览国家精神总加成", command=self._refresh_totals).grid(
-            row=0, column=2, sticky="w", padx=PADX)
+        ttk.Button(box, text="预览国家精神总加成", command=self._refresh_totals,
+                   style="Tight.TButton").grid(row=0, column=2, sticky="w", padx=PADX)
         self.lbl_spirit = ttk.Label(box, text="—", foreground=ACCENT,
-                                    font=(self.family, BODY, "bold"), justify="left")
+                                    font=(self.family, FONT_FIELD, "bold"), justify="left")
         self.lbl_spirit.grid(row=1, column=0, columnspan=3, sticky="w", padx=PADX, pady=(0, PADY))
         self._wrap_to_card(self.lbl_spirit, box)
         row += 1
@@ -820,26 +884,28 @@ class App(tk.Tk):
         self.frame_manual.grid(row=1, column=0, columnspan=2, sticky="ew")
         mods = self.inputs.get("manufacturer_modifiers") or {}
         self.mod_vars = {}
-        ttk.Label(self.frame_manual, text="单位：%（例 9 = +9%）").grid(row=0, column=8,
-                                                                     columnspan=2, sticky="w",
-                                                                     padx=PADX)
+        ttk.Label(self.frame_manual, text="单位：%（例 9 = +9%）", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=0, column=8, columnspan=2,
+                                                      sticky="w", padx=PADX)
         for i, (key, label) in enumerate(MOD_FIELDS):
             r, c = 1 + i // 5, (i % 5) * 2          # 2 行 × 5 列
-            ttk.Label(self.frame_manual, text=label).grid(row=r, column=c, sticky="e",
-                                                          padx=(PADX, 4), pady=2)
+            ttk.Label(self.frame_manual, text=label).grid(row=r, column=c, sticky="w",
+                                                          padx=(PADX, 6), pady=(4, 4))
             var = tk.StringVar(value=("%g" % (mods.get(key, 0) * 100)))
             self.mod_vars[key] = var
-            ttk.Entry(self.frame_manual, textvariable=var, width=7, justify="right").grid(
-                row=r, column=c + 1, sticky="w", padx=(0, PADX), pady=2)
+            ttk.Entry(self.frame_manual, textvariable=var, width=CTL_W_NUM,
+                      justify="right").grid(row=r, column=c + 1, sticky="w",
+                                            padx=(0, PADX), pady=(4, 4))
 
-        ttk.Label(card, text="合计").grid(row=2, column=0, sticky="e", padx=(PADX, 4),
+        ttk.Label(card, text="合计").grid(row=2, column=0, sticky="w", padx=(PADX, 6),
                                          pady=(0, PADY))
         self.lbl_overall = ttk.Label(card, text="—", foreground=ACCENT,
-                                     font=(self.family, BODY, "bold"), justify="left")
+                                     font=(self.family, FONT_FIELD, "bold"), justify="left")
         self.lbl_overall.grid(row=2, column=1, sticky="w", pady=(0, PADY))
         self._wrap_to_card(self.lbl_overall, card)
-        ttk.Button(card, text="预览总体加成", command=self._refresh_totals).grid(
-            row=2, column=2, sticky="w", padx=PADX, pady=(0, PADY))
+        ttk.Button(card, text="预览总体加成", command=self._refresh_totals,
+                   style="Tight.TButton").grid(row=2, column=2, sticky="w", padx=PADX,
+                                               pady=(0, PADY))
 
         row += 1
 
@@ -916,7 +982,8 @@ class App(tk.Tk):
             self.tree_out.heading(cid, text=text,
                                   command=lambda c=cid: self._sort_by(c))
             self.tree_out.column(cid, width=w, anchor=anchor)
-        self.lbl_pareto = ttk.Label(card, text="", foreground=ACCENT, font=(self.family, BODY - 1))
+        self.lbl_pareto = ttk.Label(card, text="", foreground=ACCENT,
+                                    font=(self.family, FONT_NOTE))
         self.lbl_pareto.grid(row=3, column=0, sticky="w", padx=PADX, pady=(0, PADY))
         # 表格单元格不能换行，所以选中行时在下方（散点图上方）用**分块标签**显示明细：
         # 左边一栏是块名（推荐改装 / 改装属性 / 设计数值 / 性能分数 / 战斗比值），右边是内容。
@@ -927,7 +994,7 @@ class App(tk.Tk):
         # 双击一行 = "我要看这架的细节"：选中它并把明细区滚进视野
         self.tree_out.bind("<Double-1>", lambda e: self._show_design(scroll=True))
         self.canvas_plot = tk.Canvas(card, height=300, background="white", highlightthickness=1,
-                                     highlightbackground="#D0D7E5")
+                                     highlightbackground=GRID)
         self.canvas_plot.grid(row=5, column=0, sticky="ew", padx=PADX, pady=(0, PADY))
         self.canvas_plot.bind("<Configure>", lambda e: self._draw_chart())
         self.tree_out.grid(row=2, column=0, sticky="nsew", padx=PADX, pady=(2, PADY))
@@ -1041,8 +1108,8 @@ class App(tk.Tk):
             self._group_items[group_text] = keys
             ttk.Checkbutton(cell, text=group_text, variable=gvar,
                             command=lambda g=group_text: self._toggle_group(g)).pack(side="left")
-            ttk.Label(cell, text="　需 " + need, foreground="#5A6472",
-                      font=(self.family, BODY - 2)).pack(side="left")
+            ttk.Label(cell, text="　需 " + need, foreground=MUTED,
+                      font=(self.family, FONT_NOTE)).pack(side="left")
 
     def _toggle_group(self, group_text):
         """勾/取消一个分组 = 把这组的前置科技（或特殊工程）一起置为同一状态。"""
@@ -2658,10 +2725,11 @@ class App(tk.Tk):
     def _render_design_blocks(self, blocks):
         """把 (块名, 内容, 样式) 列表画成两栏小表：左列块名（加粗深蓝），右列内容。"""
         styles = {
-            "header": dict(foreground=ACCENT, font=(self.family, BODY - 2, "bold")),
-            "normal": dict(foreground="#333333", font=(self.family, BODY - 1)),
-            "formula": dict(foreground="#1F4E79", font=(self.family, BODY - 1)),
-            "note": dict(foreground="#6B7280", font=(self.family, BODY - 2)),
+            # 明细区的三档字色/字号，与全局规范一致
+            "header": dict(foreground=ACCENT, font=(self.family, FONT_CARD, "bold")),
+            "normal": dict(foreground=INK, font=(self.family, FONT_FIELD)),
+            "formula": dict(foreground=ACCENT, font=(self.family, FONT_NOTE)),
+            "note": dict(foreground=MUTED, font=(self.family, FONT_NOTE)),
         }
         r = 0
         for header, text, kind in blocks:
@@ -2792,25 +2860,25 @@ class App(tk.Tk):
                 return "%.1f万" % (value / 10000.0)
             return "%.0f" % value
 
-        cv.create_line(left, top - 10, left, height - bottom, fill="#8A93A5")
-        cv.create_line(left, height - bottom, width - right, height - bottom, fill="#8A93A5")
+        cv.create_line(left, top - 10, left, height - bottom, fill=LINE)
+        cv.create_line(left, height - bottom, width - right, height - bottom, fill=LINE)
         x_year, y_year = x_key == "year", y_key == "year"
-        cv.create_text((left + width - right) / 2, height - bottom + 30, fill="#5A6472",
-                       font=(self.family, BODY - 2), text="%s（%s）"
+        cv.create_text((left + width - right) / 2, height - bottom + 30, fill=MUTED,
+                       font=(self.family, FONT_NOTE), text="%s（%s）"
                        % (self.var_axis_x.get(), "→ 越大越好" if xhigh else "← 越小越好"))
         # 纵轴标题竖排（angle=90）放在最左侧，避免横向挤占绘图区
-        cv.create_text(16, (top + height - bottom) / 2, angle=90, fill="#5A6472",
-                       font=(self.family, BODY - 2), text="%s（%s）"
+        cv.create_text(16, (top + height - bottom) / 2, angle=90, fill=MUTED,
+                       font=(self.family, FONT_NOTE), text="%s（%s）"
                        % (self.var_axis_y.get(), "越高越好 ↑" if yhigh else "越低越好 ↓"))
         for i in range(5):
             fx = x0 + (x1 - x0) * i / 4
             fy = y0 + (y1 - y0) * i / 4
             cv.create_text(px(fx), height - bottom + 11, text=tick(fx, x_year),
-                           fill="#5A6472", font=(self.family, BODY - 3))
+                           fill=MUTED, font=(self.family, FONT_NOTE))
             cv.create_text(left - 6, py(fy), anchor="e", text=tick(fy, y_year),
-                           fill="#5A6472", font=(self.family, BODY - 3))
-            cv.create_line(px(fx), height - bottom, px(fx), height - bottom + 3, fill="#8A93A5")
-            cv.create_line(left - 3, py(fy), left, py(fy), fill="#8A93A5")
+                           fill=MUTED, font=(self.family, FONT_NOTE))
+            cv.create_line(px(fx), height - bottom, px(fx), height - bottom + 3, fill=LINE)
+            cv.create_line(left - 3, py(fy), left, py(fy), fill=LINE)
 
         for i, (row, tx, ty) in enumerate(pts):
             cx, cy = px(tx), py(ty)
@@ -2818,9 +2886,9 @@ class App(tk.Tk):
                 cv.create_oval(cx - 4, cy - 4, cx + 4, cy + 4, fill=ACCENT, outline=ACCENT)
                 name = self._row_name(row).split()[-1]
                 cv.create_text(cx + 7, cy + (-12 if i % 2 == 0 else 12), anchor="w", text=name,
-                               fill=ACCENT, font=(self.family, BODY - 3, "bold"))
+                               fill=ACCENT, font=(self.family, FONT_NOTE, "bold"))
             else:
-                cv.create_oval(cx - 2, cy - 2, cx + 2, cy + 2, fill="#B9C2D0", outline="#B9C2D0")
+                cv.create_oval(cx - 2, cy - 2, cx + 2, cy + 2, fill=DOT, outline=DOT)
 
 
 if __name__ == "__main__":

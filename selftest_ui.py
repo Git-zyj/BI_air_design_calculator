@@ -305,6 +305,96 @@ def t_card4_layout(app):
 
 
 # ----------------------------------------------------- 10. 离线表覆盖（抽样）
+def t_style(app):
+    """全局视觉规范：卡片不越界、字段名对齐、同类控件同宽、字体/颜色只用规范里的。"""
+    print("[13] 视觉规范（字体 / 颜色 / 对齐 / 控件宽度）")
+    ok = True
+    for size in ("1280x980", "1000x650", "1600x977"):
+        app.geometry(size)
+        pump(app, 0.8)
+        cw = app.canvas.winfo_width()
+        worst = []
+        for card in app.inner.winfo_children():
+            try:
+                title = card.cget("text").strip()
+            except Exception:                # noqa: BLE001
+                continue
+            right = 0
+            for child in card.winfo_children():
+                right = max(right, child.winfo_rootx() - app.inner.winfo_rootx()
+                            + child.winfo_width())
+            worst.append((title[:5], right))
+        bad = [(t, r) for t, r in worst if r > cw + 2]
+        ok &= check("所有卡片不越右缘（%s）" % size, not bad,
+                    "右缘 %s / 画布 %d" % (", ".join("%s=%d" % (t, r) for t, r in worst), cw))
+
+    # 字段名左对齐：同一个 x
+    labels = ("用途", "配点方式", "军工组织", "方针", "等级", "合计", "国家精神（逗号分隔，可空）")
+    xs = {}
+    fonts, colors = set(), set()
+    stack = [app]
+    while stack:
+        w = stack.pop()
+        stack.extend(w.winfo_children())
+        try:
+            txt = w.cget("text")
+            if txt in labels:
+                xs[txt] = w.winfo_rootx() - app.inner.winfo_rootx()
+        except Exception:                    # noqa: BLE001
+            pass
+        try:
+            f = w.cget("font")
+            if f:
+                if isinstance(f, str):       # Tk 返回 "{Microsoft YaHei UI} 11 bold" 这种字符串
+                    tokens = f.replace("{", " ").replace("}", " ").split()
+                    size = next((int(t) for t in tokens if t.lstrip("-").isdigit()), None)
+                else:
+                    size = int(tuple(f)[1])
+                if size:
+                    fonts.add(size)
+        except Exception:                    # noqa: BLE001
+            pass
+        for opt in ("foreground", "background"):
+            try:
+                v = str(w.cget(opt))
+            except Exception:                # noqa: BLE001
+                continue
+            if v.startswith("#"):
+                colors.add(v)
+    ok &= check("字段名左对齐（同一个 x）", len(set(xs.values())) == 1 and len(xs) >= 6,
+                str(sorted(set(xs.values()))))
+    # ttk 控件多数走 style，字体在 style 里 —— 一并核对
+    style = gui.ttk.Style(app)
+    style_fonts = {}
+    for name, expect in (("TLabelframe.Label", gui.FONT_CARD), ("Treeview", gui.FONT_NOTE),
+                         ("Treeview.Heading", gui.FONT_CARD)):
+        spec = str(style.lookup(name, "font"))
+        tokens = spec.replace("{", " ").replace("}", " ").split()
+        size = next((int(t) for t in tokens if t.lstrip("-").isdigit()), None)
+        style_fonts[name] = (size, expect)
+    sizes = sorted(fonts)
+    ok &= check("字号只允许规范里的几档", all(s in (gui.FONT_TITLE, gui.FONT_CARD,
+                                                 gui.FONT_FIELD, gui.FONT_NOTE) for s in sizes),
+                "%d 个控件用到的字号 %s（规范 %s）" % (len(fonts), sizes,
+                                              sorted({gui.FONT_TITLE, gui.FONT_CARD,
+                                                      gui.FONT_FIELD, gui.FONT_NOTE})))
+    ok &= check("样式表字体也合规范",
+                all(size == expect for size, expect in style_fonts.values()),
+                ", ".join("%s=%s(期望 %s)" % (n, s, e) for n, (s, e) in style_fonts.items()))
+    palette = {gui.ACCENT, gui.MUTED, gui.INFO, gui.PROD, gui.INK, gui.DISABLED,
+               gui.BANNER_SUB, gui.BANNER_FG, gui.PAGE_BG, gui.CARD_BG, gui.GRID, gui.LINE,
+               gui.DOT, "#FFFFFF", "#ffffff"}
+    stray = sorted(c for c in colors if c.upper() not in {p.upper() for p in palette})
+    ok &= check("颜色只用调色板里的", not stray,
+                "扫到 %d 种颜色，越界 %s" % (len(colors), stray))
+    widths = (app.cb_org.cget("width"), app.cb_policy.cget("width"),
+              app.cb_alloc_mode.cget("width"))
+    ok &= check("同类下拉同宽（军工组织/方针/配点口径）", len(set(widths)) == 1, str(widths))
+    app.geometry("1280x980")
+    pump(app, 0.4)
+    return ok
+
+
 def t_table_coverage(full=False):
     print("[10] 离线表覆盖（方案键命中率）")
     app = new_app()
@@ -373,6 +463,7 @@ def main():
     t_small_window(app)
     t_wrapping(app)
     t_card4_layout(app)
+    t_style(app)
     app.destroy()
     t_memory()
     t_table_coverage(args.full)
