@@ -137,7 +137,9 @@ PLAN_CACHE = os.path.join(app_dir(), "route_cache.json")         # 运行时缓�
 #   v4 = 生产侧可靠并进有效造价（与设计侧可靠同效）+ 路线搜索改"廉价分粗筛 top-K
 #        → 分数会变（粗筛经抽样验证与全枚举结果一致）
 #   v5 = 粗筛 top-K 从 50 调到 20（用户口径；抽样验证与全枚举一致）+ 表内"生产花费"改名
-PLAN_CACHE_VERSION = 5
+#   v6 = 航程改成一维覆盖模型（最远目标距离 d₁ + 目标距离差 Δ，近边 d₀ = d₁ − Δ）：
+#        航程 ≤ d₀ 时覆盖率记 0（以前是 min(航程,d₁)/d₁，永远 > 0）→ 路线/改装最优解会变
+PLAN_CACHE_VERSION = 6
 
 
 def plan_key(inputs, org_name, ref_key):
@@ -157,6 +159,8 @@ def plan_key(inputs, org_name, ref_key):
          if set(inputs.get("roles") or []) & {"air_near", "air_far", "air_cv"} else "-"),
         json.dumps(inputs.get("experience") or {}, sort_keys=True),
         str(inputs.get("range_cap") or ""),
+        # 目标距离差也影响航程覆盖率 → 必须进键（否则改了差值会读到旧方案）
+        str(inputs.get("range_band") if inputs.get("range_band") is not None else ""),
         str(inputs.get("alloc_mode") or "split"),
         # 生产堆叠只影响"兼顾"（分离口径的路线与分数跟堆叠无关）→
         # 分离时用默认值入键，这样改效率上限/产量加成不会把分离那条计划也判失效。
@@ -284,6 +288,9 @@ DEFAULT_INPUTS = {
     "enemy": {"country": "GER", "rule": "previous_year", "override_key": None,
               "by_country": {}},
     "range_cap": 900.0,                     # 距离目标（航程上限）默认 900；600 起每 300 一档
+    # 目标距离差 Δ = 目标区域纵深（近边距离 d₀ = range_cap − Δ）。默认 300：
+    # 航程 ≤ 900−300 = 600 的飞机对"最远 900"的区域完全够不到 → 效率记 0。
+    "range_band": 300.0,
     "efficiency_cap_now": 100,              # 当前生产效率上限（%）——生产折算用
     "capacity_bonus_now": 200,              # 当前产能加成（%）——生产折算用
     "mio": {"organization": "", "level": 14, "manual_traits": None},   # 军工组织默认满级
@@ -378,6 +385,17 @@ def pick_reference_plane(pool, inputs, data, upgrade_map, enemy_by_role):
 POOL_WINDOW = 3
 
 
+def range_spec(inputs):
+    """把「最远目标距离 + 目标距离差」打包成 `engine.RangeSpec` 传给引擎。
+
+    2026-10-12 航程改成一维覆盖模型（见 §50）：近边距离 d₀ = 最远目标距离 − 目标距离差；
+    航程不超过 d₀ 的飞机对该区域**完全够不到**（覆盖率 0）。老 inputs.json 没有
+    `range_band` 时按 0 处理 → 退化成旧口径（近边 = 0）。
+    """
+    return engine.RangeSpec(inputs.get("range_cap") or engine.DEFAULT_RANGE_CAP,
+                            inputs.get("range_band") or 0.0)
+
+
 def candidate_pool(inputs, data):
     """候选机身 = 当前国家 + 科技年份以内 + 本次用途对应的机种（archetype）。
 
@@ -406,6 +424,9 @@ def build_rows(inputs, data):
     if inputs.get("modifier_source") == "manual":
         inputs = dict(inputs)
         inputs["manufacturer_mode"] = "manual"
+    # 航程参数打包成 RangeSpec（float 子类，额外带"目标距离差"）—— 引擎里所有
+    # range_cap 的小数运算照旧，"近边距离"只有 range_coverage() 会用到。
+    rng = range_spec(inputs)
     upgrade_map = engine.upgrades_by_key(data["upgrades"])
     candidates = candidate_pool(inputs, data)
     # 对手按用途分别取（参考机型与每行都要用，所以先算）
@@ -456,7 +477,7 @@ def build_rows(inputs, data):
             acc_f = engine.accident_factor(role in engine.CARRIER_ROLES)
             result = engine.optimize(airframe, upgrade_map, player_mods, role_enemy_values,
                                      score_key,
-                                     available=tokens, range_cap=inputs.get("range_cap"),
+                                     available=tokens, range_cap=rng,
                                      experience=inputs.get("experience"), accident_f=acc_f,
                                      # 生产侧可靠与设计侧同效（修正装备当前可靠性）→ 进有效造价
                                      prod_mods=mfr_info.get("production"))
@@ -529,7 +550,7 @@ def route_value(org, plane, tokens, mods0, upgrade_map, data, inputs, enemy_valu
         flags=inputs.get("unlocked_flags") or [], archetype=plane.get("archetype"))[0]
     key = engine.score_role(role)
     result = engine.optimize(plane, upgrade_map, mods, enemy_values, key, available=avail,
-                             range_cap=inputs.get("range_cap"),
+                             range_cap=range_spec(inputs),
                              experience=inputs.get("experience"),
                              accident_f=engine.accident_factor(role in engine.CARRIER_ROLES))
     gain = engine.production_gain(prod, inputs.get("efficiency_cap_now", 100),
@@ -635,10 +656,11 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
             _fold = (inputs.get("alloc_mode") or "split") == "balanced"
             _ckey = (org["organization"], level, ref.get("key"), _fold, _cap, _ca,
                      tuple(sorted(inputs.get("unlocked_techs") or [])),
-                     tuple(inputs["roles"]), float(inputs.get("range_cap") or 0))
+                     tuple(inputs["roles"]), float(inputs.get("range_cap") or 0),
+                     float(inputs.get("range_band") or 0))
             _chosen, mods, log = engine.route_best(
                 org, level, ref, upgrade_map, base_mods, _enemy_values, inputs["roles"],
-                inputs.get("range_cap"), inputs.get("experience"),
+                range_spec(inputs), inputs.get("experience"),
                 techs=inputs.get("unlocked_techs") or [], cap_now=_cap, capacity_now=_ca,
                 available=avail, fold=_fold, cache_key=_ckey)
             for item in log:
@@ -851,7 +873,10 @@ def write_workbook(path, inputs, rows, player_mods, enemy, enemy_values, mfr_inf
         ("对手设计商加成（机动/速度）", _enemy_mod_line(inputs, "modifiers")),
         ("对手联队经验加成（机动/速度）", _enemy_mod_line(inputs, "experience")),
         ("对手修正来源", _enemy_source_line(inputs)),
-        ("航程上限", inputs.get("range_cap")),
+        ("最远目标距离 d₁", inputs.get("range_cap")),
+        ("目标距离差 Δ（区域纵深）", inputs.get("range_band")),
+        ("目标区域近边距离 d₀（= d₁ − Δ）",
+         max(0.0, float(inputs.get("range_cap") or 0) - float(inputs.get("range_band") or 0))),
         ("事故年损失率 f", engine.ACCIDENT_FACTOR),
         ("事故年损失率 f（舰载，× ACCIDENT_CHANCE_CARRIER_MULT）",
          "%.6f（= %.6f × %.2f）" % (engine.ACCIDENT_FACTOR_CARRIER, engine.ACCIDENT_FACTOR,

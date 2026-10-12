@@ -166,6 +166,65 @@ def effect_score(mission, terms):
     return out
 GOLDEN_SHEET_CONSTANTS = True             # golden 回归时用表内（原版）系数，保持可比
 DEFAULT_RANGE_CAP = 900.0
+
+
+class RangeSpec(float):
+    """"最远目标距离 + 目标距离差"打包成一个 float 子类。
+
+    值 = **最远目标距离 d₁**（要完全覆盖目标区域、航程至少得够到这里）；
+    额外带 `band` = **目标距离差 Δ**（目标区域的纵深）→ 近边距离 d₀ = max(0, d₁ − Δ)。
+
+    为什么做成 float 子类：`range_cap` 这条参数在引擎里要穿过
+    `evaluate / optimize / route_best / route_best_joint / pick_mio_traits…`
+    十几个函数与调用点；做成 float 后所有老代码（`min(航程, range_cap)`、`÷ range_cap`…）
+    一行都不用改，只有真正需要"近边"的地方调 `range_coverage()` 取。
+    """
+
+    band = 0.0
+
+    def __new__(cls, cap, band=0.0):
+        obj = super().__new__(cls, float(cap or 0.0))
+        try:
+            obj.band = max(0.0, float(band or 0.0))
+        except (TypeError, ValueError):
+            obj.band = 0.0
+        return obj
+
+
+def range_band(range_cap):
+    """取"目标距离差"（老代码传进来的普通 float 没有 band → 0，等于旧口径）。"""
+    try:
+        return max(0.0, float(getattr(range_cap, "band", 0.0) or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def range_coverage(actual_range, range_cap):
+    """航程覆盖率（0~1）：一维版的"航程圆覆盖目标区域纵深"。
+
+    游戏里每个机翼 × 每个区域都有一个 `Coverage in this region: X%`
+    （本地化键 `AIRWING_REGION_COVERAGE`），没覆盖满就按缺口给效率惩罚
+    （`AIRBASE_DISTANCE_PENALTY_DETAIL`），一点都够不到就是
+    `Out of range of this Air Zone!`（等效 0 架）。
+
+    一维模拟（用户口径 2026-10-12）：
+        d₁ = 最远目标距离（= range_cap）、Δ = 目标距离差（= band）
+        d₀ = max(0, d₁ − Δ)                       ← 目标区域近边
+        覆盖率 = clamp((min(实际航程, d₁) − d₀) ÷ Δ, 0, 1)
+
+    - 实际航程 ≤ d₀ → 0（完全够不到）
+    - 实际航程 ≥ d₁ → 1（全覆盖）
+    - Δ ≤ 0（或老代码传普通 float）→ 退化为旧口径 `min(航程, d₁) ÷ d₁`（近边 = 0）
+    """
+    d1 = float(range_cap or 0.0)
+    if d1 <= 0:
+        return 1.0
+    band = range_band(range_cap)
+    if band <= 0.0:
+        return min(float(actual_range), d1) / d1
+    d0 = max(0.0, d1 - band)
+    covered = min(float(actual_range), d1) - d0
+    return max(0.0, min(1.0, covered / band))
 GROUND_FLOOR = 0.0001
 
 ROLES = {
@@ -451,11 +510,15 @@ def evaluate(base, levels, upgrade_map, mods, enemy, range_cap=DEFAULT_RANGE_CAP
                                     * (1 + coef.get("naval_strike_targetting", 0.0))
                                     + add.get("naval_strike_targetting", 0.0)),
     }
-    # 航程是"效率"而不是"产值"：航程不够时按 实际/目标 比例减成，够了封顶 1。
-    # 例：实际 450、目标 900 → 0.5。这样"远"用途的分数就是一个 0~1 的效率因子乘进去，
-    # 而不是乘一个 600~3600 的大数（以前那写法会让航程项主导整个分数）。
+    # 航程是"效率"而不是"产值"：航程不够时按覆盖率减成，够了封顶 1。
+    # 2026-10-12 改成一维覆盖模型（见 range_coverage()）：
+    #   d₁ = 最远目标距离、Δ = 目标距离差、d₀ = d₁ − Δ（目标区域近边）
+    #   覆盖率 = clamp((min(航程, d₁) − d₀) ÷ Δ, 0, 1)   ← 航程 ≤ d₀ 时是 0
+    # 老口径（近边 = 0，即区域从机场脚下一直铺到 d₁）是 Δ = d₁ 的特例：
+    #   实际 450、目标 900 → 0.5。
     values["range_cap"] = range_cap
-    values["range_factor"] = (values["range"] / range_cap) if range_cap else 1.0
+    values["range_band"] = range_band(range_cap)
+    values["range_factor"] = range_coverage(values["range"], range_cap)
 
     if bice_combat:
         a, s = COMBAT_AGILITY_DAMAGE_REDUCTION, COMBAT_SPEED_DAMAGE_INCREASE
@@ -596,9 +659,22 @@ def score_breakdown(role, values, effective_cost=None):
         for label, value, expo in terms) or "1"
     lines = ["性能分数 %s = %s" % (fmt_num(pure), left)]
     if any(label == "航程效率" for label, _v, _e in terms):
-        lines.append("　航程效率 %s = 实际航程 %s ÷ 目标航程 %s（不够按比例减，够了封顶 1）"
-                     % (fmt_num(values.get("range_factor"), 4), fmt_num(values.get("range")),
-                        fmt_num(values.get("range_cap"))))
+        cap = float(values.get("range_cap") or 0.0)
+        band = float(values.get("range_band") or 0.0)
+        rng = values.get("range") or 0.0
+        if band > 0:
+            near = max(0.0, cap - band)
+            lines.append(
+                "　航程效率 %s = (min(实际航程 %s, 最远目标距离 %s) − 近边距离 %s) ÷ 目标距离差 %s"
+                "（航程不超过近边距离时记 0）"
+                % (fmt_num(values.get("range_factor"), 4), fmt_num(rng), fmt_num(cap),
+                   fmt_num(near), fmt_num(band)))
+            if values.get("range_factor", 0.0) <= 0:
+                lines.append("　　⚠ 航程 %s ≤ 近边距离 %s → 飞不到这个区域，效率记 0"
+                             % (fmt_num(rng), fmt_num(near)))
+        else:
+            lines.append("　航程效率 %s = 实际航程 %s ÷ 最远目标距离 %s（不够按比例减，够了封顶 1）"
+                         % (fmt_num(values.get("range_factor"), 4), fmt_num(rng), fmt_num(cap)))
     return lines
 
 

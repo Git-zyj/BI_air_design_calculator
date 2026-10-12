@@ -305,6 +305,7 @@ class App(tk.Tk):
         self.var_year.set(int(base.get("current_year") or 1939))
         self.var_tech.set(int(base.get("tech_year") or 1939))
         self.var_distance.set(str(int(float(base.get("range_cap") or 900))))
+        self.var_band.set(str(int(float(base.get("range_band") or 0))))
         roles = base.get("roles") or ["air_far"]
         for key, var in self.role_vars.items():
             var.set(key in roles)
@@ -590,10 +591,10 @@ class App(tk.Tk):
             self.role_vars[key] = v
             ttk.Checkbutton(roles_bar, text=label, variable=v,
                             command=self._on_roles_changed).pack(side="left", padx=(0, PADX))
-        # 「距离目标」单独一行：跟六个勾选框挤在同一行时整行 1035px，
+        # 「最远目标距离 + 目标距离差」单独一行：跟六个勾选框挤在同一行时整行 1035px，
         # 窗口缩到 1000px 就会被右缘裁掉
-        ttk.Label(box, text="距离目标").grid(row=1, column=0, sticky="w",
-                                         padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
+        ttk.Label(box, text="最远目标距离").grid(row=1, column=0, sticky="w",
+                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_distance = tk.StringVar(
             value=str(int(self.inputs.get("range_cap") or DEFAULT_DISTANCE)))
         dbox = ttk.Combobox(box, textvariable=self.var_distance, width=CTL_W_NUM + 1,
@@ -601,9 +602,28 @@ class App(tk.Tk):
                             values=DISTANCES)
         dbox.grid(row=1, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
         dbox.bind("<<ComboboxSelected>>", lambda e: self._on_inputs_affecting_plan())
-        ttk.Label(box, text="（= 航程上限，600 起每 300 一档）", foreground=MUTED,
-                  font=(self.family, FONT_NOTE)).grid(row=1, column=2, columnspan=3, sticky="w",
-                                                      padx=(PADX, 0))
+        # 目标区域纵深（近边 = 最远目标距离 − 目标距离差）：默认 300（游戏里的空域纵深量级）
+        ttk.Label(box, text="目标距离差").grid(row=1, column=2, sticky="w",
+                                          padx=(PADX * 2, 6))
+        self.var_band = tk.StringVar(value=str(int(self.inputs.get("range_band") or 0)))
+        bbox = ttk.Spinbox(box, from_=0, to=3600, increment=300, width=CTL_W_NUM + 1,
+                           textvariable=self.var_band, command=self._on_range_band_changed)
+        bbox.grid(row=1, column=3, sticky="w")
+        bbox.bind("<FocusOut>", lambda e: self._on_range_band_changed())
+        bbox.bind("<Return>", lambda e: self._on_range_band_changed())
+        ttk.Label(box, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
+            row=1, column=4, sticky="w", padx=(2, 0))
+
+        # 航程口径说明（用户要求"辅以文字说明"）
+        self.lbl_range_note = ttk.Label(
+            box, text="航程口径：最远目标距离 = 目标区域远边到机场的距离；"
+                      "目标距离差 = 区域纵深（近边距离 = 最远目标距离 − 距离差）。"
+                      "航程不超过近边距离的飞机对该区域完全够不到，效率记 0"
+                      "（对应游戏里 Coverage in this region 的 0%）。",
+            foreground=MUTED, justify="left", font=(self.family, FONT_NOTE))
+        self.lbl_range_note.grid(row=2, column=0, columnspan=5, sticky="w", padx=PADX,
+                                 pady=(0, ROW_PAD))
+        self._wrap_to_card(self.lbl_range_note, box)
         row += 1
 
         # ② 年份 + 所选国家与主要对手（先定国家和年份，后面才谈前置科技）
@@ -1291,6 +1311,7 @@ class App(tk.Tk):
                 tuple(sorted(inputs.get("unlocked_techs") or [])),
                 tuple(sorted(inputs.get("unlocked_flags") or [])),
                 float(inputs.get("range_cap") or 0),
+                float(inputs.get("range_band") or 0),      # 目标距离差也进键（口径 §50）
                 json.dumps(inputs.get("experience") or {}, sort_keys=True),
                 inputs.get("country"),
                 # 对手也进键：对手机动/速度直接参与评分，换对手必须重算路线
@@ -1429,7 +1450,7 @@ class App(tk.Tk):
             if rec is None:
                 pol, _chosen, mods, log, score, gain = engine.route_best_joint(
                     org, engine.MIO_MAX_LEVEL, ref, upgrade_map, ini_mods, enemy_values,
-                    inputs["roles"], inputs.get("range_cap"), policies=pols,
+                    inputs["roles"], run.range_spec(inputs), policies=pols,
                     experience=inputs.get("experience"),
                     techs=inputs.get("unlocked_techs") or [], cap_now=cap_now,
                     capacity_now=ca_now, available=tokens, fold=fold,
@@ -1857,7 +1878,7 @@ class App(tk.Tk):
             except (Exception, SystemExit):  # noqa: BLE001
                 continue
             score = engine.evaluate(ref, {t: 0 for t in tokens}, upgrade_map, mods, enemy_values,
-                                    base.get("range_cap"), base.get("experience"),
+                                    run.range_spec(base), base.get("experience"),
                                     accident_factor=acc_f)[2][score_key]
             if best_score is None or score > best_score:
                 best, best_score = pol["token"], score
@@ -2076,6 +2097,17 @@ class App(tk.Tk):
         self._sync_rule()
         self._on_inputs_affecting_plan()
 
+    def _on_range_band_changed(self):
+        """改了「目标距离差」：航程覆盖率跟着变 → 重推路线/方针并重算结果表。"""
+        try:
+            band = float(self.var_band.get() or 0)
+        except (tk.TclError, ValueError):
+            return                            # 还在输入中
+        band = max(0.0, min(3600.0, band))
+        _dbg("操作：改目标距离差 → %g km" % band)
+        self._plans.clear()
+        self._on_inputs_affecting_plan(recalc=True)
+
     def _on_inputs_affecting_plan(self, recalc=False):
         """年份 / 距离 / 对手 / 国家精神这类输入变了：重挑方针 + 重算"推荐"那行。
 
@@ -2289,6 +2321,7 @@ class App(tk.Tk):
             "tech_year": int(self.var_tech.get()),
             "roles": roles,
             "range_cap": float(self.var_distance.get()),
+            "range_band": float(self.var_band.get() or 0),
             "pareto_x": self._axis_key(self.var_axis_x.get()),
             "pareto_y": self._axis_key(self.var_axis_y.get()),
             "modifier_source": source,
@@ -2535,7 +2568,14 @@ class App(tk.Tk):
         self._refresh_totals()
         self.lbl_overall.configure(text=fmt_mods(player_mods))
         self._render_rows()
-        self.lbl_hint.configure(text="已计算 %d 行；需要写文件时点「导出 Excel」" % len(rows))
+        # 全是 0 分时给一句人话：多半是"最远目标距离 / 目标距离差"组合下所有机型都飞不到
+        zeros = [r for r in rows if (r.get("values") or {}).get("range_factor", 1.0) <= 0]
+        if rows and len(zeros) == len(rows):
+            self.lbl_hint.configure(
+                text="⚠ 该「最远目标距离 / 目标距离差」下所有机型覆盖率都是 0（飞不到）"
+                     "——调小最远目标距离或调大目标距离差")
+        else:
+            self.lbl_hint.configure(text="已计算 %d 行；需要写文件时点「导出 Excel」" % len(rows))
         if view_result:
             self._scroll_to(self.card_result)  # 结果在折叠线以下，按了计算就带过去
 
@@ -2678,6 +2718,16 @@ class App(tk.Tk):
         for var in (self.var_cap, self.var_capacity):
             var.trace_add("write", on_prod)
 
+        # 「目标距离差」也是手打输入：键入时同样要重算（Spinbox 的 command 只在按箭头时触发）
+        def on_band(*_a):
+            try:
+                float(self.var_band.get() or 0)
+            except (tk.TclError, ValueError):
+                return
+            self._on_inputs_affecting_plan(recalc=True)   # 带 400ms 防抖
+
+        self.var_band.trace_add("write", on_band)
+
         # 对手修正/经验：改了立刻写回 by_country 并重算对手（写不进去 = 还在输入中）
         def on_enemy_mods(*_a):
             if getattr(self, "_filling_enemy_mods", False):
@@ -2768,6 +2818,8 @@ class App(tk.Tk):
 
         dv, parts = v.get("design_values") or {}, []
         cap = v.get("range_cap")
+        band = float(v.get("range_band") or 0)
+        near = max(0.0, float(cap or 0) - band) if band > 0 else None
         for key in DESIGN_SHOW:
             if key not in dv:
                 continue
@@ -2776,8 +2828,9 @@ class App(tk.Tk):
                        "naval_strike_targetting") and not value:
                 continue                      # 这个用途用不上的属性不占地方
             if key == "air_range" and cap and value > cap:
-                parts.append("%s %s（设计 %s，按目标截断）"
-                             % (name(key), engine.fmt_num(cap), engine.fmt_num(value)))
+                extra = "，近边 %s" % engine.fmt_num(near) if near is not None else ""
+                parts.append("%s %s（设计 %s，按最远目标距离截断%s）"
+                             % (name(key), engine.fmt_num(cap), engine.fmt_num(value), extra))
                 continue
             text = engine.fmt_num(value, 4) if abs(value) < 1 else engine.fmt_num(value)
             parts.append("%s %s" % (name(key), text))

@@ -147,6 +147,42 @@ def t_enemy(data):
 
 
 # ------------------------------------------------------------ 6. 命名与版本
+def t_range_coverage(data):
+    """航程一维覆盖模型（§50）：近边距离 = 最远目标距离 − 目标距离差。"""
+    print("[9] 航程覆盖模型（最远目标距离 + 目标距离差）")
+    spec = engine.RangeSpec(900, 300)            # 近边 = 600
+    cases = [(450, 0.0), (600, 0.0), (750, 0.5), (900, 1.0), (1200, 1.0)]
+    ok = True
+    for rng, want in cases:
+        got = engine.range_coverage(rng, spec)
+        ok &= check("航程 %d @ d₁=900/Δ=300 → %.2f" % (rng, want), approx(got, want, 1e-9),
+                    "%.4f" % got)
+    # Δ = 0 → 退化成旧口径（近边 = 0）
+    old = engine.RangeSpec(900, 0)
+    ok &= check("Δ=0 退化成旧口径 min(R,d₁)/d₁",
+                approx(engine.range_coverage(450, old), 0.5)
+                and approx(engine.range_coverage(700, old), 700 / 900),
+                "450→%.3f，700→%.3f" % (engine.range_coverage(450, old),
+                                        engine.range_coverage(700, old)))
+    # 端到端：改「目标距离差」必须真的改变分数（说明它一路传到了引擎）
+    base = inputs_for("SOV", "air_far", 1944, 1944)
+    rows_a, *_ = run.build_rows(dict(base, range_band=0), data)
+    rows_b, *_ = run.build_rows(dict(base, range_band=300), data)
+    fa = {r["airframe"]["key"]: r["values"]["range_factor"]
+          for r in rows_a if r["role"] == "air_far"}
+    fb = {r["airframe"]["key"]: r["values"]["range_factor"]
+          for r in rows_b if r["role"] == "air_far"}
+    top_a = next(r for r in rows_a if r["role"] == "air_far")["score"]
+    top_b = next(r for r in rows_b if r["role"] == "air_far")["score"]
+    lowered = [k for k in fa if fb.get(k, 1.0) < fa[k] - 1e-9]
+    ok &= check("改 Δ 会改变分数", abs(top_a - top_b) > 1e-9,
+                "Δ=0 首名 %.4f / Δ=300 首名 %.4f" % (top_a, top_b))
+    ok &= check("Δ=300 会压低短航程飞机的覆盖率", bool(lowered),
+                "%d 架覆盖率被压低（其中 %d 架为 0）"
+                % (len(lowered), sum(1 for k in lowered if fb[k] <= 0)))
+    return ok
+
+
 def t_naming(data):
     print("[6] 版本标识与导出文件名")
     info = run.build_info()
@@ -223,6 +259,7 @@ def main():
     t_weighted(data)
     t_production(data)
     t_enemy(data)
+    t_range_coverage(data)
     t_naming(data)
     t_table_files(data)
     if not args.quick:

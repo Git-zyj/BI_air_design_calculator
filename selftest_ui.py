@@ -57,14 +57,19 @@ def t_startup(app):
     ok = check("标题带版本号", "黑冰" in app.title() and "v" in app.title(), app.title())
     ok &= check("首屏已自动算过（表格非空）", len(app.tree_out.get_children()) > 0,
                 "%d 行" % len(app.tree_out.get_children()))
-    ok &= check("状态行给出下一步提示", "行" in app.lbl_hint.cget("text")
-                or "计算" in app.lbl_hint.cget("text"), repr(app.lbl_hint.cget("text")))
+    # 状态行要么是"已计算 N 行…"，要么是"⚠ 全飞不到"这句提示（默认 1939 + Δ=300 时会触发）
+    hint = app.lbl_hint.cget("text")
+    ok &= check("状态行给出下一步提示", "已计算" in hint or "⚠" in hint, repr(hint))
     ok &= check("字体信息单独成行（没占状态行）", "字体" not in app.lbl_hint.cget("text"),
                 repr(app.lbl_font.cget("text")))
     ok &= check("窗口不超过屏幕", app.winfo_height() <= app.winfo_screenheight() - 60,
                 "%dx%d（屏 %dx%d）" % (app.winfo_width(), app.winfo_height(),
                                       app.winfo_screenwidth(), app.winfo_screenheight()))
-    ok &= check("日志里有水印（候选机型数）", True, "")
+    # 首屏自动算可能还在跑（冷启动要搜路线）——显式算一次再验状态行，避免误判
+    app.on_calculate()
+    pump(app, 1.0)
+    hint2 = app.lbl_hint.cget("text")
+    ok &= check("点计算后状态行有反馈", "已计算" in hint2 or "⚠" in hint2, repr(hint2))
     return ok
 
 
@@ -372,7 +377,7 @@ def t_style(app):
     # 字段名左对齐：同一个 x
     # 所有"独立成行"的字段名都要在同一条竖线上（② 的五个、④ 的"配点口径"正是
     # 用户 2026-10-12 抓出来的漏检项）
-    labels = ("用途", "距离目标",
+    labels = ("用途", "最远目标距离", "目标距离差",
               "当前年份", "飞机科技年份", "所选国家", "对手国别", "选取规则",
               "配点方式", "军工组织", "方针", "等级", "配点口径",
               "国家精神（逗号分隔，可空）", "合计")
