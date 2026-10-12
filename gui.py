@@ -92,6 +92,9 @@ RULE_KEYS = {key: label for label, key in RULE_LABELS}      # 反查：key → �
 # 距离目标（= 航程上限）：600 起，每 300 一档，最高 3600；默认 900
 DISTANCES = list(range(600, 3601, 300))
 DEFAULT_DISTANCE = 900
+# 目标距离差（目标区域纵深）挡位（用户口径 2026-10-12）：100~600，默认 300
+BAND_CHOICES = [100, 200, 300, 400, 500, 600]
+DEFAULT_BAND = 300
 # 自动配点的口径：
 #   design   只按设计分挑路线（生产侧顺带拿到的算白赚）
 #   balanced 兼顾：同一条路线里最大化"折算后总分数"（生产特质与设计链并存）
@@ -613,12 +616,12 @@ class App(tk.Tk):
         blk2 = ttk.Frame(rng_row)
         blk2.grid(row=0, column=1, sticky="w")
         ttk.Label(blk2, text="目标距离差").grid(row=0, column=0, sticky="w", padx=(0, 6))
-        self.var_band = tk.StringVar(value=str(int(self.inputs.get("range_band") or 0)))
-        bbox = ttk.Spinbox(blk2, from_=0, to=3600, increment=300, width=CTL_W_NUM + 1,
-                           textvariable=self.var_band, command=self._on_range_band_changed)
+        self.var_band = tk.StringVar(
+            value=str(int(self.inputs.get("range_band") or DEFAULT_BAND)))
+        bbox = ttk.Combobox(blk2, textvariable=self.var_band, state="readonly",
+                            width=CTL_W_NUM + 1, values=BAND_CHOICES)
         bbox.grid(row=0, column=1, sticky="w")
-        bbox.bind("<FocusOut>", lambda e: self._on_range_band_changed())
-        bbox.bind("<Return>", lambda e: self._on_range_band_changed())
+        bbox.bind("<<ComboboxSelected>>", lambda e: self._on_range_band_changed())
         ttk.Label(blk2, text="km", foreground=MUTED, font=(self.family, FONT_NOTE)).grid(
             row=0, column=2, sticky="w", padx=(2, 0))
 
@@ -2123,7 +2126,7 @@ class App(tk.Tk):
             band = float(self.var_band.get() or 0)
         except (tk.TclError, ValueError):
             return                            # 还在输入中
-        band = max(0.0, min(3600.0, band))
+        band = max(0.0, min(float(max(BAND_CHOICES)), band))
         _dbg("操作：改目标距离差 → %g km" % band)
         self._plans.clear()
         self._on_inputs_affecting_plan(recalc=True)
