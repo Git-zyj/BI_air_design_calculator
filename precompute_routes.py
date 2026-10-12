@@ -71,6 +71,22 @@ def main():
     if args.force:
         app._plan_table = {}
         app._plan_runtime = {}
+    # ⚠ 生成离线表必须**强制用出厂默认的那几个口径**，不能吃"本机上次输入"
+    # （app 启动时会读 %LOCALAPPDATA%\...\last_inputs.json）。
+    # 踩过的坑：苏德两片曾被按"最远目标距离 1200"生成 —— 因为当时维护者本机
+    # 上次玩的就是 1200，于是键里写的是 1200.0，用户按默认 900 打开全部未命中。
+    app.inputs = dict(run.DEFAULT_INPUTS)
+    app.var_distance.set(str(int(run.DEFAULT_INPUTS["range_cap"])))
+    app.var_band.set(str(int(run.DEFAULT_INPUTS["range_band"])))
+    app.var_cap.set(int(run.DEFAULT_INPUTS["efficiency_cap_now"]))
+    app.var_capacity.set(int(run.DEFAULT_INPUTS["capacity_bonus_now"]))
+    app.var_spirits.set(",".join(run.DEFAULT_INPUTS.get("national_spirits") or []))
+    app.var_source.set(run.DEFAULT_INPUTS.get("modifier_source") or "mio")
+    app.var_alloc.set("auto")
+    app.var_override.set("")
+    print("本次口径：最远目标距离 %s / 目标距离差 %s / 效率上限 %s / 产能加成 %s / 国家精神 %s"
+          % (app.var_distance.get(), app.var_band.get(), app.var_cap.get(),
+             app.var_capacity.get(), app.var_spirits.get() or "（无）"))
 
     t_all = time.time()
     done = 0
@@ -123,6 +139,16 @@ def main():
             run.save_plan_shard(country, role, shard)
             print("  分片 %s_%s：%d 条" % (country, role, len(shard)))
             sys.stdout.flush()
+            # 兜底自检：分片里的"最远目标距离/目标距离差"必须是出厂默认值，
+            # 否则用户按默认打开时会全部未命中（见上面那个坑）。
+            caps = sorted({k.split("|")[11] for k in shard})
+            bands = sorted({k.split("|")[12] for k in shard})
+            want_cap = str(float(run.DEFAULT_INPUTS["range_cap"]))
+            want_band = str(float(run.DEFAULT_INPUTS["range_band"]))
+            if caps != [want_cap] or bands != [want_band]:
+                print("  ⚠⚠ 口径不对！分片里的 cap=%s band=%s（应为 %s / %s）"
+                      % (caps, bands, want_cap, want_band))
+                sys.stdout.flush()
 
     print("\n完成：分片目录 %s，用时 %.1f 分钟" % (run.PLAN_TABLE_DIR, (time.time() - t_all) / 60.0))
     app.destroy()
