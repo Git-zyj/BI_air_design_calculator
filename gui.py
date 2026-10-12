@@ -3000,6 +3000,47 @@ class App(tk.Tk):
         out = " ".join(parts[:ascii_idx[-1] + 1]) if ascii_idx else " ".join(parts)
         return out[:limit] + "…" if len(out) > limit else out
 
+    @staticmethod
+    def _cjk_tail(text):
+        """取一段文字**最靠右的连续中文段**（"…“箭” 重型战斗机" → "重型战斗机"）。"""
+        out = []
+        for ch in reversed(str(text or "")):
+            if "\u4e00" <= ch <= "\u9fff" or ch == "·":
+                out.append(ch)
+            else:
+                break
+        return "".join(reversed(out))
+
+    def _short_label(self, row, limit=26):
+        """界面上用的**"游戏简称 + 飞机种类"**（用户 2026-10-13 口径）。
+
+        简称 = 装备的 `_short` 本地化 —— **游戏里就是这么叫的**
+        （`me_109_late_fighter_equipment_3_short:0 "Bf 109 G"`，用户从游戏里复制的就是它）。
+        种类 = 全名里**跟在简称后面的最靠右中文段**（用汉化自己的说法：
+        轰炸机 / 喷气式多用途战斗机 / 重型战斗机…），取不到就退回按 `category` 的中文名。
+
+        结果：`巴伐利亚 Bf 109 G-14 战斗机` → `Bf 109 G-14 战斗机`；
+              `超级马林“喷火” Mk.XIVe战斗机` → `“喷火” Mk.XIVe 战斗机`；
+              `梅塞施密特 Me 262 A “飞燕” 喷气式多用途战斗机` → `Me 262 A “飞燕” 喷气式多用途战斗机`；
+              `福克-沃尔夫 Ta 152 H-1`（短名后面没中文）→ `Ta 152 H-1 截击机`。
+        没有 `_short` 条目（约 54/953 架）时退回老的启发式短名，保证永远有字可显示。
+        """
+        frame = row.get("airframe") or {}
+        key, full = frame.get("key") or "", self._row_name(row)
+        short = zh(self.loc, key + "_short") if key else ""
+        if short == key + "_short":          # 没这条本地化时 zh() 会把 key 原样返回
+            short = ""
+        if not short:
+            return self._short_name(full, limit)
+        kind = ""
+        idx = full.find(short)
+        if idx >= 0:
+            kind = self._cjk_tail(full[idx + len(short):])
+        if not kind:
+            kind = engine.CATEGORY_ZH.get(frame.get("category"), "")
+        out = ("%s %s" % (short, kind)).strip()
+        return out[:limit] + "…" if len(out) > limit else out
+
     def _sort_value(self, row):
         key = getattr(self, "_sort_key", "rank")
         getters = {
@@ -3164,7 +3205,12 @@ class App(tk.Tk):
             return
         row = getattr(self, "_row_by_iid", {}).get(sel[0])
         v = (row or {}).get("values") or {}
-        blocks = [("推荐改装", "%s：%s" % (values[3], values[-1]), "normal")]
+        blocks = []
+        # 2026-10-13：先给一行"游戏里的简称 + 飞机种类"（`_short` 本地化 + 种类），
+        # 方便对着游戏里的装备列表核对；数据里的全名仍在"推荐改装"那行里。
+        if row is not None:
+            blocks.append(("机型", self._short_label(row), "normal"))
+        blocks.append(("推荐改装", "%s：%s" % (values[3], values[-1]), "normal"))
         if v:
             blocks.extend(self._design_blocks(v))
             blocks.append(("", "", "sep"))
@@ -3396,7 +3442,7 @@ class App(tk.Tk):
             cx, cy = px(tx), py(ty)
             if row.get("pareto"):
                 cv.create_oval(cx - 4, cy - 4, cx + 4, cy + 4, fill=ACCENT, outline=ACCENT)
-                name = self._short_name(self._row_name(row))
+                name = self._short_label(row)
                 cv.create_text(cx + 7, cy + (-12 if i % 2 == 0 else 12), anchor="w", text=name,
                                fill=ACCENT, font=(self.family, FONT_NOTE, "bold"))
             else:
@@ -3417,7 +3463,7 @@ class App(tk.Tk):
             cv.create_line(sx + 8, sy, sx + 11, sy, fill=INK, tags="selhl")
             cv.create_line(sx, sy - 11, sx, sy - 8, fill=INK, tags="selhl")
             cv.create_line(sx, sy + 8, sx, sy + 11, fill=INK, tags="selhl")
-            name = self._short_name(self._row_name(sel_row))
+            name = self._short_label(sel_row)
             cv.create_text(sx, sy - 15, anchor="s", text="选中 %s" % name, fill=INK,
                            font=(self.family, FONT_NOTE, "bold"), tags="selhl")
 

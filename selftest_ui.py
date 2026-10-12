@@ -44,10 +44,28 @@ def pump(app, seconds=1.0):
         time.sleep(0.02)
 
 
-def new_app():
+def new_app(memory_path=None):
+    """起一个界面实例做检查**并且屏蔽"记住上次输入"**。
+
+    ⚠ 2026-10-13：以前这里直接 `gui.App()`，会读本机 `%LOCALAPPDATA%\...\last_inputs.json`
+    —— 维护者用 exe 试过哪个国家，自检就从哪个国家开始。实测踩坑：维护者试到"英联邦"后，
+    ④ 那条军工组织累计文本更长、在 1280px 下**正常换行**成两行，于是 `[12] 前 9 行行高一致`
+    假报警。自检必须是**可复现**的，所以默认一律指向临时文件（要测记忆的 `[8]` 自己指定路径）。
+    """
     gui.App._pop_to_front = lambda self: None        # 自检时不要抢前台
     gui.messagebox.showerror = lambda *a, **k: print("[showerror]", a)
-    app = gui.App()
+    if memory_path is None:
+        tmp = os.path.join(tempfile.gettempdir(), "_selftest_ui_isolated.json")
+        if os.path.exists(tmp):
+            os.remove(tmp)            # ⚠ 只有"默认隔离"才清空；指定路径时别把要读的记忆删了
+    else:
+        tmp = memory_path
+    orig = run.last_inputs_path
+    run.last_inputs_path = lambda: tmp
+    try:
+        app = gui.App()
+    finally:
+        run.last_inputs_path = orig
     pump(app, 1.2)
     return app
 
@@ -188,7 +206,7 @@ def t_memory():
     orig = run.last_inputs_path
     run.last_inputs_path = lambda: tmp
     try:
-        app = new_app()
+        app = new_app(tmp)          # 记忆测试要用它自己那个路径（new_app 默认会隔离）
         ok = check("干净环境下用示例默认（苏联/1941，科技 1942）",
                    app.var_tag.get() == "苏联" and int(app.var_year.get()) == 1941
                    and int(app.var_tech.get()) == 1942,
@@ -202,7 +220,7 @@ def t_memory():
         pump(app, 0.8)
         app._on_close()                      # 关窗 = 记住这次输入
         ok &= check("生成了记忆文件", os.path.exists(tmp), tmp)
-        app2 = new_app()
+        app2 = new_app(tmp)
         ok &= check("重开后回到上次输入（德国/1944）",
                     app2.var_tag.get() == "德国" and int(app2.var_year.get()) == 1944,
                     "%s / %s" % (app2.var_tag.get(), app2.var_year.get()))
@@ -336,8 +354,38 @@ def t_card4_layout(app):
         except Exception:                    # noqa: BLE001
             h = -1
         heights.append(h)
-    ok &= check("前 9 行行高完全一致", len(set(heights)) == 1 and heights[0] > 0,
-                "行高 %s" % heights)
+    # 失败时把每行的文字一起打出来（不然只知道"某行 52px"，不知道是哪一行、为什么）
+    row_txt = {}
+    for child in card.winfo_children():
+        gi = child.grid_info()
+        if not gi:
+            continue
+        r = int(gi["row"])
+        if r not in row_txt:
+            try:
+                row_txt[r] = str(child.cget("text"))[:34]
+            except Exception:                # noqa: BLE001
+                row_txt[r] = "<%s>" % child.winfo_class()
+    # 判据：**控件行**（放输入框/下拉/按钮的那些行）行高必须完全一致（这就是用户要的
+    # "行距统一"）；**纯文字行**允许换行成两行（军工组织累计/方针说明这类长句，国家不同
+    # 长度差别很大，比如英联邦的超级马林那条在 1280px 下就是两行）。
+    ctl_rows = [r for r in range(0, 9)
+                if any(c.winfo_class() == "TFrame"
+                       and int(c.grid_info().get("row", -1)) == r
+                       for c in card.winfo_children())]
+    ctl_heights = [heights[r] for r in ctl_rows]
+    text_rows = [r for r in range(0, 9) if r not in ctl_rows]
+    detail = "行高 %s（控件行 %s）" % (heights, ctl_heights)
+    if len(set(ctl_heights)) != 1 or not ctl_heights or min(ctl_heights) <= 0:
+        detail += "　｜　" + "；".join("r%d=%s" % (r, row_txt.get(r, "?"))
+                                     for r in range(0, 9))
+    ok &= check("前 9 行的控件行行高完全一致（%d 行控件 / %d 行文字）"
+                % (len(ctl_rows), len(text_rows)),
+                bool(ctl_heights) and len(set(ctl_heights)) == 1 and ctl_heights[0] > 0,
+                detail)
+    ok &= check("文字行不矮于控件行（换行只会更高）",
+                all(heights[r] >= ctl_heights[0] for r in text_rows),
+                "文字行 %s" % [(r, heights[r]) for r in text_rows])
     # 生产折算那一行必须仍是"一行两对"、且 "%" 紧跟在输入框后面（不能被挤到别的列）
     kids = app.frm_prod.winfo_children()
     prod = [(c.winfo_class(), c.winfo_rootx(), c.winfo_width()) for c in kids]
@@ -737,7 +785,7 @@ def t_swap_and_highlight():
 
 def t_short_names_and_copy():
     """图上机型名补全（制造厂+型号）+ 右键复制（用户 2026-10-13 口径）。"""
-    print("[18] 图上机型短名 + 右键复制")
+    print("[18] 机型名（游戏简称 + 种类）+ 右键复制")
     ok = True
     S = gui.App._short_name
     cases = [
@@ -753,7 +801,7 @@ def t_short_names_and_copy():
         ("超级马林“喷火” Mk.I战斗机", "超级马林“喷火” Mk.I战斗机"),
     ]
     bad = [(c, want, S(c)) for c, want in cases if S(c) != want]
-    ok &= check("短名 = 制造厂 + 型号（丢掉「喷气式多用途战斗机」这类类别后缀）", not bad,
+    ok &= check("兜底短名（没有 `_short` 条目时）= 制造厂 + 型号", not bad,
                 "；".join("%s→%s（应 %s）" % b for b in bad) if bad else
                 "例：%s" % S(cases[0][0]))
     ok &= check("纯中文名不丢字", S("某个纯中文名字") == "某个纯中文名字", S("某个纯中文名字"))
@@ -768,6 +816,29 @@ def t_short_names_and_copy():
     finally:
         run.last_inputs_path = orig_last
     pump(app, 2.0)
+    # ① 游戏里的简称（`<key>_short`）抽到了没有；② 简称+种类的拼法
+    shorts = [k for k in app.loc if k.endswith("_short")]
+    ok &= check("中文字典里有装备短名（`<key>_short`）", len(shorts) >= 800,
+                "%d 条" % len(shorts))
+    by_key = {a["key"]: a for a in app.data["airframes_all"]}
+    want = [("me_109_late_fighter_equipment_3", "Bf 109 G 战斗机"),          # 用户给的例子
+            ("northamerican_p51d_equipment_1", "P-51D “野马” 战斗机"),        # 用户给的例子
+            ("griffon_spitfire_equipment_1", "“喷火” Mk.XIVe 战斗机"),        # 用户给的例子（数据里是 XIVe）
+            ("me_262_fighter_equipment_1", "Me 262 A “飞燕” 喷气式多用途战斗机"),
+            ("ta_152_fighter_equipment_2", "Ta 152 H-1 截击机")]           # 短名后面没中文 → 用 category
+    bad = [(k, w, app._short_label({"airframe": by_key[k]})) for k, w in want
+           if k in by_key and app._short_label({"airframe": by_key[k]}) != w]
+    ok &= check("「游戏简称 + 飞机种类」拼法正确（含用户给的 3 个例子）", not bad,
+                "；".join("%s→%s（应 %s）" % b for b in bad) if bad else
+                "、".join(app._short_label({"airframe": by_key[k]}) for k, _w in want[:3]))
+    no_short = next((a for a in app.data["airframes_all"]
+                     if a.get("key") and (a["key"] + "_short") not in app.loc), None)
+    ok &= check("没有 `_short` 的机型退回启发式短名（不留空）",
+                no_short is not None
+                and app._short_label({"airframe": no_short})
+                == S(gui.zh(app.loc, no_short["key"]) or no_short["name"]),
+                (no_short or {}).get("key"))
+
     # 图上标签：把德国 1944 拉出来，确认标签不再是"喷气式多用途战斗机"光秃秃一个类别
     app.var_tag.set(app._tag_labels["GER"])
     app._refresh_country()
@@ -786,12 +857,12 @@ def t_short_names_and_copy():
                    if app.canvas_plot.type(i) == "text"}
     # 图上只给**帕累托前沿**的那些点写名字（其余是小圆点），所以拿前沿逐架对
     front = [r for r in app.rows if r.get("pareto")]
-    expect = {S(app._row_name(r)) for r in front}
-    ok &= check("帕累托前沿的标签 = 「制造厂 + 型号」（%d 架）" % len(front),
+    expect = {app._short_label(r) for r in front}
+    ok &= check("帕累托前沿的标签 = 「简称 + 种类」（%d 架）" % len(front),
                 bool(expect) and expect <= chart_names,
                 "缺：%s" % "；".join(sorted(expect - chart_names)))
-    ok &= check("标签里带型号代号（不只是类别词）",
-                any(any(ch.isdigit() for ch in t) for t in expect),
+    ok &= check("标签里带型号代号 + 中文种类（不只是类别词）",
+                all(any(ch.isdigit() for ch in t) and app._cjk_tail(t) for t in expect),
                 "；".join(sorted(expect)[:6]))
     ok &= check("图上不再只剩类别词（如「喷气式多用途战斗机」）",
                 not (chart_names & {"喷气式多用途战斗机", "喷气式战斗机", "舰载战斗机"}),

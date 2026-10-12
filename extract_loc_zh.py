@@ -76,6 +76,12 @@ def needed_keys():
             for f in fields:
                 if item.get(f):
                     keys.add(item[f])
+                    # 装备的**短名**（游戏里就叫这个，如 `Bf 109 G`）：
+                    # 本地化键写成一 `me_109_late_fighter_equipment_3_short`。
+                    # 用户 2026-10-13 口径：界面上要显示"简称 + 飞机种类"，
+                    # 简称直接取它（汉化里的写法才是他在游戏里看到的那串）。
+                    if name in ("airframes", "airframes_all"):
+                        keys.add(item[f] + "_short")
             for trait in item.get("traits", []) or []:
                 if trait.get("token"):
                     keys.add(trait["token"])

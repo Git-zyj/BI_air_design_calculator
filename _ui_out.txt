@@ -1,0 +1,828 @@
+C:\Users\Yijie Zhi\Documents\Paradox Interactive\Hearts of Iron IV\mod\BI_air_design_calculator\selftest_ui.py:50: SyntaxWarning: invalid escape sequence '\.'
+  \u26a0 2026-10-13����ǰ����ֱ�� `gui.App()`��������� `%LOCALAPPDATA%\...\last_inputs.json`
+[BI_SOV] 界面构建完成，正在计算推荐…
+[BI_SOV] 准备就绪，正在显示窗口…
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.24s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.5921  性能分数 444.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.5936  性能分数 484.5  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.4750  性能分数 436.2  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[1] 启动状态（新用户第一眼）
+  PASS 标题带版本号　— 飞机设计计算器 · 黑冰正式版 v12.1.0
+  PASS 首屏已自动算过（表格非空）　— 14 行
+  PASS 状态行给出下一步提示　— '已重算 14 行；需要写文件时点「导出 Excel」｜首次使用？先看「开始使用前先看.txt」'
+  PASS 字体信息单独成行（没占状态行）　— '字体：Microsoft YaHei UI'
+  PASS 窗口不超过屏幕　— 1280x977（屏 1707x1067）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+  PASS 点计算后状态行有反馈　— '已重算 14 行；需要写文件时点「导出 Excel」｜首次使用？先看「开始使用前先看.txt」'
+[2] 键入飞机科技年份 → 参考机型随之变
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 雅科夫列夫设计局
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.02s）→ 推荐「雅科夫列夫设计局」，方针「模块化装配」，比次优「米格设计局」高 21.2%
+[DEBUG] 操作：改方针 → 模块化装配
+[DEBUG] 配点口径：分离 0.3840 vs 兼顾 0.3708（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「分离」
+[DEBUG] 操作：改配点口径 → 分离（设计最优 + 生产另算）
+[DEBUG] 计算：年份 1941/1939｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_yakovlev_design_bureau_organization 等级=14 方针=mio_policy_air_modular_assembly 候选池=7
+[DEBUG]   计算完成：7 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_yakovlev_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_multi_role_aircraft_designer", "traits
+[DEBUG]   第1名 Polikarpov I-16 Type 29  总分数 0.3840  性能分数 11.0  造价 28.75  增大弹药容量×3 提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 增强对空火力×2 改良机身×2
+[DEBUG]   第2名 Polikarpov I-16 Type 24  总分数 0.3814  性能分数 10.9  造价 28.62  增大弹药容量×3 提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 增强对空火力×2 改良机身×2
+[DEBUG]   第3名 Polikarpov I-153  总分数 0.2685  性能分数 6.2  造价 22.94  增大弹药容量×3 提高燃料容量×3 提高维护水平×2 增设副油箱×1 增强对空火力×2 改良机身×2
+[DEBUG] 操作：改飞机科技年份 → 1941
+[DEBUG] 操作：改军工组织 → 拉沃契金设计局
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.02s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「雅科夫列夫设计局」高 5.1%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 配点口径：分离 14.7024 vs 兼顾 14.7024（按表中第 1 名的总分数比）
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.02s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.1%
+[DEBUG] 配点口径：分离 36.6478 vs 兼顾 36.9253（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1944｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=12
+[DEBUG]   计算完成：12 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9U  总分数 36.9253  性能分数 1023.7  造价 27.72  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Polikarpov I-185  总分数 27.8907  性能分数 979.4  造价 35.12  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Lavochkin 7  总分数 24.4788  性能分数 792.1  造价 32.36  提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+  PASS 三次参考机型文本都不同　— 1939:波利卡波夫 I-153轻型战斗机（轻型战斗机） / 1941:雅克夫列夫 雅克-7轻型战斗机（轻型战斗机） / 1944:雅克夫列夫 雅克-9U轻型战斗机（轻型战斗机）
+  PASS ① 的前置清单也重建过（组数 > 0）　— 8 组
+[3] 手动指定机型 → ② 对手行刷新
+[DEBUG] 操作：改当前年份 → 1942
+[DEBUG] 操作：改对手选取规则 → 手动
+[DEBUG] 配点口径：分离 25.1397 vs 兼顾 25.3077（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.06s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.7%
+[DEBUG] 操作：改手动机型 → me_109_late_fighter_equipment_4
+[DEBUG] 配点口径：分离 17.9239 vs 兼顾 18.0723（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.08s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.9%
+  PASS 对手行跟着变　— 对手：巴伐利亚 Bf 109 F-4 战斗机 机动 79.87 速度 → 对手：巴伐利亚 Bf 109 G-14 战斗机 机动 86.11 速
+  PASS 换成了目标机型（G-14 / 86.11）　— 对手：巴伐利亚 Bf 109 G-14 战斗机 机动 86.11 速度 708.72
+[DEBUG] 操作：改对手选取规则 → 当前年份−1
+[DEBUG] 操作：改手动机型 → 
+[DEBUG] 操作：改当前年份 → 1944
+[4] 配点口径：没手动选过 → 自动跟随推荐
+[DEBUG] 配点口径：分离 19.2402 vs 兼顾 19.3651（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.06s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.8%
+  PASS 当前口径 = 推荐口径　— 当前「兼顾（同一 MIO 一条路线）」/ 推荐：兼顾（比另一种高 0.65%）
+[DEBUG] 操作：改配点口径 → 分离（设计最优 + 生产另算）
+[DEBUG] 计算：年份 1944/1944｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 9 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=12
+[DEBUG]   计算完成：12 行，用时 0.03s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9U  总分数 19.2402  性能分数 536.1  造价 27.86  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Polikarpov I-185  总分数 14.3873  性能分数 508.4  造价 35.34  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Lavochkin 7  总分数 12.6167  性能分数 410.5  造价 32.54  提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+  PASS 手动选过之后不被劫持　— 分离（设计最优 + 生产另算）
+[5] 点「计算」→ 结果区滚进视野
+[DEBUG] 计算：年份 1944/1944｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 9 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=12
+[DEBUG]   计算完成：12 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9U  总分数 19.2402  性能分数 536.1  造价 27.86  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Polikarpov I-185  总分数 14.3873  性能分数 508.4  造价 35.34  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Lavochkin 7  总分数 12.6167  性能分数 410.5  造价 32.54  提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+  PASS 视口已下移　— yview=0.608
+  PASS 结果区进入可视范围　— 结果区 top=101，视口高 936
+[6] 双击一行 → 明细区滚进视野
+  PASS 明细区进入可视范围　— 明细 top=275
+  PASS 明细有内容（推荐改装 + 公式）　— 21 个块
+[7] 导出 Excel（文件名带国家/年份/用途）
+[DEBUG] 计算：年份 1944/1944｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 9 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=12
+[DEBUG]   计算完成：12 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9U  总分数 19.2402  性能分数 536.1  造价 27.86  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Polikarpov I-185  总分数 14.3873  性能分数 508.4  造价 35.34  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Lavochkin 7  总分数 12.6167  性能分数 410.5  造价 32.54  提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG] 导出：C:\Users\Yijie Zhi\Documents\Paradox Interactive\Hearts of Iron IV\mod\BI_air_design_calculator\output\飞机选型_SOV_1944年_科技1944_对空.xlsx（12 行）
+  PASS 导出文件按新命名生成　— 飞机选型_SOV_1944年_科技1944_对空.xlsx
+  PASS 状态行显示导出结果　— '已导出 → 飞机选型_SOV_1944年_科技1944_对空.xlsx'
+[9] 小窗口（1000x650）仍然可用
+  PASS 内容比视口高 → 靠滚动查看　— 内容 2765 / 视口 609
+  PASS 滚动后能看到结果区　— 结果区 top=6
+[11] 长文本换行：不越界、宽度跟着窗口走
+  PASS ②数值来源 @1280x980 不越右缘　— 右缘 535 / 画布 1266
+  PASS ②对手 @1280x980 不越右缘　— 右缘 961 / 画布 1266
+  PASS ④方针说明 @1280x980 不越右缘　— 右缘 848 / 画布 1266
+  PASS ④参考机型 @1280x980 不越右缘　— 右缘 945 / 画布 1266
+  PASS ④口径推荐 @1280x980 不越右缘　— 右缘 529 / 画布 1266
+  PASS ④累计 @1280x980 不越右缘　— 右缘 764 / 画布 1266
+  PASS ④生产侧 @1280x980 不越右缘　— 右缘 237 / 画布 1266
+  PASS ④路线说明 @1280x980 不越右缘　— 右缘 454 / 画布 1266
+  PASS 换行宽跟着窗口走（1280x980 → 1211 px）　— 期望 ≥ 1100
+  PASS ②数值来源 @1000x650 不越右缘　— 右缘 535 / 画布 986
+  PASS ②对手 @1000x650 不越右缘　— 右缘 713 / 画布 986
+  PASS ④方针说明 @1000x650 不越右缘　— 右缘 848 / 画布 986
+  PASS ④参考机型 @1000x650 不越右缘　— 右缘 945 / 画布 986
+  PASS ④口径推荐 @1000x650 不越右缘　— 右缘 529 / 画布 986
+  PASS ④累计 @1000x650 不越右缘　— 右缘 764 / 画布 986
+  PASS ④生产侧 @1000x650 不越右缘　— 右缘 237 / 画布 986
+  PASS ④路线说明 @1000x650 不越右缘　— 右缘 454 / 画布 986
+  PASS 换行宽跟着窗口走（1000x650 → 931 px）　— 期望 ≥ 850
+  PASS ②数值来源 @1600x977 不越右缘　— 右缘 535 / 画布 1586
+  PASS ②对手 @1600x977 不越右缘　— 右缘 961 / 画布 1586
+  PASS ④方针说明 @1600x977 不越右缘　— 右缘 848 / 画布 1586
+  PASS ④参考机型 @1600x977 不越右缘　— 右缘 945 / 画布 1586
+  PASS ④口径推荐 @1600x977 不越右缘　— 右缘 529 / 画布 1586
+  PASS ④累计 @1600x977 不越右缘　— 右缘 764 / 画布 1586
+  PASS ④生产侧 @1600x977 不越右缘　— 右缘 237 / 画布 1586
+  PASS ④路线说明 @1600x977 不越右缘　— 右缘 454 / 画布 1586
+  PASS 换行宽跟着窗口走（1600x977 → 1531 px）　— 期望 ≥ 1400
+  PASS ② 数值来源按语义分两行　— '数值来源：按模组 AI 权重自动判定（AI 按「加成总和最大」点特质，不是战斗力最优）\n\u3000\u3000对手
+  PASS ④ 方针说明没有写死换行　— '前置：6 级✓、基础计算机✓\u3000加成：最大速度 +1.50%\u3000组织（不影响飞机属性）：军工组织资金获取 -5.00%，军工组织研究加成 +2.00%'
+  PASS ④ 方针说明宽屏下并成一行　— 高度 23px（单行 ≈21）
+  PASS ④ 行序 = 军工组织→参考机型→方针→前置　— 军工组织(y=-818) < 参考机型(y=-779) < 方针(y=-742) < 前置/加成(y=-703)
+[12] ④ 排版：字段名对齐 + 行距一致
+  PASS 四个字段名左对齐（同一个 x）　— [73, 73, 73, 73]
+  PASS ④ 标签与控件的间距和 ①② 一样（6px）　— 间距 [6, 6, 6, 6, 6, 6]
+  PASS 前 9 行的控件行行高完全一致（6 行控件 / 3 行文字）　— 行高 [38, 38, 38, 38, 38, 38, 38, 38, 38]（控件行 [38, 38, 38, 38, 38, 38]）
+  PASS 文字行不矮于控件行（换行只会更高）　— 文字行 [(2, 38), (4, 38), (7, 38)]
+  PASS 生产折算是一行两对、% 紧跟输入框　— 同一行=True，% 间距=[2, 2]
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1944/1944｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 9 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=12
+[DEBUG]   计算完成：12 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9U  总分数 19.3651  性能分数 539.5  造价 27.86  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Polikarpov I-185  总分数 14.5276  性能分数 513.3  造价 35.34  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Lavochkin 7  总分数 12.7555  性能分数 415.0  造价 32.54  提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+  PASS 空的生产伙伴不占行（兼顾口径）　— 间距 12px，生产伙伴 已隐藏
+[13] 视觉规范（字体 / 颜色 / 对齐 / 控件宽度）
+  PASS 所有卡片不越右缘（1280x980）　— 右缘 ① 用途=599, ② 年份 =974, ③ 改装 =949, ④ 军工组=945, ⑤ 国家精=979, ⑥ 总体累=1234, ⑦ 最终结=1241 / 画布 1266
+  PASS 所有卡片不越右缘（1000x650）　— 右缘 ① 用途=599, ② 年份 =974, ③ 改装 =949, ④ 军工组=945, ⑤ 国家精=979, ⑥ 总体累=839, ⑦ 最终结=961 / 画布 986
+  PASS 所有卡片不越右缘（1600x977）　— 右缘 ① 用途=599, ② 年份 =974, ③ 改装 =949, ④ 军工组=945, ⑤ 国家精=979, ⑥ 总体累=1294, ⑦ 最终结=1561 / 画布 1586
+  PASS 字段名一个不漏　— 缺 []
+  PASS 同列字段名首字对齐　— 各列 x = {('.!frame2.!canvas.!frame.!labelframe', (0,)): [25], ('.!frame2.!canvas.!frame.!labelframe', (0, 0, 0)): [25], ('.!frame2.!canvas.!frame.!labelframe', (0, 1, 0)): [266], ('.!frame2.!canvas.!frame.!labelframe2', (0, 0, 0)): [25], ('.!frame2.!canvas.!frame.!labelframe2', (0, 1, 0)): [257], ('.!frame2.!canvas.!frame.!labelframe2', (0, 2, 0)): [482], ('.!frame2.!canvas.!frame.!labelframe2', (0, 3, 0)): [734], ('.!frame2.!canvas.!frame.!labelframe4', (0, 0)): [25], ('.!frame2.!canvas.!frame.!labelframe5', (0,)): [25], ('.!frame2.!canvas.!frame.!labelframe6', (0,)): [25]}
+  PASS 最左一列在 x=25　— 最左 x=25
+  PASS 字号只允许规范里的几档　— 2 个控件用到的字号 [10, 15]（规范 [10, 11, 15]）
+  PASS 样式表字体也合规范　— TLabelframe.Label=11(期望 11), Treeview=10(期望 10), Treeview.Heading=11(期望 11)
+  PASS 颜色只用调色板里的　— 扫到 7 种颜色，越界 []
+  PASS 同类下拉同宽（军工组织/方针/配点口径）　— (22, 22, 22)
+[14] 最远目标距离挡位按用途分档
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对空（舰载） → True
+[DEBUG] 操作：改军工组织 → 米格设计局
+[DEBUG] MIO 路线：比较 2 个组织（重算 0，缓存命中 2，用时 0.05s）→ 推荐「米格设计局」，方针「风洞先驱」，比次优「拉沃契金设计局」高 2.9%
+[DEBUG] 配点口径：分离 2.9982 vs 兼顾 2.8086（按表中第 1 名的总分数比）
+  PASS 对空舰载 → 600…1500　— 挡位 600…1500（4 档）
+[DEBUG] 操作：勾选用途 对空（舰载） → False
+[DEBUG] 操作：勾选用途 对海（舰载） → True
+[DEBUG] 操作：改军工组织 → 雅科夫列夫设计局
+[DEBUG] MIO 路线：比较 5 个组织（重算 0，缓存命中 5，用时 0.11s）→ 推荐「雅科夫列夫设计局」，方针「模块化装配」，比次优「米格设计局」高 12.1%
+[DEBUG] 操作：改方针 → 模块化装配
+[DEBUG] 配点口径：分离 26.3959 vs 兼顾 26.3959（按表中第 1 名的总分数比）
+  PASS 对海舰载 → 600…1500　— 挡位 600…1500（4 档）
+[DEBUG] 操作：勾选用途 对海 → True
+[DEBUG] 操作：勾选用途 对海（舰载） → False
+[DEBUG] MIO 路线：比较 1 个组织（重算 0，缓存命中 1，用时 0.01s）→ 推荐「雅科夫列夫设计局」，方针「模块化装配」
+[DEBUG] 配点口径：分离 28.1897 vs 兼顾 28.1897（按表中第 1 名的总分数比）
+  PASS 对海 → 600…3000　— 挡位 600…3000（9 档）
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对海 → False
+[DEBUG] 操作：改军工组织 → 拉沃契金设计局
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.07s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.8%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 配点口径：分离 19.2402 vs 兼顾 19.3651（按表中第 1 名的总分数比）
+  PASS 对空 → 600…2100　— 挡位 600…2100（6 档）
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对地 → True
+[DEBUG] MIO 路线：比较 5 个组织（重算 0，缓存命中 5，用时 0.11s）→ 推荐「伊留申设计局」，方针「模块化装配」，比次优「米格设计局」高 9.9%
+[DEBUG] 操作：改方针 → 模块化装配
+[DEBUG] 配点口径：分离 4.9426 vs 兼顾 4.2361（按表中第 1 名的总分数比）
+  PASS 对地 → 600…2100　— 挡位 600…2100（6 档）
+[DEBUG] 操作：勾选用途 对地 → False
+[DEBUG] 操作：勾选用途 侦察/运输 → True
+[DEBUG] MIO 路线：比较 5 个组织（重算 0，缓存命中 5，用时 0.11s）→ 推荐「拉沃契金设计局」，方针「模块化装配」，比次优「图波列夫设计局」高 1.5%
+[DEBUG] 配点口径：分离 0.0243 vs 兼顾 0.0221（按表中第 1 名的总分数比）
+  PASS 侦察/运输 → 600…2100　— 挡位 600…2100（6 档）
+[DEBUG] 操作：勾选用途 对海 → True
+[DEBUG] 操作：勾选用途 侦察/运输 → False
+[DEBUG] 操作：改军工组织 → 雅科夫列夫设计局
+[DEBUG] MIO 路线：比较 1 个组织（重算 0，缓存命中 1，用时 0.03s）→ 推荐「雅科夫列夫设计局」，方针「模块化装配」
+[DEBUG] 配点口径：分离 28.1897 vs 兼顾 28.1897（按表中第 1 名的总分数比）
+[DEBUG] 操作：改最远目标距离 → 3000
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对海 → False
+[DEBUG] 距离挡位：当前用途上限 2100 km → 距目标收到 2100
+[DEBUG] 操作：改最远目标距离 → 2100
+[DEBUG] MIO 路线：比较 3 个组织 → 无可比较结果（0 分 3 家，用时 0.07s）
+[DEBUG] 操作：改方针 → 完美抛光
+  PASS 超出上限自动收到 2100　— 2100
+[15] 用途单选 / 表格列顺序 / 操作记录小窗
+[DEBUG] 操作：勾选用途 对海 → True
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] MIO 路线：比较 1 个组织（重算 0，缓存命中 1，用时 0.02s）→ 推荐「雅科夫列夫设计局」，方针「模块化装配」
+[DEBUG] 操作：改方针 → 模块化装配
+[DEBUG] 配点口径：分离 18.0427 vs 兼顾 18.0427（按表中第 1 名的总分数比）
+  PASS 点'对海'后只剩它选中　— ['naval_far']
+[DEBUG] MIO 路线：比较 1 个组织（重算 0，缓存命中 1，用时 0.03s）→ 推荐「雅科夫列夫设计局」，方针「模块化装配」
+[DEBUG] 配点口径：分离 18.0427 vs 兼顾 18.0427（按表中第 1 名的总分数比）
+  PASS 再点自己不会变成全不选
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对海 → False
+[DEBUG] MIO 路线：比较 3 个组织 → 无可比较结果（0 分 3 家，用时 0.07s）
+[DEBUG] 操作：改方针 → 完美抛光
+  PASS 再点'对空'只切到对空
+  PASS 表头筛选里不再有'用途'
+  PASS 资源加权分列在年份列之前　— 第 7 列 vs 第 8 列
+[DEBUG] 打开操作记录窗口（164 行）
+  PASS 日志小窗能打开
+  PASS 日志里有环境信息与操作行　— 日志 12053 字符
+  PASS 日志小窗有横向滚动条且接上 xview　— 滚动条 2 个，横向 1 个
+[DEBUG] 导出日志：C:\Users\Yijie Zhi\Documents\Paradox Interactive\Hearts of Iron IV\mod\BI_air_design_calculator\output\BI_SOV_log_20261013-011948.txt
+  PASS 能导出 log 文件　— BI_SOV_log_20261013-011948.txt
+[16] 配点口径推荐（按表中第 1 名的总分数）
+[BI_SOV] 界面构建完成，正在计算推荐…
+[BI_SOV] 准备就绪，正在显示窗口…
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.26s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.5921  性能分数 444.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.5936  性能分数 484.5  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.4750  性能分数 436.2  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 操作：改飞机科技年份 → 1946
+[DEBUG] 操作：改当前年份 → 1944
+[DEBUG] 操作：改军工组织 → 雅科夫列夫设计局
+[DEBUG] 配点口径：分离 34.9511 vs 兼顾 32.7411（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「分离」
+[DEBUG] 操作：改配点口径 → 分离（设计最优 + 生产另算）
+[DEBUG] 计算：年份 1944/1946｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 9 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_yakovlev_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=11
+[DEBUG]   计算完成：11 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_yakovlev_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_multi_role_aircraft_designer", "traits
+[DEBUG]   第1名 Mikoyan-Gurevich 9  总分数 34.9511  性能分数 1715.5  造价 49.08  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Yakovlev 9P  总分数 29.8261  性能分数 826.5  造价 27.71  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Yakovlev 3P  总分数 28.9834  性能分数 836.3  造价 28.85  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG] 操作：改军工组织 → 拉沃契金设计局
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.19s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 14.6%
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.26s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 14.6%
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.32s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 14.6%
+[DEBUG] 配点口径：分离 36.5759 vs 兼顾 36.8548（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1944/1946｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 9 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=11
+[DEBUG]   计算完成：11 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Mikoyan-Gurevich 9  总分数 36.8548  性能分数 1846.0  造价 50.09  提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Yakovlev 9P  总分数 33.0595  性能分数 925.3  造价 27.99  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Yakovlev 3P  总分数 30.1794  性能分数 893.5  造价 29.60  提高燃料容量×3 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG] 配点口径：分离 36.5759 vs 兼顾 36.8548（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：分离 36.5759 vs 兼顾 36.8548（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：分离 36.5759 vs 兼顾 36.8548（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.06s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 13.1%
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.06s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 13.1%
+[DEBUG] 配点口径：分离 36.5759 vs 兼顾 36.8548（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.08s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 13.1%
+  PASS 最远 900：split 推荐值 = 表里第 1 名总分数　— 表 36.5759 vs 推荐 36.5759（Mikoyan-Gurevich 9）
+  PASS 最远 900：balanced 推荐值 = 表里第 1 名总分数　— 表 36.8548 vs 推荐 36.8548（Mikoyan-Gurevich 9）
+  PASS 最远 900：界面差距 = 两分数之比（36.5759 vs 36.8548）　— 推荐：兼顾（比另一种高 0.76%）
+  PASS 最远 900：不写'高 0.00%'　— 推荐：兼顾（比另一种高 0.76%）
+[DEBUG] 操作：改最远目标距离 → 1200
+[DEBUG] 配点口径：分离 28.2592 vs 兼顾 28.2592（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「分离」
+[DEBUG] 操作：改配点口径 → 分离（设计最优 + 生产另算）
+[DEBUG] 计算：年份 1944/1946｜国家 SOV｜用途 air_far｜距离 1200.0｜来源 mio
+[DEBUG]   解锁科技 9 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=11
+[DEBUG]   计算完成：11 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Lavochkin 9  总分数 28.2592  性能分数 894.3  造价 31.65  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Yakovlev 9P  总分数 16.0143  性能分数 460.0  造价 28.73  提高燃料容量×3 升级发动机×1 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Mikoyan-Gurevich I-211  总分数 14.0593  性能分数 513.5  造价 36.52  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.19s）→ 推荐「雅科夫列夫设计局」，方针「风洞先驱」，比次优「米格设计局」高 12.3%
+  PASS 最远 1200：split 推荐值 = 表里第 1 名总分数　— 表 28.2592 vs 推荐 28.2592（Lavochkin 9）
+  PASS 最远 1200：balanced 推荐值 = 表里第 1 名总分数　— 表 28.2592 vs 推荐 28.2592（Lavochkin 9）
+  PASS 最远 1200：界面差距 = 两分数之比（28.2592 vs 28.2592）　— 推荐：分离（与另一种持平，差 <0.01%，选哪个都一样）
+  PASS 最远 1200：不写'高 0.00%'　— 推荐：分离（与另一种持平，差 <0.01%，选哪个都一样）
+  PASS 至少一个距离下两种口径分数不同（证明比的是真数）　— 900 差 0.2788 / 1200 差 0.0000
+[DEBUG] 配点口径：分离 28.2592 vs 兼顾 28.2592（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.06s）→ 推荐「雅科夫列夫设计局」，方针「风洞先驱」，比次优「米格设计局」高 12.2%
+  PASS 两口径相同时写'持平'（最远 1200）　— 推荐：分离（与另一种持平，差 <0.01%，选哪个都一样）
+[17] 交换国家/对手 + 帕累托图高亮选中机型
+[BI_SOV] 界面构建完成，正在计算推荐…
+[BI_SOV] 准备就绪，正在显示窗口…
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.24s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.03s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.5921  性能分数 444.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.5936  性能分数 484.5  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.4750  性能分数 436.2  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+  PASS 交换键在 ② 里（真按钮、不是文字）　— ⇄
+[DEBUG] 操作：改国家 → 德国
+[DEBUG] 操作：改对手国别 → 苏联
+[DEBUG] 操作：交换所选国家与对手国别 → 德国 ↔ 苏联
+[DEBUG] 操作：改军工组织 → 阿拉多飞机制造厂
+[DEBUG] 计算：年份 1941/1942｜国家 GER｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 6 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=GER_arado_flugzeugwerke_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=13
+[DEBUG]   计算完成：13 行，用时 0.01s
+[DEBUG]   对手=Lavochkin-Gorbunov-Gudkov 1（机动 68.64 速度 644.78）｜制造商来源={"mode": "traits", "organization": "GER_arado_flugzeugwerke_organization", "initial_trait": "generic_mio_initial_trait_multi_role_aircraft_designer", "traits": 
+[DEBUG]   第1名 Bayerische Flugzeugwerke 109 G  总分数 43.6215  性能分数 1304.8  造价 29.91  升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Focke-Wulf 190 A-5  总分数 41.4375  性能分数 1275.2  造价 30.77  升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Focke-Wulf 190 A  总分数 35.6600  性能分数 1088.0  造价 30.51  升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 操作：改军工组织 → 梅赛施密特
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.15s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 19.1%
+[DEBUG] 配点口径：分离 52.8353 vs 兼顾 51.9691（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「分离」
+[DEBUG] 操作：改配点口径 → 分离（设计最优 + 生产另算）
+[DEBUG] 计算：年份 1941/1942｜国家 GER｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 6 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=GER_messerschmitt_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=13
+[DEBUG]   计算完成：13 行，用时 0.03s
+[DEBUG]   对手=Lavochkin-Gorbunov-Gudkov 1（机动 68.64 速度 644.78）｜制造商来源={"mode": "traits", "organization": "GER_messerschmitt_organization", "initial_trait": "generic_mio_initial_trait_light_aircraft_designer", "traits": [{"token": 
+[DEBUG]   第1名 Bayerische Flugzeugwerke 109 G  总分数 52.8353  性能分数 1542.9  造价 29.20  升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Focke-Wulf 190 A-5  总分数 48.8316  性能分数 1459.5  造价 29.89  升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Bayerische Flugzeugwerke 109 F-4  总分数 41.0928  性能分数 1216.7  造价 29.61  升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 配点口径：分离 52.8353 vs 兼顾 51.9691（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.06s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 19.1%
+  PASS 一键交换：国家/对手对调　— 苏联 / 德国 → 德国 / 苏联
+  PASS 换过来的国家挑了自己的 MIO　— MIO=GER_messerschmitt_organization / 国家=GER
+  PASS ② 对手行跟着刷新　— 对手：拉沃契金-戈尔布诺夫-古德科夫 拉格-1战斗机 机动 68.64 速度 6
+  PASS 操作记录里记下了这次交换　— 01:20:03  操作：交换所选国家与对手国别 → 德国 ↔ 苏联
+  PASS 状态行有反馈　— 「改军工组织 → 梅赛施密特」已生效：已重算 13 行；需要写文件时点「
+[DEBUG] 操作：改国家 → 苏联
+[DEBUG] 操作：改对手国别 → 德国
+[DEBUG] 操作：交换所选国家与对手国别 → 苏联 ↔ 德国
+[DEBUG] 操作：改军工组织 → 拉沃契金设计局
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.5921  性能分数 444.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.5936  性能分数 484.5  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.4750  性能分数 436.2  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.06s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.00s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.09s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.5%
+  PASS 再点一次换回原样　— 苏联 / 德国
+[DEBUG] 操作：改对手国别 → 苏联
+  PASS 国家＝对手时交换不报错、只提示　— 所选国家与对手国别相同，无需交换
+[DEBUG] 操作：改对手国别 → 德国
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.09s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.5%
+  PASS 未选中时图上没有高亮图元　— 0 个
+  PASS 选中一行 → 图上出现高亮（圈 + 准星 + 标签）　— 6 个图元
+  PASS 高亮标签点出是哪一架　— ['选中 米格-3 截击机']
+  PASS 换一行 → 高亮跟着换、不叠加　— 6 → 6
+  PASS 取消选中 → 高亮抹掉　— 0 个
+[18] 机型名（游戏简称 + 种类）+ 右键复制
+  PASS 兜底短名（没有 `_short` 条目时）= 制造厂 + 型号　— 例：梅塞施密特 Me 262 A
+  PASS 纯中文名不丢字　— 某个纯中文名字
+[BI_SOV] 界面构建完成，正在计算推荐…
+[BI_SOV] 准备就绪，正在显示窗口…
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.21s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.5921  性能分数 444.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.5936  性能分数 484.5  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.4750  性能分数 436.2  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+  PASS 中文字典里有装备短名（`<key>_short`）　— 899 条
+  PASS 「游戏简称 + 飞机种类」拼法正确（含用户给的 3 个例子）　— Bf 109 G 战斗机、P-51D “野马” 战斗机、“喷火” Mk.XIVe 战斗机
+  PASS 没有 `_short` 的机型退回启发式短名（不留空）　— prewar_cas_equipment_1
+[DEBUG] 操作：改国家 → 德国
+[DEBUG] 操作：改军工组织 → 阿拉多飞机制造厂
+[DEBUG] 操作：改当前年份 → 1944
+[DEBUG] 操作：改飞机科技年份 → 1945
+[DEBUG] 操作：改军工组织 → 梅赛施密特
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.00s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 11.6%
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.09s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 11.6%
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.18s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 11.6%
+[DEBUG] 配点口径：分离 73.9134 vs 兼顾 72.7017（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「分离」
+[DEBUG] 操作：改配点口径 → 分离（设计最优 + 生产另算）
+[DEBUG] 计算：年份 1944/1945｜国家 GER｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 10 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=GER_messerschmitt_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=20
+[DEBUG]   计算完成：20 行，用时 0.03s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "GER_messerschmitt_organization", "initial_trait": "generic_mio_initial_trait_light_aircraft_designer", "traits": [{"token": 
+[DEBUG]   第1名 Heinkel 162 A 'Spatz'  总分数 73.9134  性能分数 2874.6  造价 38.89  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Messerschmitt 262 A 'Schwalbe'  总分数 59.1698  性能分数 2848.3  造价 48.14  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Focke-Wulf Ta 152 H-1  总分数 54.9037  性能分数 1753.0  造价 31.93  升级发动机×3 提高维护水平×2 改良舱盖×1 改良机身×2
+[DEBUG] 配点口径：分离 73.9134 vs 兼顾 72.7017（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：分离 73.9134 vs 兼顾 72.7017（按表中第 1 名的总分数比）
+[DEBUG] 操作：改军工组织 → 阿拉多飞机制造厂
+[DEBUG] 配点口径：分离 66.8821 vs 兼顾 65.7857（按表中第 1 名的总分数比）
+[DEBUG] 操作：改军工组织 → 梅赛施密特
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.10s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 11.6%
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.21s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 11.6%
+[DEBUG] 配点口径：分离 73.9134 vs 兼顾 72.7017（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：分离 73.9134 vs 兼顾 72.7017（按表中第 1 名的总分数比）
+[DEBUG] 计算：年份 1944/1945｜国家 GER｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 10 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=GER_messerschmitt_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=20
+[DEBUG]   计算完成：20 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "GER_messerschmitt_organization", "initial_trait": "generic_mio_initial_trait_light_aircraft_designer", "traits": [{"token": 
+[DEBUG]   第1名 Heinkel 162 A 'Spatz'  总分数 73.9134  性能分数 2874.6  造价 38.89  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Messerschmitt 262 A 'Schwalbe'  总分数 59.1698  性能分数 2848.3  造价 48.14  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Focke-Wulf Ta 152 H-1  总分数 54.9037  性能分数 1753.0  造价 31.93  升级发动机×3 提高维护水平×2 改良舱盖×1 改良机身×2
+  PASS 帕累托前沿的标签 = 「简称 + 种类」（4 架）　— 缺：
+  PASS 标签里带型号代号 + 中文种类（不只是类别词）　— Bf 109 G-14 战斗机；Bf 109 K 战斗机；He 162A 喷气式战斗机；Ta 152 H-1 截击机
+  PASS 图上不再只剩类别词（如「喷气式多用途战斗机」）　— Bf 109 G-14 战斗机；Bf 109 K 战斗机；He 162A 喷气式战斗机；Ta 152 H-1 截击机
+[DEBUG] 复制机型名称：梅塞施密特 Me 262 A
+  PASS 复制文字能进剪贴板　— 已复制机型名称：梅塞施密特 Me 262 A
+  PASS 表格行能取到机型名与 key　— 亨克尔 He 162 A “火蜥蜴” 喷气式战斗机 / he_162_fighter_equipment_1
+  PASS 表格行的「整行」含表里的数值（制表符分隔）　— 对空@900	1	★	亨克尔 He 162 A “火蜥蜴” 喷气式战斗机	73.91	2,827.5	38.89	12.
+  PASS 图上记录了每个点的坐标　— 20 个点
+  PASS 右键点中某个点 → 找回同一架机型　— 亨克尔 He 162 A
+  PASS 离所有点都远 → 不误判（返回 None）
+  PASS 散点图/表格装了右键菜单绑定　— canvas=True tree=True
+[8] 记住上次输入 / 重置为默认
+[BI_SOV] 界面构建完成，正在计算推荐…
+[BI_SOV] 准备就绪，正在显示窗口…
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.20s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.00s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.5921  性能分数 444.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.5936  性能分数 484.5  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.4750  性能分数 436.2  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+  PASS 干净环境下用示例默认（苏联/1941，科技 1942）　— 苏联 / 1941 / 科技 1942
+  PASS 首次打开时状态栏提示先看说明书　— '已重算 14 行；需要写文件时点「导出 Excel」｜首次使用？先看「开始使用前先看.txt」'
+[DEBUG] 操作：改国家 → 德国
+[DEBUG] 操作：改当前年份 → 1944
+[DEBUG] 配点口径：分离 17.0338 vs 兼顾 16.8441（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「分离」
+[DEBUG] 操作：改配点口径 → 分离（设计最优 + 生产另算）
+[DEBUG] 计算：年份 1944/1942｜国家 GER｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 10 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=13
+[DEBUG]   计算完成：13 行，用时 0.03s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Bayerische Flugzeugwerke 109 G  总分数 17.0338  性能分数 517.0  造价 30.35  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Focke-Wulf 190 A-5  总分数 16.2405  性能分数 507.5  造价 31.25  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Bayerische Flugzeugwerke 109 F-4  总分数 13.7394  性能分数 421.7  造价 30.69  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.20s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 14.9%
+  PASS 生成了记忆文件　— C:\Users\Yijie Zhi\AppData\Local\Temp\_selftest_ui_last.json
+[BI_SOV] 界面构建完成，正在计算推荐…
+[BI_SOV] 准备就绪，正在显示窗口…
+[DEBUG] 操作：改军工组织 → 梅赛施密特
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.22s）→ 推荐「梅赛施密特」，方针「风洞先驱」，比次优「阿拉多飞机制造厂」高 14.9%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 计算：年份 1944/1942｜国家 GER｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 10 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=GER_messerschmitt_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=13
+[DEBUG]   计算完成：13 行，用时 0.03s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 G-14（机动 86.11 速度 708.72）｜制造商来源={"mode": "traits", "organization": "GER_messerschmitt_organization", "initial_trait": "generic_mio_initial_trait_light_aircraft_designer", "traits": [{"token": 
+[DEBUG]   第1名 Bayerische Flugzeugwerke 109 G  总分数 16.4979  性能分数 484.6  造价 29.37  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第2名 Focke-Wulf 190 A-5  总分数 15.8243  性能分数 475.1  造价 30.03  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG]   第3名 Bayerische Flugzeugwerke 109 F-4  总分数 13.2584  性能分数 395.0  造价 29.80  升级发动机×3 提高维护水平×2 增设副油箱×1 改良舱盖×1 改良机身×2
+[DEBUG] 配点口径：分离 16.4979 vs 兼顾 16.2274（按表中第 1 名的总分数比）
+  PASS 重开后回到上次输入（德国/1944）　— 德国 / 1944
+[DEBUG] 操作：改当前年份 → 1941
+[DEBUG] 操作：改国家 → 苏联
+[DEBUG] 操作：改军工组织 → 拉沃契金设计局
+[DEBUG] 重置为默认：苏联 / 1941
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.01s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.20s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.03s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.5%
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.08s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 6.5%
+  PASS 「重置为默认」立刻回到苏联/1941（不用重启）　— 苏联 / 1941
+  PASS 「重置为默认」清掉了记忆文件
+[10] 离线表覆盖（方案键命中率）
+[BI_SOV] 界面构建完成，正在计算推荐…
+[BI_SOV] 准备就绪，正在显示窗口…
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=None 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 15.2353  性能分数 407.7  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 13.4169  性能分数 445.4  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 11.4471  性能分数 400.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] MIO 路线：比较 3 个组织（重算 0，缓存命中 3，用时 0.40s）→ 推荐「拉沃契金设计局」，方针「风洞先驱」，比次优「米格设计局」高 5.5%
+[DEBUG] 操作：改方针 → 风洞先驱
+[DEBUG] 配点口径：分离 16.5921 vs 兼顾 16.7416（按表中第 1 名的总分数比）
+[DEBUG] 配点口径：未手动选择 → 自动跟随推荐「兼顾」
+[DEBUG] 操作：改配点口径 → 兼顾（同一 MIO 一条路线）
+[DEBUG] 计算：年份 1941/1942｜国家 SOV｜用途 air_far｜距离 900.0｜来源 mio
+[DEBUG]   解锁科技 5 项｜国家标识 0 项｜国家精神 SOV_improved_designs,SOV_USA_aid_air
+[DEBUG]   MIO=SOV_lavochkin_design_bureau_organization 等级=14 方针=mio_policy_air_wind_tunnel_pioneers 候选池=14
+[DEBUG]   计算完成：14 行，用时 0.02s
+[DEBUG]   对手=Bayerische Flugzeugwerke 109 F（机动 78.62 速度 655.44）｜制造商来源={"mode": "traits", "organization": "SOV_lavochkin_design_bureau_organization", "initial_trait": "generic_mio_initial_trait_high_agility_fighters_designer", "tra
+[DEBUG]   第1名 Yakovlev 9  总分数 16.7416  性能分数 448.0  造价 26.76  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第2名 Mikoyan-Gurevich 3  总分数 14.7024  性能分数 488.1  造价 33.20  提高燃料容量×1 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG]   第3名 Polikarpov I-180-5  总分数 12.5929  性能分数 440.3  造价 34.97  提高燃料容量×2 升级发动机×3 提高维护水平×2 增设副油箱×1 改良机身×2
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对空（舰载） → True
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改国家 → 德国
+[DEBUG] 操作：改军工组织 → 道尼尔
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对空（舰载） → False
+[DEBUG] 操作：改对手国别 → 苏联
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 阿拉多飞机制造厂
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对空（舰载） → True
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 道尼尔
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改国家 → 美国
+[DEBUG] 操作：改军工组织 → 格鲁曼
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对空（舰载） → False
+[DEBUG] 操作：改对手国别 → 德国
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 北美航空
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对空（舰载） → True
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 格鲁曼
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改国家 → 英联邦
+[DEBUG] 操作：改军工组织 → 费尔雷航空
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对空（舰载） → False
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 霍克飞机
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对空（舰载） → True
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 费尔雷航空
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改国家 → 日本
+[DEBUG] 操作：改军工组织 → 爱知公司
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对空（舰载） → False
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对空（舰载） → True
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改国家 → 意大利
+[DEBUG] 操作：改军工组织 → CRDA-CANT
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对空（舰载） → False
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → 菲亚特航空
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：勾选用途 对空 → False
+[DEBUG] 操作：勾选用途 对空（舰载） → True
+[DEBUG] 操作：改飞机科技年份 → 1939
+[DEBUG] 操作：改军工组织 → CRDA-CANT
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改飞机科技年份 → 1948
+[DEBUG] 操作：改当前年份 → 1939
+[DEBUG] 操作：改当前年份 → 1943
+[DEBUG] 操作：改当前年份 → 1947
+[DEBUG] 操作：改国家 → 苏联
+[DEBUG] 操作：改军工组织 → 拉沃契金设计局
+[DEBUG] 操作：勾选用途 对空 → True
+[DEBUG] 操作：勾选用途 对空（舰载） → False
+[DEBUG] 操作：改飞机科技年份 → 1941
+[DEBUG] 操作：改当前年份 → 1941
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1944
+[DEBUG] 操作：改飞机科技年份 → 1946
+[DEBUG] 操作：改当前年份 → 1946
+[DEBUG] 操作：改飞机科技年份 → 1941
+[DEBUG] 操作：改当前年份 → 1941
+[DEBUG] 操作：改飞机科技年份 → 1944
+[DEBUG] 操作：改当前年份 → 1944
+[DEBUG] 操作：改飞机科技年份 → 1946
+[DEBUG] 操作：改当前年份 → 1946
+  PASS 离线表命中（缺 0 个）　— 走了 216 组（抽样）
+  PASS 勾/不勾特殊工程标识都命中（缺 0 / 36）　— 方案 D：标识不进方案键
+
+合计 129 项，失败 0 项，用时 80.2s
