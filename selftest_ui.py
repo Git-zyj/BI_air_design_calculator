@@ -735,6 +735,98 @@ def t_swap_and_highlight():
     return ok
 
 
+def t_short_names_and_copy():
+    """图上机型名补全（制造厂+型号）+ 右键复制（用户 2026-10-13 口径）。"""
+    print("[18] 图上机型短名 + 右键复制")
+    ok = True
+    S = gui.App._short_name
+    cases = [
+        ("梅塞施密特 Me 262 A “飞燕” 喷气式多用途战斗机", "梅塞施密特 Me 262 A"),
+        ("梅塞施密特 Me 262 A-2 “风暴鸟” 喷气式近距支援机", "梅塞施密特 Me 262 A-2"),
+        ("格鲁曼 F6F-3 “地狱猫”舰载战斗机", "格鲁曼 F6F-3"),
+        ("中岛 Ki-84 四式战斗机甲型 “疾风”", "中岛 Ki-84"),
+        ("三菱 A6M2 零式舰上战斗机二一型", "三菱 A6M2"),
+        ("福克-沃尔夫 Ta 152 H-1", "福克-沃尔夫 Ta 152 H-1"),
+        # 苏联机型（用户说"显示正常"的那批）必须原样保留，别被新规则改坏
+        ("雅克夫列夫 雅克-9U轻型战斗机", "雅克夫列夫 雅克-9U轻型战斗机"),
+        ("波利卡波夫 I-153轻型战斗机", "波利卡波夫 I-153轻型战斗机"),
+        ("超级马林“喷火” Mk.I战斗机", "超级马林“喷火” Mk.I战斗机"),
+    ]
+    bad = [(c, want, S(c)) for c, want in cases if S(c) != want]
+    ok &= check("短名 = 制造厂 + 型号（丢掉「喷气式多用途战斗机」这类类别后缀）", not bad,
+                "；".join("%s→%s（应 %s）" % b for b in bad) if bad else
+                "例：%s" % S(cases[0][0]))
+    ok &= check("纯中文名不丢字", S("某个纯中文名字") == "某个纯中文名字", S("某个纯中文名字"))
+
+    tmp = os.path.join(tempfile.gettempdir(), "_selftest_ui_copy.json")
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    orig_last = run.last_inputs_path
+    run.last_inputs_path = lambda: tmp
+    try:
+        app = new_app()
+    finally:
+        run.last_inputs_path = orig_last
+    pump(app, 2.0)
+    # 图上标签：把德国 1944 拉出来，确认标签不再是"喷气式多用途战斗机"光秃秃一个类别
+    app.var_tag.set(app._tag_labels["GER"])
+    app._refresh_country()
+    for k, v in app.role_vars.items():
+        v.set(k == "air_far")
+    app._on_roles_changed()
+    app.var_year.set(1944)
+    app._build_tech_checks()
+    app.var_tech.set(1945)
+    app._on_tech_year_changed()
+    pump(app, 2.5)
+    app.on_calculate()
+    pump(app, 1.2)
+    chart_names = {app.canvas_plot.itemcget(i, "text")
+                   for i in app.canvas_plot.find_all()
+                   if app.canvas_plot.type(i) == "text"}
+    # 图上只给**帕累托前沿**的那些点写名字（其余是小圆点），所以拿前沿逐架对
+    front = [r for r in app.rows if r.get("pareto")]
+    expect = {S(app._row_name(r)) for r in front}
+    ok &= check("帕累托前沿的标签 = 「制造厂 + 型号」（%d 架）" % len(front),
+                bool(expect) and expect <= chart_names,
+                "缺：%s" % "；".join(sorted(expect - chart_names)))
+    ok &= check("标签里带型号代号（不只是类别词）",
+                any(any(ch.isdigit() for ch in t) for t in expect),
+                "；".join(sorted(expect)[:6]))
+    ok &= check("图上不再只剩类别词（如「喷气式多用途战斗机」）",
+                not (chart_names & {"喷气式多用途战斗机", "喷气式战斗机", "舰载战斗机"}),
+                "；".join(sorted(expect)[:6]))
+    # 复制：剪贴板 + 状态行反馈
+    ok &= check("复制文字能进剪贴板",
+                app._copy_text("梅塞施密特 Me 262 A", "机型名称")
+                and app.clipboard_get() == "梅塞施密特 Me 262 A",
+                app.lbl_hint.cget("text"))
+    # 表格行：名称 / key / 整行
+    items = app.tree_out.get_children()
+    info = app._row_clipboard_info(items[0])
+    ok &= check("表格行能取到机型名与 key",
+                bool(info and info["name"] and info["key"] and "\t" in info["line"]),
+                "%s / %s" % ((info or {}).get("name"), (info or {}).get("key")))
+    ok &= check("表格行的「整行」含表里的数值（制表符分隔）",
+                info and info["line"].count("\t") >= 3, (info or {}).get("line", "")[:60])
+    # 散点图按坐标找最近的点
+    pts = getattr(app, "_chart_pts", [])
+    ok &= check("图上记录了每个点的坐标", len(pts) >= 3, "%d 个点" % len(pts))
+    row0, cx, cy = pts[0]
+    ok &= check("右键点中某个点 → 找回同一架机型",
+                app._chart_nearest_row(cx, cy) is row0,
+                app._short_name(app._row_name(row0)))
+    ok &= check("离所有点都远 → 不误判（返回 None）",
+                app._chart_nearest_row(-500, -500) is None)
+    # 菜单真的装上去了（绑定了 Button-3）
+    ok &= check("散点图/表格装了右键菜单绑定",
+                bool(app.canvas_plot.bind("<Button-3>")) and bool(app.tree_out.bind("<Button-3>")),
+                "canvas=%s tree=%s" % (bool(app.canvas_plot.bind("<Button-3>")),
+                                       bool(app.tree_out.bind("<Button-3>"))))
+    app.destroy()
+    return ok
+
+
 def t_table_coverage(full=False):
     print("[10] 离线表覆盖（方案键命中率）")
     # ⚠ 离线表只按**出厂默认**生成（口径 + ③ 的默认勾选）。本机"记住上次输入"里若
@@ -861,6 +953,7 @@ def main():
     app.destroy()
     t_alloc_recommendation()
     t_swap_and_highlight()
+    t_short_names_and_copy()
     t_memory()
     t_table_coverage(args.full)
     bad = [n for n, ok, _d in RESULTS if not ok]

@@ -306,6 +306,7 @@ class App(tk.Tk):
         self._refresh_totals()
         self._watch_inputs()          # 调试：输入项一变就打一行日志
         self._bind_live_refresh()     # 年份直接键入时也要重算 ② 的对手
+        self._install_copy_menu()     # 右键复制：标签/按钮、表格行、散点图的点
         self.protocol("WM_DELETE_WINDOW", self._on_close)   # 关窗口时记住这次输入
         _say("准备就绪，正在显示窗口…")
         self.after(80, self._pop_to_front)
@@ -444,6 +445,111 @@ class App(tk.Tk):
         del LOG[:]
         self._refresh_log_text()
         self.lbl_hint.configure(text="已清空本次的操作记录")
+
+    # ---------- 右键复制（用户 2026-10-13：界面文字没法选中，想复制飞机名称）----------
+    def _copy_text(self, text, what="文字"):
+        """把文字放进剪贴板 + 在状态行给一句反馈（Tk 的 Label 天生不能选中复制）。"""
+        text = str(text or "")
+        if not text:
+            return False
+        try:
+            self.clipboard_clear()
+            self.clipboard_append(text)
+        except tk.TclError:
+            return False
+        short = text if len(text) <= 40 else text[:40] + "…"
+        self.lbl_hint.configure(text="已复制%s：%s" % (what, short))
+        _dbg("复制%s：%s" % (what, short))
+        return True
+
+    def _row_clipboard_info(self, iid):
+        """表格某行的 (机型名, 机型 key, 整行文本) —— 右键菜单与自检共用（不弹菜单）。"""
+        row = getattr(self, "_row_by_iid", {}).get(iid)
+        if not row:
+            return None
+        try:
+            values = self.tree_out.item(iid)["values"]
+        except tk.TclError:
+            values = []
+        return {"name": self._row_name(row),
+                "key": (row.get("airframe") or {}).get("key") or "",
+                "line": "\t".join(str(v) for v in values)}
+
+    def _chart_nearest_row(self, x, y, tol=16):
+        """散点图上离 (x, y) 最近的机型（超过 tol 像素算没点中，返回 None）。"""
+        best, best_d = None, float(tol) * float(tol)
+        for row, cx, cy in getattr(self, "_chart_pts", []):
+            d = (cx - x) ** 2 + (cy - y) ** 2
+            if d <= best_d:
+                best, best_d = row, d
+        return best
+
+    def _install_copy_menu(self):
+        """给"不能选中"的控件挂右键复制。
+
+        Tk 的 ttk.Label / Button / Checkbutton 没有可选中文本（选了也复制不了），
+        所以这里统一挂一个右键菜单：
+          · 标签/按钮/勾选框 → 「复制这段文字」；
+          · 结果表某行 → 「复制机型名称 / 机型 key / 整行」；
+          · 散点图某个点附近 → 「复制机型名称 / 机型 key」。
+        字符串类控件（Entry/Spinbox/Combobox/日志小窗的 Text）本来就能选中 Ctrl+C，不动。
+        """
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="复制这段文字",
+                         command=lambda: self._copy_text(menu._copy_text))
+        self._copy_menu = menu
+
+        def on_widget(event):
+            w = event.widget
+            try:
+                text = str(w.cget("text") or "")
+            except tk.TclError:
+                return
+            if not text.strip():
+                return
+            menu._copy_text = text
+            self._popup(menu, event)
+
+        for cls in ("TLabel", "TButton", "TCheckbutton", "TRadiobutton"):
+            self.bind_class(cls, "<Button-3>", on_widget, add="+")
+        self.tree_out.bind("<Button-3>", self._on_table_right_click, add="+")
+        self.canvas_plot.bind("<Button-3>", self._on_chart_right_click, add="+")
+
+    def _popup(self, menu, event):
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _on_table_right_click(self, event):
+        iid = self.tree_out.identify_row(event.y)
+        info = self._row_clipboard_info(iid) if iid else None
+        if not info:
+            return
+        # 右键顺手选中该行（图上也会跟着高亮，用户能立刻对上位置）
+        self.tree_out.selection_set(iid)
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="复制机型名称",
+                         command=lambda: self._copy_text(info["name"], "机型名称"))
+        if info["key"]:
+            menu.add_command(label="复制机型 key（数据里的 id）",
+                             command=lambda: self._copy_text(info["key"], "机型 key"))
+        menu.add_command(label="复制整行（制表符分隔）",
+                         command=lambda: self._copy_text(info["line"], "整行"))
+        self._popup(menu, event)
+
+    def _on_chart_right_click(self, event):
+        row = self._chart_nearest_row(event.x, event.y)
+        if not row:
+            return
+        name, key = self._row_name(row), (row.get("airframe") or {}).get("key") or ""
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="复制机型名称",
+                         command=lambda: self._copy_text(name, "机型名称"))
+        if key:
+            menu.add_command(label="复制机型 key（数据里的 id）",
+                             command=lambda: self._copy_text(key, "机型 key"))
+        self._popup(menu, event)
 
     def _export_log(self):
         """把日志导出到 output\\BI_SOV_log_时间戳.txt。"""
@@ -2871,6 +2977,29 @@ class App(tk.Tk):
     def _row_name(self, row):
         return zh(self.loc, row["airframe"]["key"]) or row["airframe"]["name"]
 
+    @staticmethod
+    def _short_name(full, limit=22):
+        """图上/窄处用的短名：**保留"制造商 + 型号"**，丢掉后面的类别与绰号。
+
+        用户 2026-10-13 报：德国 `梅塞施密特 Me 262 A "飞燕" 喷气式多用途战斗机`
+        在散点图上只显示了最后一个词"喷气式多用途战斗机"（原来取 `name.split()[-1]`），
+        苏联机型因为名字里没有空格才恰好正常。
+        规则：取到**最后一个含 ASCII 字母/数字的字段**为止 —— 类别后缀是纯中文
+        （"喷气式多用途战斗机"/"四式战斗机甲型"/"重型近距支援机"）自然被丢掉，
+        而 `Mk.I战斗机`（字母+中文混排）、`Ki-84`、`Me 262 A` 这些型号都会被保留。
+        实测：`梅塞施密特 Me 262 A "飞燕" 喷气式多用途战斗机` → `梅塞施密特 Me 262 A`；
+              `中岛 Ki-84 四式战斗机甲型 "疾风"` → `中岛 Ki-84`；
+              `超级马林"喷火" Mk.I战斗机` → 原样（型号那一段本身带中文）；
+              `雅克夫列夫 雅克-9U轻型战斗机` → 原样（和以前显示的一样）。
+        """
+        parts = [p for p in str(full or "").split() if p]
+        if not parts:
+            return ""
+        ascii_idx = [i for i, p in enumerate(parts)
+                     if any(c.isascii() and c.isalnum() for c in p)]
+        out = " ".join(parts[:ascii_idx[-1] + 1]) if ascii_idx else " ".join(parts)
+        return out[:limit] + "…" if len(out) > limit else out
+
     def _sort_value(self, row):
         key = getattr(self, "_sort_key", "rank")
         getters = {
@@ -3267,11 +3396,14 @@ class App(tk.Tk):
             cx, cy = px(tx), py(ty)
             if row.get("pareto"):
                 cv.create_oval(cx - 4, cy - 4, cx + 4, cy + 4, fill=ACCENT, outline=ACCENT)
-                name = self._row_name(row).split()[-1]
+                name = self._short_name(self._row_name(row))
                 cv.create_text(cx + 7, cy + (-12 if i % 2 == 0 else 12), anchor="w", text=name,
                                fill=ACCENT, font=(self.family, FONT_NOTE, "bold"))
             else:
                 cv.create_oval(cx - 2, cy - 2, cx + 2, cy + 2, fill=DOT, outline=DOT)
+
+        # 记下每个点的画布坐标：右键"复制机型名称"要按距离找最近的那架（见 _on_chart_copy）
+        self._chart_pts = [(row, px(xget(row)), py(yget(row))) for row, _tx, _ty in pts]
 
         # 表格里**选中的那架**在图上圈出来（用户 2026-10-13 口径：想看自己那架在图里的位置）。
         # 画在最后 = 压在所有点之上；标签带上"选中"，和帕累托前沿的名称标签区分开。
@@ -3285,7 +3417,7 @@ class App(tk.Tk):
             cv.create_line(sx + 8, sy, sx + 11, sy, fill=INK, tags="selhl")
             cv.create_line(sx, sy - 11, sx, sy - 8, fill=INK, tags="selhl")
             cv.create_line(sx, sy + 8, sx, sy + 11, fill=INK, tags="selhl")
-            name = self._row_name(sel_row).split()[-1]
+            name = self._short_name(self._row_name(sel_row))
             cv.create_text(sx, sy - 15, anchor="s", text="选中 %s" % name, fill=INK,
                            font=(self.family, FONT_NOTE, "bold"), tags="selhl")
 
