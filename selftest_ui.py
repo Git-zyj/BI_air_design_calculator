@@ -329,7 +329,12 @@ def t_style(app):
                     "右缘 %s / 画布 %d" % (", ".join("%s=%d" % (t, r) for t, r in worst), cw))
 
     # 字段名左对齐：同一个 x
-    labels = ("用途", "配点方式", "军工组织", "方针", "等级", "合计", "国家精神（逗号分隔，可空）")
+    # 所有"独立成行"的字段名都要在同一条竖线上（② 的五个、④ 的"配点口径"正是
+    # 用户 2026-10-12 抓出来的漏检项）
+    labels = ("用途", "距离目标",
+              "当前年份", "飞机科技年份", "所选国家", "对手国别", "选取规则",
+              "配点方式", "军工组织", "方针", "等级", "配点口径",
+              "国家精神（逗号分隔，可空）", "合计")
     xs = {}
     fonts, colors = set(), set()
     stack = [app]
@@ -361,8 +366,10 @@ def t_style(app):
                 continue
             if v.startswith("#"):
                 colors.add(v)
-    ok &= check("字段名左对齐（同一个 x）", len(set(xs.values())) == 1 and len(xs) >= 6,
-                str(sorted(set(xs.values()))))
+    missing = [t for t in labels if t not in xs]
+    ok &= check("字段名一个不漏", not missing, "缺 %s" % missing)
+    ok &= check("字段名左对齐（同一个 x）", len(set(xs.values())) == 1 and len(xs) >= 12,
+                "x=%s（%d 个字段名）" % (sorted(set(xs.values())), len(xs)))
     # ttk 控件多数走 style，字体在 style 里 —— 一并核对
     style = gui.ttk.Style(app)
     style_fonts = {}

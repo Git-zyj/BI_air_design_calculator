@@ -597,50 +597,59 @@ class App(tk.Tk):
         self.frm_fields = fields          # 供后续核对布局（前两行的列宽只看它自己）
         self.var_year = tk.IntVar(value=self.inputs["current_year"])
         self.var_tech = tk.IntVar(value=self.inputs["tech_year"])
+        # ⚠️ 一行一个字段：字段名全在 col0（同一条竖线），控件在 col1，说明在 col2。
+        # 以前是 2 行 × 3 列的填表布局，第二/第三个字段的名各自落在不同列上
+        # （实测 x=25 / 224 / 354 三个竖线），用户一眼就看出"没对齐"。
         ttk.Label(fields, text="当前年份").grid(row=0, column=0, sticky="w",
-                                            padx=(0, 6), pady=(ROW_PAD, ROW_PAD))
+                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_year, width=CTL_W_NUM,
                     command=self._refresh_enemy).grid(row=0, column=1, sticky="w")
-        ttk.Label(fields, text="（决定对手机型）").grid(row=0, column=2, sticky="w")
-        ttk.Label(fields, text="飞机科技年份").grid(row=0, column=3, sticky="w",
-                                               padx=(PADX * 2, 6))
+        ttk.Label(fields, text="（决定对手机型）", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=0, column=2, sticky="w",
+                                                      padx=(PADX, 0))
+        ttk.Label(fields, text="飞机科技年份").grid(row=1, column=0, sticky="w",
+                                               padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_tech, width=CTL_W_NUM,
-                    command=self._on_tech_year_changed).grid(row=0, column=4, sticky="w")
-        ttk.Label(fields, text="（决定我方可用机身，可超前研究）").grid(row=0, column=5, sticky="w")
+                    command=self._on_tech_year_changed).grid(row=1, column=1, sticky="w")
+        ttk.Label(fields, text="（决定我方可用机身，可超前研究）", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=1, column=2, sticky="w",
+                                                      padx=(PADX, 0))
 
-        ttk.Label(fields, text="所选国家").grid(row=1, column=0, sticky="w",
-                                             padx=(0, 6), pady=(ROW_PAD, ROW_PAD))
+        ttk.Label(fields, text="所选国家").grid(row=2, column=0, sticky="w",
+                                             padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
         cb = ttk.Combobox(fields, textvariable=self.var_tag, width=CTL_W_TAG,
                           state="readonly")
-        cb.grid(row=1, column=1, sticky="w")
+        cb.grid(row=2, column=1, sticky="w")
         cb.bind("<<ComboboxSelected>>", lambda e: self._refresh_country())
         cb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_tag.set(self._tag_labels.get(self.inputs.get("country") or "SOV", "苏联"))
-        ttk.Label(fields, text="对手国别").grid(row=1, column=2, sticky="w",
-                                            padx=(PADX * 2, 6))
         enemy = self.inputs.get("enemy") or {}
+        ttk.Label(fields, text="对手国别").grid(row=3, column=0, sticky="w",
+                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_enemy_tag = tk.StringVar(value=enemy.get("country", "GER"))
         eb = ttk.Combobox(fields, textvariable=self.var_enemy_tag, width=CTL_W_TAG,
                           state="readonly")
-        eb.grid(row=1, column=3, sticky="w")
+        eb.grid(row=3, column=1, sticky="w")
         eb.bind("<<ComboboxSelected>>", lambda e: self._on_enemy_change())
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
-        ttk.Label(fields, text="选取规则").grid(row=1, column=4, sticky="w", padx=(PADX * 2, 6))
+        ttk.Label(fields, text="选取规则").grid(row=4, column=0, sticky="w",
+                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         # 旧写法 dict(RULE_LABELS).get(key) 方向反了（表是"显示名 → key"），
         # 不管 inputs.json 写什么都会显示成"当前年份−1"。
         cur_rule = RULE_KEYS.get(enemy.get("rule", "previous_year"), "当前年份−1")
         self.var_rule = tk.StringVar(value=cur_rule)
         rb = ttk.Combobox(fields, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
-                          width=12, state="readonly")
-        rb.grid(row=1, column=5, sticky="w")
+                          width=CTL_W_TAG, state="readonly")
+        rb.grid(row=4, column=1, sticky="w")
         rb.bind("<<ComboboxSelected>>", lambda e: self._on_rule_change())
 
         self.frm_manual_plane = ttk.Frame(box)
         self.frm_manual_plane.grid(row=3, column=0, sticky="w")
-        ttk.Label(self.frm_manual_plane, text="手动指定机型 key").grid(row=0, column=0, sticky="e",
-                                                                      padx=(PADX, 4))
+        ttk.Label(self.frm_manual_plane, text="手动指定机型 key", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=0, column=0, sticky="w",
+                                                      padx=(PADX, 6))
         self.var_override = tk.StringVar(value=enemy.get("override_key") or "")
         ov = ttk.Entry(self.frm_manual_plane, textvariable=self.var_override, width=46)
         ov.grid(row=0, column=1, sticky="w")
@@ -759,7 +768,9 @@ class App(tk.Tk):
         frm_alloc = ttk.Frame(card)
         frm_alloc.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX,
                        pady=(ROW_PAD, ROW_PAD))
-        ttk.Label(frm_alloc, text="配点口径").grid(row=0, column=0, sticky="e", padx=(PADX, 4))
+        # ⚠️ 子框已经带 padx=PADX，里面的标签不能再加一次 —— 否则"配点口径"比同卡片
+        # 其它字段名（x=25）多缩进 12px（用户 2026-10-12 报"后者缩进太多"）。
+        ttk.Label(frm_alloc, text="配点口径").grid(row=0, column=0, sticky="w", padx=(0, 6))
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
         self.cb_alloc_mode = ttk.Combobox(frm_alloc, textvariable=self.var_alloc_mode,
                                           width=CTL_W_TEXT,
