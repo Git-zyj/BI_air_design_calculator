@@ -523,7 +523,7 @@ def production_gain(prod, cap_now=100.0, capacity_now=200.0):
     p_ca = ((1 + ca + ca_add) / (1 + ca)) if (1 + ca) else 1.0
     cost_mod = float(prod.get("production_cost_factor", 0.0))
     p_cost = (1.0 / (1 + cost_mod)) if (1 + cost_mod) else 1.0
-    return p_cap * p_ca * p_cost, {"效率上限": p_cap, "产量": p_ca, "生产产出花费": p_cost}
+    return p_cap * p_ca * p_cost, {"生产效率上限": p_cap, "产量": p_ca, "生产产出花费": p_cost}
 
 
 def score_terms(role, values):

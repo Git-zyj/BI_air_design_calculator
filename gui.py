@@ -78,13 +78,13 @@ ALLOC_MODES = [("split", "分离（设计最优 + 生产另算）"),
 #                  **产能**是折算出来的等效产出倍率（"⇒ 产能 ×1.0167"）。
 PROD_ZH = {"production_capacity_factor": "产量",
            "production_cost_factor": "生产产出花费",
-           "production_efficiency_cap_factor": "效率上限",
-           "production_efficiency_gain_factor": "效率增长",
-           "production_resource_need_factor": "资源需求",
-           "production_resource_penalty_factor": "资源短缺惩罚",
-           "production_conversion_speed_factor": "转换速度",
+           "production_efficiency_cap_factor": "生产效率上限",
+           "production_efficiency_gain_factor": "生产效率增长",
+           "production_resource_need_factor": "生产资源需求",
+           "production_resource_penalty_factor": "生产资源惩罚",
+           "production_conversion_speed_factor": "生产转换速度",
            # 生产侧"可靠"与设计侧同效（都是百分比修正装备当前可靠性）→ 已并进有效造价
-           "reliability": "可靠"}
+           "reliability": "可靠性"}
 # 明细行里"设计数值"要展示的属性（顺序即显示顺序）
 DESIGN_SHOW = ("air_attack", "air_defence", "air_agility", "maximum_speed", "air_range",
                "reliability", "build_cost_ic", "air_ground_attack",
@@ -2341,8 +2341,8 @@ class App(tk.Tk):
             res_cost = (row.get("airframe") or {}).get("air_production") or 0
             if res_cost and row.get("weighted"):
                 blocks.append(("资源加权分",
-                               "%.4f = 纯 %.4f ÷ （装配资源 %g × 资源消耗 %.4f）"
-                               % (row["weighted"], row.get("score_raw", 0.0), res_cost,
+                               "%.4f = 折算后总分数 %.4f ÷ （装配资源 %g × 资源消耗 %.4f）"
+                               % (row["weighted"], row.get("score", 0.0), res_cost,
                                   1.0 + float(need or 0.0)),
                                "formula"))
             combat = engine.combat_breakdown(row["role"], v, row.get("enemy_values"))

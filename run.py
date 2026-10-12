@@ -363,7 +363,12 @@ def build_rows(inputs, data):
             # 资源加权分：把该路线/方针的"生产资源需求"修正折算进除数
             # （需求 −5% ⇒ 等效资源开销 ×0.95 ⇒ 资源加权分变高）
             _need = (mfr_info.get("production") or {}).get("production_resource_need_factor", 0.0)
-            weighted = engine.resource_weighted(result["scores"], airframe, need_factor=_need)
+            # 资源加权分用**折算后**的总分数（性能 × 生产折算 ÷ 有效造价）再除资源开销，
+            # 这样它和表里的总分数同口径（以前用的是未折算的纯分数）
+            _gain = float(mfr_info.get("production_gain") or 1.0)
+            weighted = {k: v * _gain for k, v in
+                        engine.resource_weighted(result["scores"], airframe,
+                                                 need_factor=_need).items()}
             design = " ".join(
                 "%s×%d" % (upgrade_label(t), n)
                 for t, n in result["levels"].items() if n
