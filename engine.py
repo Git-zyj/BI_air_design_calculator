@@ -1193,12 +1193,15 @@ def production_route(org, base, techs=(), cap_now=100.0, capacity_now=200.0,
     用在两种口径里：
       设计/生产分离 → 生产那家 MIO 就按它点这些特质；
       兼顾         → 拿它和"设计向路线"比折算后的总分数，谁高用谁。
-    返回 (token 列表, 该子集的生产折算倍率)；没有任何生产修正时返回 ([], 1.0)。
+    返回 (token 列表, 该子集的生产折算倍率, 该子集的生产修正合计)；
+    没有任何生产修正时是 ([], 1.0, {})。第三个值是给"资源加权分"用的
+    —— 它要把**生产那家**的生产资源需求也算进资源开销里。
     """
     groups = plane_groups((base or {}).get("archetype"))
     arche = (base or {}).get("archetype")
     order, masks = mio_feasible_sets(org, max_level, techs, groups, arche)
     best, best_gain, best_n = [], 1.0, 10 ** 9
+    best_prod = {}
     for mask in masks:
         picked, prod = [], {}
         for i, trait in enumerate(order):
@@ -1207,8 +1210,8 @@ def production_route(org, base, techs=(), cap_now=100.0, capacity_now=200.0,
                 prod = combine_modifiers(prod, trait.get("production") or {})
         gain = production_gain(prod, cap_now, capacity_now)[0]
         if gain > best_gain + 1e-9 or (abs(gain - best_gain) <= 1e-9 and len(picked) < best_n):
-            best, best_gain, best_n = picked, gain, len(picked)
-    return [order[i]["token"] for i in best], best_gain
+            best, best_gain, best_n, best_prod = picked, gain, len(picked), prod
+    return [order[i]["token"] for i in best], best_gain, best_prod
 
 
 def _mods_of(order, picked, mods0):

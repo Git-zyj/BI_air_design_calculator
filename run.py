@@ -362,13 +362,17 @@ def build_rows(inputs, data):
                                      prod_mods=mfr_info.get("production"))
             # 资源加权分：把该路线/方针的"生产资源需求"修正折算进除数
             # （需求 −5% ⇒ 等效资源开销 ×0.95 ⇒ 资源加权分变高）
-            _need = (mfr_info.get("production") or {}).get("production_resource_need_factor", 0.0)
-            # 资源加权分用**折算后**的总分数（性能 × 生产折算 ÷ 有效造价）再除资源开销，
-            # 这样它和表里的总分数同口径（以前用的是未折算的纯分数）
-            _gain = float(mfr_info.get("production_gain") or 1.0)
-            weighted = {k: v * _gain for k, v in
-                        engine.resource_weighted(result["scores"], airframe,
-                                                 need_factor=_need).items()}
+            if "production_need_override" in mfr_info:
+                # 「分离」：生产交给生产伙伴，资源开销按**那家**的资源需求算
+                _need = float(mfr_info.get("production_need_override") or 0.0)
+                _prod_view = {"production_resource_need_factor": _need}
+            else:
+                _prod_view = mfr_info.get("production") or {}
+                _need = _prod_view.get("production_resource_need_factor", 0.0)
+            # 分子给的是**纯设计分**；生产折算在下面写行时统一乘 gain，
+            # 这样 资源加权分 = 折算后总分数 ÷ 资源开销，和表里的总分数同口径。
+            weighted = engine.resource_weighted(result["scores"], airframe,
+                                                need_factor=_need)
             design = " ".join(
                 "%s×%d" % (upgrade_label(t), n)
                 for t, n in result["levels"].items() if n
@@ -380,6 +384,8 @@ def build_rows(inputs, data):
                 "score": result["scores"][score_key] * gain,       # 生产折算后（÷ 等效造价）
                 "weighted": weighted.get(score_key, 0.0) * gain,
                 "production_gain": gain,
+                # 该路线实际生效的生产侧修正：明细里摊开"资源加权分"算式时用同一个资源需求值
+                "production": _prod_view,
                 "enemy": role_enemy,
                 "enemy_values": role_enemy_values,
                 "airframe": airframe,
@@ -449,14 +455,14 @@ def best_production_plan(inputs, data, plane):
         types = set(org.get("equipment_types") or [])
         if groups and not (types & groups):
             continue
-        tokens, gain = engine.production_route(org, plane, techs, cap, ca)
+        tokens, gain, mods = engine.production_route(org, plane, techs, cap, ca)
         if gain <= 1.0 + 1e-9:
             continue
         better = (best is None or gain > best["gain"] + 1e-9
                   or (abs(gain - best["gain"]) <= 1e-9 and len(tokens) < len(best["tokens"])))
         if better:
             best = {"organization": org["organization"], "tokens": tokens, "gain": gain,
-                    "level": engine.MIO_MAX_LEVEL}
+                    "level": engine.MIO_MAX_LEVEL, "mods": mods}
     return best
 
 
@@ -555,6 +561,10 @@ def resolve_manufacturer(inputs, data, upgrade_map, candidates, ref=None):
                 and partner["organization"] != org["organization"]):
             info["production_partner"] = partner
             info["production_gain_override"] = partner["gain"]
+            # 生产那家的"生产资源需求"要一起进资源加权分的除数
+            # （否则 ④ 面板写着"资源消耗×0.95"，明细里却按 1.0000 算）
+            info["production_need_override"] = (partner.get("mods") or {}).get(
+                "production_resource_need_factor", 0.0)
             prod = {}                  # 本 MIO 只做设计，生产不算它的
             info["alloc_mode"] = "split→生产换家"
         else:
