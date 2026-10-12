@@ -277,19 +277,43 @@ def t_card4_layout(app):
     pump(app, 0.8)
     card = app.lbl_policy.master
     texts = {}
+    stack = [card]
+    while stack:
+        w = stack.pop()
+        stack.extend(w.winfo_children())
+        try:
+            texts[str(w.cget("text"))] = w
+        except Exception:                    # noqa: BLE001
+            pass
+    texts_top = {}
     rows = {}
     for child in card.winfo_children():
         gi = child.grid_info()
         if not gi:
             continue
-        try:
-            texts[child.cget("text")] = child
-        except Exception:                    # noqa: BLE001
-            pass
         r = int(gi["row"])
         rows[r] = min(rows.get(r, 10 ** 6), child.winfo_y())
-    xs = [texts[t].winfo_x() for t in ("配点方式", "军工组织", "方针", "等级") if t in texts]
+    xs = [texts[t].winfo_rootx() for t in ("配点方式", "军工组织", "方针", "等级")
+          if t in texts]
     ok = check("四个字段名左对齐（同一个 x）", len(xs) == 4 and len(set(xs)) == 1, str(xs))
+    # 标签 → 控件 的间距要像 ①② 那样贴在一起（用户 2026-10-12 口径）
+    gaps = []
+    for rowf in card.winfo_children():
+        if rowf.winfo_class() != "TFrame":
+            continue
+        kids = sorted([c for c in rowf.winfo_children() if c.grid_info()],
+                      key=lambda c: int(c.grid_info()["column"]))
+        if len(kids) < 2:
+            continue
+        lab, ctl = kids[0], kids[1]
+        if lab.winfo_class() not in ("TLabel", "Label"):
+            continue
+        if str(lab.cget("text")) not in ("配点方式", "军工组织", "方针", "等级",
+                                         "配点口径", "当前效率上限"):
+            continue                          # 只量"字段块"，别把表/按钮那些框算进来
+        gaps.append(ctl.winfo_x() - (lab.winfo_x() + lab.winfo_width()))
+    ok &= check("④ 标签与控件的间距和 ①② 一样（6px）",
+                gaps and max(gaps) <= 8 and min(gaps) >= 0, "间距 %s" % gaps)
     # 行距用**单元格**量（grid_bbox）：子控件在不同行高里会被垂直居中，
     # 拿子控件的 y 去比会假抖动 ±3px（实测 35~40），单元格才是真正的排版节奏。
     heights = []
@@ -301,16 +325,13 @@ def t_card4_layout(app):
         heights.append(h)
     ok &= check("前 9 行行高完全一致", len(set(heights)) == 1 and heights[0] > 0,
                 "行高 %s" % heights)
-    # 所有"选项槽"（第一个单选 + 三个下拉 + 等级 + 两个生产输入）同一条竖线
-    ctrls = []
-    for child in card.winfo_children():
-        cls = child.winfo_class()
-        if cls in ("TCombobox", "TSpinbox"):
-            ctrls.append((cls, child.winfo_x()))
-        elif cls == "TRadiobutton" and str(child.cget("text")).startswith("自动配点"):
-            ctrls.append((cls, child.winfo_x()))
-    ok &= check("④ 选项槽同一条竖线", len({x for _c, x in ctrls}) == 1 and len(ctrls) >= 6,
-                str(ctrls))
+    # 生产折算那一行必须仍是"一行两对"、且 "%" 紧跟在输入框后面（不能被挤到别的列）
+    kids = app.frm_prod.winfo_children()
+    prod = [(c.winfo_class(), c.winfo_rootx(), c.winfo_width()) for c in kids]
+    rowys = {c.winfo_rooty() for c in kids}
+    gaps = [prod[2][1] - (prod[1][1] + prod[1][2]), prod[5][1] - (prod[4][1] + prod[4][2])]
+    ok &= check("生产折算是一行两对、% 紧跟输入框", len(rowys) == 1 and max(gaps) <= 6,
+                "同一行=%s，%% 间距=%s" % (len(rowys) == 1, gaps))
     # 「生产伙伴」为空时不该占一行（以前"生产侧"和"满级最优路线"之间空一大块）。
     # 兼顾口径下这行一定是空的 —— 正好用来验证"空行被隐藏"。
     app.var_alloc_mode.set(dict(gui.ALLOC_MODES)["balanced"])

@@ -739,9 +739,10 @@ class App(tk.Tk):
         self.var_alloc = tk.StringVar(value="auto")
         ttk.Label(card, text="配点方式").grid(row=0, column=0, sticky="w",
                                           padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
-        ttk.Radiobutton(card, text="自动配点（按等级）", variable=self.var_alloc,
-                        value="auto", command=self._sync_alloc).grid(
-            row=0, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
+        self.radio_alloc_auto = ttk.Radiobutton(card, text="自动配点（按等级）",
+                                                variable=self.var_alloc,
+                                                value="auto", command=self._sync_alloc)
+        self.radio_alloc_auto.grid(row=0, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
         ttk.Radiobutton(card, text="手动勾选特质", variable=self.var_alloc,
                         value="pick", command=self._sync_alloc).grid(
             row=0, column=2, sticky="w", padx=PADX, pady=(ROW_PAD, ROW_PAD))
@@ -750,15 +751,33 @@ class App(tk.Tk):
         self.var_org = tk.StringVar(value="")
         self.var_level = tk.IntVar(value=mio.get("level") or 5)
         # 2026-10-12 用户指定顺序：军工组织 → 参考机型（+推荐）→ 方针 → 前置/加成/组织。
-        # 版式规矩（用户口径）：**字段名全在 col0（x=25）、控件全在 col1（同一个"槽"）**，
-        # 后续按钮/推荐放 col2；行距统一（每行 minsize=ROW_H + 同样的 pady）；
-        # 预览按钮用 `Tight.TButton`（默认按钮太高，会把它那行顶高）。
-        for _r in range(16):
+        # 版式规矩（用户口径）：字段做成**行内"字段块"**（和 ①② 一样）——标签与控件之间
+        # 只隔 6px；不要把控件拉到一条"被跨列长标签撑宽的竖线"上（那样标签到控件能差 100px）。
+        # 行距统一：每行 minsize=ROW_H + 同样的 pady；预览按钮用 `Tight.TButton`。
+        for _r in range(15):
             card.grid_rowconfigure(_r, minsize=ROW_H)
-        ttk.Label(card, text="军工组织").grid(row=1, column=0, sticky="w",
-                                          padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
-        self.cb_org = ttk.Combobox(card, textvariable=self.var_org, width=22, state="readonly")
-        self.cb_org.grid(row=1, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
+
+        def field_row(row, label):
+            """一行字段：字段块 = 标签 + 控件（标签与控件只隔 6px，和 ①② 一致）。"""
+            rowf = ttk.Frame(card)
+            rowf.grid(row=row, column=0, columnspan=6, sticky="w", padx=PADX,
+                      pady=(ROW_PAD, ROW_PAD))
+            ttk.Label(rowf, text=label).grid(row=0, column=0, sticky="w", padx=(0, 6))
+            return rowf
+
+        row0 = field_row(0, "配点方式")
+        self.radio_alloc_auto = ttk.Radiobutton(row0, text="自动配点（按等级）",
+                                                variable=self.var_alloc,
+                                                value="auto", command=self._sync_alloc)
+        self.radio_alloc_auto.grid(row=0, column=1, sticky="w")
+        ttk.Radiobutton(row0, text="手动勾选特质", variable=self.var_alloc,
+                        value="pick", command=self._sync_alloc).grid(
+            row=0, column=2, sticky="w", padx=(PADX, 0))
+
+        row1 = field_row(1, "军工组织")
+        self.cb_org = ttk.Combobox(row1, textvariable=self.var_org, width=CTL_W_TEXT,
+                                   state="readonly")
+        self.cb_org.grid(row=0, column=1, sticky="w")
         self.cb_org.bind("<<ComboboxSelected>>", lambda e: self._on_org_change())
 
         # 参考机型 + MIO 推荐：紧跟军工组织那一行（用户指定位置；原来挂在"配点方式"右边）
@@ -768,12 +787,11 @@ class App(tk.Tk):
                               pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_org_rec, card)
 
-        ttk.Label(card, text="方针").grid(row=3, column=0, sticky="w",
-                                      padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_policy = tk.StringVar(value="（不选）")
-        self.cb_policy = ttk.Combobox(card, textvariable=self.var_policy, width=CTL_W_TEXT,
+        row3 = field_row(3, "方针")
+        self.cb_policy = ttk.Combobox(row3, textvariable=self.var_policy, width=CTL_W_TEXT,
                                       state="readonly")
-        self.cb_policy.grid(row=3, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
+        self.cb_policy.grid(row=0, column=1, sticky="w")
         self.cb_policy.bind("<<ComboboxSelected>>", lambda e: self._on_policy_change())
         # 方针的「前置 / 加成 / 组织」说明：单独占一整行，段与段用全角空格分隔 ——
         # 宽的时候自然**并成一行**，窄了才在段与段之间折行（用户口径 2026-10-12）
@@ -784,30 +802,28 @@ class App(tk.Tk):
         self._wrap_to_card(self.lbl_policy, card)
 
         # 等级 + 预览按钮
-        ttk.Label(card, text="等级").grid(row=5, column=0, sticky="w",
-                                      padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
-        self.spin_level = ttk.Spinbox(card, from_=0, to=14, textvariable=self.var_level, width=6,
+        row5 = field_row(5, "等级")
+        self.spin_level = ttk.Spinbox(row5, from_=0, to=14, textvariable=self.var_level,
+                                      width=6,
                                       command=self._on_level_changed)
-        self.spin_level.grid(row=5, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
-        ttk.Button(card, text="预览军工组织总加成", command=self.on_preview,
-                   style="Tight.TButton").grid(row=5, column=2, sticky="w", padx=(PADX, 2),
-                                               pady=(ROW_PAD, ROW_PAD))
-        # 「配点口径」不再套子框：字段名直接在 col0、选择框直接在 col1 —— 这样它的"槽"
-        # 与军工组织/方针/等级完全同一条竖线（用户 2026-10-12 口径）。
-        ttk.Label(card, text="配点口径").grid(row=6, column=0, sticky="w",
-                                          padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
+        self.spin_level.grid(row=0, column=1, sticky="w")
+        ttk.Button(row5, text="预览军工组织总加成", command=self.on_preview,
+                   style="Tight.TButton").grid(row=0, column=2, sticky="w", padx=(PADX, 2),
+                                               pady=0)
+        # 「配点口径」：同样放进字段块 —— 标签与选择框紧挨着
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
-        self.cb_alloc_mode = ttk.Combobox(card, textvariable=self.var_alloc_mode,
+        row6 = field_row(6, "配点口径")
+        self.cb_alloc_mode = ttk.Combobox(row6, textvariable=self.var_alloc_mode,
                                           width=CTL_W_TEXT,
                                           state="readonly",
                                           values=[label for _k, label in ALLOC_MODES])
-        self.cb_alloc_mode.grid(row=6, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
+        self.cb_alloc_mode.grid(row=0, column=1, sticky="w")
         self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_picked())
-        self.lbl_alloc_rec = ttk.Label(card, text="", foreground=ACCENT,
+        self.lbl_alloc_rec = ttk.Label(row6, text="", foreground=ACCENT,
                                        font=(self.family, FONT_NOTE, "bold"), justify="left")
-        self.lbl_alloc_rec.grid(row=6, column=2, columnspan=4, sticky="w", padx=PADX,
-                                pady=(ROW_PAD, ROW_PAD))
-        self._wrap_to_card(self.lbl_alloc_rec, card)
+        self.lbl_alloc_rec.grid(row=0, column=2, columnspan=4, sticky="w", padx=PADX,
+                                pady=0)
+        self._wrap_to_card(self.lbl_alloc_rec, row6)
 
         # 累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
@@ -820,29 +836,41 @@ class App(tk.Tk):
         # 但一个 MIO 只有一条特质路线 —— 所以这里把这条路线带来的生产修正如实列出来，
         # 供用户定性判断"值不值得为了生产改路线 / 换一个 MIO 来生产"。
         # 生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同。
-        # 2026-10-12：两个输入改成**一行一个**，字段名在 col0、输入框在 col1
-        # —— 和上面所有选项同一个"槽"（用户口径）；"%"紧跟输入框。
+        # ⚠️ 这一行保持**一行两对**（用户口径 2026-10-12：这行的排版是对的，别拆），
+        # 而且放在自己的子框里 —— 卡片主网格的列宽会被"跨列长标签"撑开，
+        # "%" 会被挤到离输入框很远的第 3 列（实测 x=400，输入框才到 235）。
+        # 对齐靠 `_align_prod_slot()`：运行时把子框的 label 列宽调成与卡片 col1 相同。
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
+        prod_row = ttk.Frame(card)
+        prod_row.grid(row=8, column=0, columnspan=6, sticky="w", padx=PADX,
+                      pady=(ROW_PAD, ROW_PAD))
+        self.frm_prod = prod_row
         for i, (text, var, lo, hi) in enumerate((
                 ("当前效率上限", self.var_cap, 1, 500),
                 ("当前产量加成", self.var_capacity, 0, 2000))):
-            ttk.Label(card, text=text).grid(row=8 + i, column=0, sticky="w",
-                                        padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
-            ttk.Spinbox(card, from_=lo, to=hi, textvariable=var, width=CTL_W_NUM).grid(
-                row=8 + i, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
-            ttk.Label(card, text="%").grid(row=8 + i, column=2, sticky="w", padx=(2, 0))
+            lab = ttk.Label(prod_row, text=text)
+            lab.grid(row=0, column=i * 3, sticky="w",
+                     padx=((0, 6) if i == 0 else (PADX * 2, 6)),
+                     pady=0)
+            if i == 0:
+                self.prod_label0 = lab
+            spin = ttk.Spinbox(prod_row, from_=lo, to=hi, textvariable=var, width=CTL_W_NUM)
+            spin.grid(row=0, column=i * 3 + 1, sticky="w", pady=0)
+            ttk.Label(prod_row, text="%").grid(row=0, column=i * 3 + 2, sticky="w", padx=(2, 0))
+            if i == 0:
+                self.spin_cap = spin
 
         self.lbl_prod = ttk.Label(card, text="", foreground=PROD,
                                   font=(self.family, FONT_NOTE), justify="left")
-        self.lbl_prod.grid(row=10, column=0, columnspan=6, sticky="w", padx=PADX,
+        self.lbl_prod.grid(row=9, column=0, columnspan=6, sticky="w", padx=PADX,
                            pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_prod, card)
 
         # 「生产伙伴」经常是空的（分离口径且没换家）—— 空着也占一整行 38px，
         # 看起来就是"生产侧"和"满级最优路线"之间莫名空一大块（用户 2026-10-12 问）。
         # 有内容才显示：空 → grid_remove + 该行 minsize 归零。
-        self._partner_row = 11
+        self._partner_row = 10
         self.lbl_partner = ttk.Label(card, text="", foreground=PROD,
                                      font=(self.family, FONT_NOTE), justify="left")
         self.lbl_partner.grid(row=self._partner_row, column=0, columnspan=6, sticky="w", padx=PADX,
@@ -851,7 +879,7 @@ class App(tk.Tk):
 
         self.lbl_mio_route = ttk.Label(card, text="", foreground=MUTED,
                                        font=(self.family, FONT_NOTE), justify="left")
-        self.lbl_mio_route.grid(row=12, column=0, columnspan=6, sticky="w", padx=PADX,
+        self.lbl_mio_route.grid(row=11, column=0, columnspan=6, sticky="w", padx=PADX,
                                 pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_mio_route, card)
 
@@ -861,10 +889,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=13, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=12, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=14, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=13, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
