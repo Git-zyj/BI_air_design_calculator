@@ -301,6 +301,26 @@ def t_card4_layout(app):
         heights.append(h)
     ok &= check("前 9 行行高完全一致", len(set(heights)) == 1 and heights[0] > 0,
                 "行高 %s" % heights)
+    # 所有"选项槽"（第一个单选 + 三个下拉 + 等级 + 两个生产输入）同一条竖线
+    ctrls = []
+    for child in card.winfo_children():
+        cls = child.winfo_class()
+        if cls in ("TCombobox", "TSpinbox"):
+            ctrls.append((cls, child.winfo_x()))
+        elif cls == "TRadiobutton" and str(child.cget("text")).startswith("自动配点"):
+            ctrls.append((cls, child.winfo_x()))
+    ok &= check("④ 选项槽同一条竖线", len({x for _c, x in ctrls}) == 1 and len(ctrls) >= 6,
+                str(ctrls))
+    # 「生产伙伴」为空时不该占一行（以前"生产侧"和"满级最优路线"之间空一大块）。
+    # 兼顾口径下这行一定是空的 —— 正好用来验证"空行被隐藏"。
+    app.var_alloc_mode.set(dict(gui.ALLOC_MODES)["balanced"])
+    app._alloc_user_picked = True
+    app._on_alloc_mode_change()
+    pump(app, 1.2)
+    gap = app.lbl_mio_route.winfo_y() - (app.lbl_prod.winfo_y() + app.lbl_prod.winfo_height())
+    ok &= check("空的生产伙伴不占行（兼顾口径）", not app.lbl_partner.winfo_ismapped()
+                and gap <= 24, "间距 %dpx，生产伙伴 %s" % (
+                    gap, "可见" if app.lbl_partner.winfo_ismapped() else "已隐藏"))
     return ok
 
 
@@ -344,7 +364,19 @@ def t_style(app):
         try:
             txt = w.cget("text")
             if txt in labels:
-                xs[txt] = w.winfo_rootx() - app.inner.winfo_rootx()
+                # 字段名的"对齐键" = 从它自己往上到卡片为止，每一层的 grid 列号。
+                # ② 的字段挂在各自的块里 → 键 (0,0,0)/(0,1,0)/(0,2,0)；
+                # 其它卡片直接挂在卡片上 → 键 (0,)。
+                card = w.master
+                while card is not None and card.winfo_class() not in ("TLabelframe",
+                                                                     "Labelframe"):
+                    card = card.master
+                key, node = [], w
+                while node is not None and node is not card:
+                    gi = node.grid_info()
+                    key.append(int(gi.get("column", 0)) if gi else 0)
+                    node = node.master
+                xs[txt] = (w.winfo_rootx() - app.inner.winfo_rootx(), tuple(key))
         except Exception:                    # noqa: BLE001
             pass
         try:
@@ -368,8 +400,15 @@ def t_style(app):
                 colors.add(v)
     missing = [t for t in labels if t not in xs]
     ok &= check("字段名一个不漏", not missing, "缺 %s" % missing)
-    ok &= check("字段名左对齐（同一个 x）", len(set(xs.values())) == 1 and len(xs) >= 12,
-                "x=%s（%d 个字段名）" % (sorted(set(xs.values())), len(xs)))
+    # 版式规矩：同一列（同一条 grid 路径）的字段名首字对齐；最左边那一列固定 x=25
+    # （② 是两行并排：第 1 列"当前年份/所选国家"、第 2 列"飞机科技年份/对手国别"、第 3 列"选取规则"）
+    groups = {}
+    for text, (x, key) in xs.items():
+        groups.setdefault(key, set()).add(x)
+    ok &= check("同列字段名首字对齐", all(len(v) == 1 for v in groups.values()),
+                "各列 x = %s" % {k: sorted(v) for k, v in sorted(groups.items())})
+    left_x = min(min(v) for v in groups.values()) if groups else None
+    ok &= check("最左一列在 x=25", left_x == 25, "最左 x=%s" % left_x)
     # ttk 控件多数走 style，字体在 style 里 —— 一并核对
     style = gui.ttk.Style(app)
     style_fonts = {}

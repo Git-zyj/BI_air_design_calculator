@@ -515,6 +515,25 @@ class App(tk.Tk):
             return
         self._rewrap_job = self.after_idle(self._rewrap_all)
 
+    def _set_partner(self, text):
+        """「生产伙伴」那一行：**有内容才占位**。
+
+        它经常是空的（分离口径且不需要换生产家），空着照样占一条 38px 的行 ——
+        用户看到的就是"生产侧"和"满级最优路线"之间莫名空一大块（2026-10-12 提问）。
+        没内容时 `grid_remove()` 并把该行 minsize 归零。
+        """
+        self.lbl_partner.configure(text=text or "")
+        card = self.lbl_partner.master
+        row = getattr(self, "_partner_row", None)
+        if row is None:
+            return
+        if text:
+            self.lbl_partner.grid()
+            card.grid_rowconfigure(row, minsize=ROW_H)
+        else:
+            self.lbl_partner.grid_remove()
+            card.grid_rowconfigure(row, minsize=0)
+
     # ---------- 界面 ----------
     def _build(self):
         self.columnconfigure(0, weight=1)
@@ -597,53 +616,65 @@ class App(tk.Tk):
         self.frm_fields = fields          # 供后续核对布局（前两行的列宽只看它自己）
         self.var_year = tk.IntVar(value=self.inputs["current_year"])
         self.var_tech = tk.IntVar(value=self.inputs["tech_year"])
-        # ⚠️ 一行一个字段：字段名全在 col0（同一条竖线），控件在 col1，说明在 col2。
-        # 以前是 2 行 × 3 列的填表布局，第二/第三个字段的名各自落在不同列上
-        # （实测 x=25 / 224 / 354 三个竖线），用户一眼就看出"没对齐"。
-        ttk.Label(fields, text="当前年份").grid(row=0, column=0, sticky="w",
-                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
-        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_year, width=CTL_W_NUM,
-                    command=self._refresh_enemy).grid(row=0, column=1, sticky="w")
-        ttk.Label(fields, text="（决定对手机型）", foreground=MUTED,
-                  font=(self.family, FONT_NOTE)).grid(row=0, column=2, sticky="w",
-                                                      padx=(PADX, 0))
-        ttk.Label(fields, text="飞机科技年份").grid(row=1, column=0, sticky="w",
-                                               padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
-        ttk.Spinbox(fields, from_=1936, to=1948, textvariable=self.var_tech, width=CTL_W_NUM,
-                    command=self._on_tech_year_changed).grid(row=1, column=1, sticky="w")
-        ttk.Label(fields, text="（决定我方可用机身，可超前研究）", foreground=MUTED,
-                  font=(self.family, FONT_NOTE)).grid(row=1, column=2, sticky="w",
-                                                      padx=(PADX, 0))
+        # 版式（用户 2026-10-12 口径）：每个字段 = 一个子框（字段名 + 控件 + 说明），
+        # 子框按列排 —— 同一列的字段名首字对齐，列与列之间互不干扰：
+        #   第 1 行：当前年份 ｜ 飞机科技年份
+        #   第 2 行：所选国家 ｜ 对手国别 ｜ 选取规则
+        # （以前是 2 行 × 3 列混排，字段名落在三条不同竖线 x=25/224/354 上。）
+        def field_block(row, col):
+            blk = ttk.Frame(fields)
+            blk.grid(row=row, column=col, sticky="w", padx=(0, PADX * 2),
+                     pady=(ROW_PAD, ROW_PAD))
+            return blk
 
-        ttk.Label(fields, text="所选国家").grid(row=2, column=0, sticky="w",
-                                             padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
+        blk = field_block(0, 0)
+        ttk.Label(blk, text="当前年份").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
+        ttk.Spinbox(blk, from_=1936, to=1948, textvariable=self.var_year, width=CTL_W_NUM,
+                    command=self._refresh_enemy).grid(row=0, column=1, sticky="w")
+
+        blk = field_block(0, 1)
+        ttk.Label(blk, text="飞机科技年份").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
+        ttk.Spinbox(blk, from_=1936, to=1948, textvariable=self.var_tech, width=CTL_W_NUM,
+                    command=self._on_tech_year_changed).grid(row=0, column=1, sticky="w")
+
+        blk = field_block(1, 0)
+        ttk.Label(blk, text="所选国家").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         self.var_tag = tk.StringVar(value=self.inputs.get("country") or "SOV")
-        cb = ttk.Combobox(fields, textvariable=self.var_tag, width=CTL_W_TAG,
+        cb = ttk.Combobox(blk, textvariable=self.var_tag, width=CTL_W_TAG,
                           state="readonly")
-        cb.grid(row=2, column=1, sticky="w")
+        cb.grid(row=0, column=1, sticky="w")
         cb.bind("<<ComboboxSelected>>", lambda e: self._refresh_country())
         cb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_tag.set(self._tag_labels.get(self.inputs.get("country") or "SOV", "苏联"))
         enemy = self.inputs.get("enemy") or {}
-        ttk.Label(fields, text="对手国别").grid(row=3, column=0, sticky="w",
-                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
+
+        blk = field_block(1, 1)
+        ttk.Label(blk, text="对手国别").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         self.var_enemy_tag = tk.StringVar(value=enemy.get("country", "GER"))
-        eb = ttk.Combobox(fields, textvariable=self.var_enemy_tag, width=CTL_W_TAG,
+        eb = ttk.Combobox(blk, textvariable=self.var_enemy_tag, width=CTL_W_TAG,
                           state="readonly")
-        eb.grid(row=3, column=1, sticky="w")
+        eb.grid(row=0, column=1, sticky="w")
         eb.bind("<<ComboboxSelected>>", lambda e: self._on_enemy_change())
         eb.configure(values=[self._tag_labels[t] for t in self.tags])
         self.var_enemy_tag.set(self._tag_labels.get(enemy.get("country", "GER"), "德国"))
-        ttk.Label(fields, text="选取规则").grid(row=4, column=0, sticky="w",
-                                            padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
+
+        blk = field_block(1, 2)
+        ttk.Label(blk, text="选取规则").grid(row=0, column=0, sticky="w", padx=(PADX, 6))
         # 旧写法 dict(RULE_LABELS).get(key) 方向反了（表是"显示名 → key"），
         # 不管 inputs.json 写什么都会显示成"当前年份−1"。
         cur_rule = RULE_KEYS.get(enemy.get("rule", "previous_year"), "当前年份−1")
         self.var_rule = tk.StringVar(value=cur_rule)
-        rb = ttk.Combobox(fields, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
+        rb = ttk.Combobox(blk, textvariable=self.var_rule, values=[l for l, _ in RULE_LABELS],
                           width=CTL_W_TAG, state="readonly")
-        rb.grid(row=4, column=1, sticky="w")
+        rb.grid(row=0, column=1, sticky="w")
         rb.bind("<<ComboboxSelected>>", lambda e: self._on_rule_change())
+
+        # 两个年份的说明合成一行放在字段下面：塞在各自的块里会把列的宽度撑大
+        # （实测 1000px 窗口下 ② 整行 1029px > 画布 986px，右缘被裁）
+        ttk.Label(box, text="说明：当前年份决定对手机型；飞机科技年份决定我方可用机身"
+                            "（可超前研究）", foreground=MUTED,
+                  font=(self.family, FONT_NOTE)).grid(row=1, column=0, sticky="w",
+                                                      padx=PADX, pady=(0, ROW_PAD))
 
         self.frm_manual_plane = ttk.Frame(box)
         self.frm_manual_plane.grid(row=3, column=0, sticky="w")
@@ -719,10 +750,10 @@ class App(tk.Tk):
         self.var_org = tk.StringVar(value="")
         self.var_level = tk.IntVar(value=mio.get("level") or 5)
         # 2026-10-12 用户指定顺序：军工组织 → 参考机型（+推荐）→ 方针 → 前置/加成/组织。
-        # 行距统一：① 字段名**左对齐**（右对齐时"配点方式/军工组织"起点 69px、
-        # "方针/等级"起点 99px，看着像被缩进）；② 每一行都设 minsize 与同样的 pady，
-        # ③ 预览按钮换 `Tight.TButton`（默认按钮太高，会把它那行顶高）。
-        for _r in range(14):
+        # 版式规矩（用户口径）：**字段名全在 col0（x=25）、控件全在 col1（同一个"槽"）**，
+        # 后续按钮/推荐放 col2；行距统一（每行 minsize=ROW_H + 同样的 pady）；
+        # 预览按钮用 `Tight.TButton`（默认按钮太高，会把它那行顶高）。
+        for _r in range(16):
             card.grid_rowconfigure(_r, minsize=ROW_H)
         ttk.Label(card, text="军工组织").grid(row=1, column=0, sticky="w",
                                           padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
@@ -746,7 +777,7 @@ class App(tk.Tk):
         self.cb_policy.bind("<<ComboboxSelected>>", lambda e: self._on_policy_change())
         # 方针的「前置 / 加成 / 组织」说明：单独占一整行，段与段用全角空格分隔 ——
         # 宽的时候自然**并成一行**，窄了才在段与段之间折行（用户口径 2026-10-12）
-        self.lbl_policy = ttk.Label(card, text="", foreground="#5A6472",
+        self.lbl_policy = ttk.Label(card, text="", foreground=MUTED,
                                     font=(self.family, FONT_NOTE), justify="left")
         self.lbl_policy.grid(row=4, column=0, columnspan=6, sticky="w", padx=PADX,
                              pady=(ROW_PAD, ROW_PAD))
@@ -761,27 +792,22 @@ class App(tk.Tk):
         ttk.Button(card, text="预览军工组织总加成", command=self.on_preview,
                    style="Tight.TButton").grid(row=5, column=2, sticky="w", padx=(PADX, 2),
                                                pady=(ROW_PAD, ROW_PAD))
-        # 「配点口径 + 推荐」放进一个子框：推荐紧跟在选择框右边，
-        # 又不会被卡片左边那几列的宽度变化推着跑（以前塞主网格里就会漂）。
-        # 2026-10-12：这一框改**单独占一整行** —— 原来挂在"等级"那行的第 3 列，
-        # 卡片各列是跨行共享宽度的，窄窗口（≤1000px）下整行能到 1001px、推荐几个字被右缘裁掉。
-        frm_alloc = ttk.Frame(card)
-        frm_alloc.grid(row=6, column=0, columnspan=6, sticky="w", padx=PADX,
-                       pady=(ROW_PAD, ROW_PAD))
-        # ⚠️ 子框已经带 padx=PADX，里面的标签不能再加一次 —— 否则"配点口径"比同卡片
-        # 其它字段名（x=25）多缩进 12px（用户 2026-10-12 报"后者缩进太多"）。
-        ttk.Label(frm_alloc, text="配点口径").grid(row=0, column=0, sticky="w", padx=(0, 6))
+        # 「配点口径」不再套子框：字段名直接在 col0、选择框直接在 col1 —— 这样它的"槽"
+        # 与军工组织/方针/等级完全同一条竖线（用户 2026-10-12 口径）。
+        ttk.Label(card, text="配点口径").grid(row=6, column=0, sticky="w",
+                                          padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
         self.var_alloc_mode = tk.StringVar(value=ALLOC_MODES[0][1])
-        self.cb_alloc_mode = ttk.Combobox(frm_alloc, textvariable=self.var_alloc_mode,
+        self.cb_alloc_mode = ttk.Combobox(card, textvariable=self.var_alloc_mode,
                                           width=CTL_W_TEXT,
                                           state="readonly",
                                           values=[label for _k, label in ALLOC_MODES])
-        self.cb_alloc_mode.grid(row=0, column=1, sticky="w")
+        self.cb_alloc_mode.grid(row=6, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
         self.cb_alloc_mode.bind("<<ComboboxSelected>>", lambda e: self._on_alloc_mode_picked())
-        self.lbl_alloc_rec = ttk.Label(frm_alloc, text="", foreground=ACCENT,
+        self.lbl_alloc_rec = ttk.Label(card, text="", foreground=ACCENT,
                                        font=(self.family, FONT_NOTE, "bold"), justify="left")
-        self.lbl_alloc_rec.grid(row=0, column=2, sticky="w", padx=PADX)
-        self._wrap_to_card(self.lbl_alloc_rec, frm_alloc)
+        self.lbl_alloc_rec.grid(row=6, column=2, columnspan=4, sticky="w", padx=PADX,
+                                pady=(ROW_PAD, ROW_PAD))
+        self._wrap_to_card(self.lbl_alloc_rec, card)
 
         # 累计加成单独占一整行——满级十几项修正，挤在右边就会被卡片裁掉
         self.lbl_mio_total = ttk.Label(card, text="", foreground=ACCENT,
@@ -794,39 +820,38 @@ class App(tk.Tk):
         # 但一个 MIO 只有一条特质路线 —— 所以这里把这条路线带来的生产修正如实列出来，
         # 供用户定性判断"值不值得为了生产改路线 / 换一个 MIO 来生产"。
         # 生产折算用的"当前堆叠"——同一个 +5%，在上限 100 和 200 上值多少完全不同。
-        # （原来这里还有个"生产折算"标题标签，挪行后和累计行撞在一起，已删；
-        #   两个输入各自有"当前效率上限 / 当前产量加成"标签，够清楚。）
-        # 列宽一变 "%" 就飘到离输入框很远的地方）
-        prod_row = ttk.Frame(card)
-        prod_row.grid(row=8, column=0, columnspan=6, sticky="w", padx=PADX,
-                      pady=(ROW_PAD, ROW_PAD))
-        self.frm_prod = prod_row          # 供布局核对（每个字段自带 %）
+        # 2026-10-12：两个输入改成**一行一个**，字段名在 col0、输入框在 col1
+        # —— 和上面所有选项同一个"槽"（用户口径）；"%"紧跟输入框。
         self.var_capacity = tk.IntVar(value=int(self.inputs.get("capacity_bonus_now") or 200))
         self.var_cap = tk.IntVar(value=int(self.inputs.get("efficiency_cap_now") or 100))
-        for col, (text, var, lo, hi) in enumerate((
+        for i, (text, var, lo, hi) in enumerate((
                 ("当前效率上限", self.var_cap, 1, 500),
                 ("当前产量加成", self.var_capacity, 0, 2000))):
-            ttk.Label(prod_row, text=text).grid(row=0, column=col * 3, sticky="e",
-                                                padx=(0 if col == 0 else PADX, 4))
-            ttk.Spinbox(prod_row, from_=lo, to=hi, textvariable=var, width=5).grid(
-                row=0, column=col * 3 + 1, sticky="w")
-            ttk.Label(prod_row, text="%").grid(row=0, column=col * 3 + 2, sticky="w", padx=(1, 0))
+            ttk.Label(card, text=text).grid(row=8 + i, column=0, sticky="w",
+                                        padx=(PADX, 6), pady=(ROW_PAD, ROW_PAD))
+            ttk.Spinbox(card, from_=lo, to=hi, textvariable=var, width=CTL_W_NUM).grid(
+                row=8 + i, column=1, sticky="w", pady=(ROW_PAD, ROW_PAD))
+            ttk.Label(card, text="%").grid(row=8 + i, column=2, sticky="w", padx=(2, 0))
 
-        self.lbl_prod = ttk.Label(card, text="", foreground="#7A5C1E",
+        self.lbl_prod = ttk.Label(card, text="", foreground=PROD,
                                   font=(self.family, FONT_NOTE), justify="left")
-        self.lbl_prod.grid(row=9, column=0, columnspan=6, sticky="w", padx=PADX,
+        self.lbl_prod.grid(row=10, column=0, columnspan=6, sticky="w", padx=PADX,
                            pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_prod, card)
 
-        self.lbl_partner = ttk.Label(card, text="", foreground="#7A5C1E",
+        # 「生产伙伴」经常是空的（分离口径且没换家）—— 空着也占一整行 38px，
+        # 看起来就是"生产侧"和"满级最优路线"之间莫名空一大块（用户 2026-10-12 问）。
+        # 有内容才显示：空 → grid_remove + 该行 minsize 归零。
+        self._partner_row = 11
+        self.lbl_partner = ttk.Label(card, text="", foreground=PROD,
                                      font=(self.family, FONT_NOTE), justify="left")
-        self.lbl_partner.grid(row=10, column=0, columnspan=6, sticky="w", padx=PADX,
+        self.lbl_partner.grid(row=self._partner_row, column=0, columnspan=6, sticky="w", padx=PADX,
                               pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_partner, card)
 
-        self.lbl_mio_route = ttk.Label(card, text="", foreground="#5A6472",
+        self.lbl_mio_route = ttk.Label(card, text="", foreground=MUTED,
                                        font=(self.family, FONT_NOTE), justify="left")
-        self.lbl_mio_route.grid(row=11, column=0, columnspan=6, sticky="w", padx=PADX,
+        self.lbl_mio_route.grid(row=12, column=0, columnspan=6, sticky="w", padx=PADX,
                                 pady=(ROW_PAD, ROW_PAD))
         self._wrap_to_card(self.lbl_mio_route, card)
 
@@ -836,10 +861,10 @@ class App(tk.Tk):
                                      ("bonus", "该特质加成", 420, "w")):
             self.tree_mio.heading(cid, text=text)
             self.tree_mio.column(cid, width=w, anchor=anchor)
-        self.tree_mio.grid(row=12, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.tree_mio.grid(row=13, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
 
         self.frm_traits = ttk.Frame(card)
-        self.frm_traits.grid(row=13, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
+        self.frm_traits.grid(row=14, column=0, columnspan=6, sticky="ew", padx=PADX, pady=(0, PADY))
         self.lbl_traits_hint = ttk.Label(
             self.frm_traits, text="点击行勾选/取消（初始特质已默认计入，不需要勾）")
         self.lbl_traits_hint.grid(row=0, column=0, sticky="w", pady=(0, 2))
@@ -2381,20 +2406,20 @@ class App(tk.Tk):
         else:
             self.lbl_prod.configure(text=self._prod_text(prod, gain, parts))
         # 「分离」口径：把生产那家 MIO 与它需要的特质列出来（按卡片宽度换行）
-        self.lbl_partner.configure(text="")
+        self._set_partner("")
         if inputs.get("alloc_mode") == "split":
             ref = self._ref_plane()
             partner = run.best_production_plan(inputs, self.data, ref) if ref else None
             if partner and partner["organization"] != self._org_key():
-                self.lbl_partner.configure(
-                    text="　生产交给「%s」（满级 %d），需点：%s"
-                         % (zh(self.loc, partner["organization"]), partner.get("level", 14),
-                            " → ".join(zh(self.loc, t) for t in partner["tokens"])))
+                self._set_partner(
+                    "　生产交给「%s」（满级 %d），需点：%s"
+                    % (zh(self.loc, partner["organization"]), partner.get("level", 14),
+                       " → ".join(zh(self.loc, t) for t in partner["tokens"])))
             elif partner:
-                self.lbl_partner.configure(
-                    text="　生产：最优的一家就是本 MIO（换别家都不给产量加成）→ 用「兼顾」更合适")
+                self._set_partner("　生产：最优的一家就是本 MIO（换别家都不给产量加成）"
+                                  "→ 用「兼顾」更合适")
             else:
-                self.lbl_partner.configure(text="　生产：没有 MIO 能给产量加成")
+                self._set_partner("　生产：没有 MIO 能给产量加成")
 
     def _prod_of_tokens(self, org_name, tokens):
         """某 MIO + 指定特质列表的生产侧修正合计（分离口径下显示"生产伙伴"用）。"""
