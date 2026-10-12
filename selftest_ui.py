@@ -250,9 +250,20 @@ def t_wrapping(app):
     ok &= check("② 数值来源按语义分两行",
                 app.lbl_enemy_src.cget("text").count("\n") == 1,
                 repr(app.lbl_enemy_src.cget("text"))[:60])
-    ok &= check("④ 方针说明一项一行",
-                app.lbl_policy.cget("text").count("\n") >= 1,
-                repr(app.lbl_policy.cget("text")).replace("\\n", " / ")[:80])
+    # ④ 方针说明：**不写死换行**，宽的时候要并成一行（窄了才在段与段之间折）
+    txt = app.lbl_policy.cget("text")
+    ok &= check("④ 方针说明没有写死换行", "\n" not in txt, repr(txt)[:90])
+    app.geometry("1600x977")
+    pump(app, 0.8)
+    ok &= check("④ 方针说明宽屏下并成一行", app.lbl_policy.winfo_height() <= 26,
+                "高度 %dpx（单行 ≈21）" % app.lbl_policy.winfo_height())
+    # ④ 的行序：军工组织 → 参考机型 → 方针 → 前置/加成/组织
+    ys = [(name, getattr(app, attr).winfo_rooty())
+          for name, attr in (("军工组织", "cb_org"), ("参考机型", "lbl_org_rec"),
+                             ("方针", "cb_policy"), ("前置/加成", "lbl_policy"))]
+    ok &= check("④ 行序 = 军工组织→参考机型→方针→前置",
+                all(ys[i][1] < ys[i + 1][1] for i in range(len(ys) - 1)),
+                " < ".join("%s(y=%d)" % (n, y) for n, y in ys))
     app.geometry("1280x980")
     pump(app, 0.4)
     return ok
