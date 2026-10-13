@@ -135,6 +135,15 @@ gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target 
 > 改过 `开始使用前先看.txt` 之后**要重打 zip 并 `gh release upload --clobber` 覆盖 release 里的附件**，
 > 否则下载包里还是旧说明（exe 里没有打包这个 txt，只有 zip 里有）。
 
+> ⚠️ **改已发布 release 的说明：必须走 `--notes-file`，不要 `--notes`，也不要拿 PowerShell 变量拼**（踩过两次）：
+> ① `gh release edit <tag> --notes $new` —— 说明以 `-` 开头时会被 PowerShell 当成参数（`unknown shorthand flag`），
+> 改不上去；
+> ② `$b = gh api ... --jq .body` 拿到的是**行数组**，`$b + $extra` 会用空格把数组元素连起来 →
+> **整篇说明的换行全被挤成一行**（表格、代码围栏全废）。
+> 正确做法：`$body | Set-Content -Encoding utf8 <file>`（或 `[IO.File]::WriteAllText(..., UTF8Encoding($false))` 写**无 BOM** 的 UTF-8），
+> 拼好后再 `gh release edit <tag> --notes-file <file>`；改完**回读核对**：行数、代码围栏是否成对、表格 `|` 是否还在。
+> 想确认没丢内容：把线上 body 与本地文件都 `re.sub(r"\s+", "", ...)` 后逐字比对。
+
 ## 阶段 4：文档与交付
 
 - [ ] `PLAN.md` 加一节 `§N`：**为什么这么改 + 实测数字**（不要只写"已修复"）
