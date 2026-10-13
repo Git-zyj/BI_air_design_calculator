@@ -76,24 +76,24 @@ python selftest_ui.py --full  # 额外跑 2400 组离线表覆盖（约 2~3 分�
 
 ```
 cmd /c "build_exe.bat < nul"            # 发行版（交付给用户的就是这个；必须在沙箱外跑）
-cmd /c "build_exe_debug.bat < nul"      # 调试版：只在排查"窗口打不开"时用（多一个黑窗口）
+cmd /c "build_exe_debug.bat < nul"      # 调试版：**内部排错用**（多一个黑窗口，能看启动 traceback）
 ```
 
 > 2026-10-12 起：**交付发行版 exe**，运行日志改从**右上角状态栏 → 操作记录小窗**看
 > （`_dbg` 全部进内存缓冲，发行版没有控制台也能看、还能导出）。
-> **调试版照样要打**：状态栏日志窗只能覆盖"界面能打开"的情况；万一连窗口都出不来
-> （缺 tkinter / 被安全软件拦 / 闪退），只有调试版的黑窗口能打出启动日志。
-> 两个 exe 一起打、一起发：发行版日常用，调试版留作"打不开时"的抓日志手段。
+> **调试版不发布、说明书里也不提**（用户 2026-10-13 口径）：用户那边"窗口打不开"就让他直接来群里找作者。
+> 我们自己改完代码时打一次调试版、扫一眼黑窗口里的启动日志（阶段 5）即可。
 
 检查清单：
 
 - [ ] `dist\飞机设计计算器_黑冰正式版v12.1.0.exe` 体积 **≥ 13 MB**（<12 MB 说明 tkinter 被排除，
       双击必然打不开窗口；把命令放回沙箱外重打）
-- [ ] `dist\飞机设计计算器_黑冰正式版v12.1.0_调试版.exe` 同样 ≥ 13 MB（黑窗口能打印启动日志）
+- [ ] （内部排错用）`dist\飞机设计计算器_黑冰正式版v12.1.0_调试版.exe` 同样 ≥ 13 MB
+      —— 它**不进发布包**，只是自己验证"能启动 + 日志链路正常"的手段
 - [ ] 双击一次：窗口标题带版本，首屏自动出结果，右上角状态栏可点开日志
 - [ ] 随手改一个国家/年份按一次「计算」，看结果表和明细都正常
 - [ ] 清掉 `build\` 与 `*.spec`（它们本来就在 .gitignore 里，但会留在磁盘上）
-- [ ] 要发布时：`build_exe.bat` 出发行版、`build_exe_debug.bat` 出调试版（**两个都要发**，见阶段 3b）；
+- [ ] 要发布时：`build_exe.bat` 出发行版即可（调试版**只留着自己排错**，不发布、说明书里也不提）；
       Release 附件名必须 ASCII；测试版 release 必须加 `--prerelease`
 
 ## 阶段 3b：两个分支（main / beta）同步与发布
@@ -136,19 +136,17 @@ git commit && git push origin beta
 - [ ] 确认离线表是**默认口径**（`selftest_ui.py` 抽样 216 组缺 0），不是按自己上次的 1200/自定义生成的；
 - [ ] 确认 exe 是从**当前已提交状态**打的（`git status` 干净；改过代码/数据就重打，别发旧 exe）。
 
-发布用的 ASCII 附件（zip = **发行版 exe + 调试版 exe + 说明书**；再单独附两份 ASCII 名 exe）：
+发布用的 ASCII 附件（zip = **发行版 exe + 说明书**；再单独附一份 ASCII 名的发行版 exe）：
 
 ```
 Compress-Archive -Path <stage>\* -DestinationPath dist\BI_air_design_calculator_v12.1.0.2.zip
-gh release create v12.1.0.2 --title "…" --notes-file <notes.md> --target main --latest \
-  <zip> <exe> <debug-exe>
-gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target beta --prerelease \
-  <zip> <exe> <debug-exe>
+gh release create v12.1.0.2 --title "…" --notes-file <notes.md> --target main --latest <zip> <exe>
+gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target beta --prerelease <zip> <exe>
 ```
 
-> **调试版必须一起发**：说明书里写了"双击后窗口出不来就用同目录的「…_调试版.exe」"，
-> 包里没有它这条指引就是空的（用户 2026-10-13 抓到过）。zip 里三个文件：
-> 发行版 exe（日常用）+ 调试版 exe（抓启动日志）+ `开始使用前先看.txt`。
+> **调试版不进发布包、说明书里也不提它**（用户 2026-10-13 口径）：用户双击后窗口出不来，
+> 就让他直接来 QQ 群找作者。`build_exe_debug.bat` 只作**内部排错**用（带控制台，能看启动 traceback），
+> 改完代码自己验一下启动就行，别放进 zip、也别写进 `开始使用前先看.txt`。
 
 > 改过 `开始使用前先看.txt` 之后**要重打 zip 并 `gh release upload --clobber` 覆盖 release 里的附件**，
 > 否则下载包里还是旧说明（exe 里没有打包这个 txt，只有 zip 里有）。
@@ -173,7 +171,7 @@ gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target 
 
 ## 阶段 5：日志里该有的水印
 
-调试版的控制台里，这几行是"链路正常"的证据，交付前扫一眼：
+**调试版**（内部排错用，不发布）的控制台里，这几行是"链路正常"的证据，交付前扫一眼：
 
 - 每次键入/切换后应出现 `操作：…`
 - 改年份/科技年/对手/方针后应出现 `MIO 路线：比较 N 个组织…→ 推荐 …`
@@ -228,8 +226,8 @@ python precompute_routes.py --countries SOV,GER,USA,Commonwealth,JAP,ITA \
 改动：<一句话>；分支/版本：main（黑冰正式版 v12.1.0）commit <sha>
 阶段 1：selftest.py —— 43 项 0 失败（0.6s）
 阶段 2：selftest_ui.py —— 129 项 0 失败（80s）；离线表抽样 216 组缺 0；勾/不勾标识 36 次查找缺 0
-阶段 3：调试版 exe 13.04 MiB，启动正常；build/spec 已清
+阶段 3：发行版 exe 13.06 MiB，启动正常；build/spec 已清（调试版只自己排错用，不进发布）
 阶段 4：PLAN §N / CHANGELOG / 开始使用前先看.txt 已更新
-交付：dist\飞机设计计算器_黑冰正式版v12.1.0_调试版.exe（HH:MM）
+交付：dist\BI_air_design_calculator_v12.1.0.2.zip（= 发行版 exe + 说明书，HH:MM）
 请你抽查：<具体点位 + 期望数字>
 ```
