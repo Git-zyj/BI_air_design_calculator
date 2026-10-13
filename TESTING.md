@@ -93,7 +93,8 @@ cmd /c "build_exe_debug.bat < nul"      # 调试版：只在排查"窗口打不�
 - [ ] 双击一次：窗口标题带版本，首屏自动出结果，右上角状态栏可点开日志
 - [ ] 随手改一个国家/年份按一次「计算」，看结果表和明细都正常
 - [ ] 清掉 `build\` 与 `*.spec`（它们本来就在 .gitignore 里，但会留在磁盘上）
-- [ ] 要发布时：`build_exe.bat` 出发行版；Release 附件名必须 ASCII；测试版 release 必须加 `--prerelease`
+- [ ] 要发布时：`build_exe.bat` 出发行版、`build_exe_debug.bat` 出调试版（**两个都要发**，见阶段 3b）；
+      Release 附件名必须 ASCII；测试版 release 必须加 `--prerelease`
 
 ## 阶段 3b：两个分支（main / beta）同步与发布
 
@@ -124,13 +125,30 @@ git commit && git push origin beta
 | `build_exe.bat` / `build_exe_debug.bat` | exe 名里的版本号不同（`…_黑冰正式版v12.1.0.exe` / `…_黑冰测试版v12.3.0.exe`） |
 | `开始使用前先看.txt` | 开头「本工具对应的模组与版本」那段要写成本分支那一版 |
 
-发布用的 ASCII 附件（zip = exe + 说明书；再单独附一份 ASCII 名的 exe）：
+**发布前先"恢复默认"（用户 2026-10-13 口径：别把自己的测试内容带进包）**：
+
+- [ ] 清掉自己测试留下的东西：仓库与 exe 同目录的 `route_cache.json`、`output\`（日志/导出）
+      —— 它们虽然是 gitignore 的，但一旦跟着文件夹压缩就会发给用户；
+- [ ] 清掉本机记忆 `%LOCALAPPDATA%\BI_air_design_calculator\last_inputs.json`
+      （不清也不影响别人，只会让**自己**打开 exe 时看到上次的测试输入，看着像"包里带了测试数据"）；
+- [ ] 确认**新用户首屏 = 出厂示例**（苏联 / 1941 / 科技 1942 / 900 / 300 / 默认国家精神）：
+      把记忆指到空路径起一次界面即可（`selftest_ui.py [8]` 的"干净环境下用示例默认"就是这条）；
+- [ ] 确认离线表是**默认口径**（`selftest_ui.py` 抽样 216 组缺 0），不是按自己上次的 1200/自定义生成的；
+- [ ] 确认 exe 是从**当前已提交状态**打的（`git status` 干净；改过代码/数据就重打，别发旧 exe）。
+
+发布用的 ASCII 附件（zip = **发行版 exe + 调试版 exe + 说明书**；再单独附两份 ASCII 名 exe）：
 
 ```
 Compress-Archive -Path <stage>\* -DestinationPath dist\BI_air_design_calculator_v12.1.0.2.zip
-gh release create v12.1.0.2 --title "…" --notes-file <notes.md> --target main --latest <zip> <exe>
-gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target beta --prerelease <zip> <exe>
+gh release create v12.1.0.2 --title "…" --notes-file <notes.md> --target main --latest \
+  <zip> <exe> <debug-exe>
+gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target beta --prerelease \
+  <zip> <exe> <debug-exe>
 ```
+
+> **调试版必须一起发**：说明书里写了"双击后窗口出不来就用同目录的「…_调试版.exe」"，
+> 包里没有它这条指引就是空的（用户 2026-10-13 抓到过）。zip 里三个文件：
+> 发行版 exe（日常用）+ 调试版 exe（抓启动日志）+ `开始使用前先看.txt`。
 
 > 改过 `开始使用前先看.txt` 之后**要重打 zip 并 `gh release upload --clobber` 覆盖 release 里的附件**，
 > 否则下载包里还是旧说明（exe 里没有打包这个 txt，只有 zip 里有）。
