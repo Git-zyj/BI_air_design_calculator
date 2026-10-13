@@ -95,6 +95,46 @@ cmd /c "build_exe_debug.bat < nul"      # 调试版：只在排查"窗口打不�
 - [ ] 清掉 `build\` 与 `*.spec`（它们本来就在 .gitignore 里，但会留在磁盘上）
 - [ ] 要发布时：`build_exe.bat` 出发行版；Release 附件名必须 ASCII；测试版 release 必须加 `--prerelease`
 
+## 阶段 3b：两个分支（main / beta）同步与发布
+
+两分支**代码同一份**，只有 `data/` 与版本标识不同。发布 = 两边各推一次 + 各发一个 release：
+
+```
+# ① main（正式版）：改完 → 自检 → 提交 → 推
+git push origin main
+# ② beta（测试版）：把代码整份带过去（**下面这个文件清单是白名单，别用 git merge**）
+git checkout beta
+git checkout main -- engine.py run.py gui.py precompute_routes.py extract_game_data.py \
+  extract_loc_zh.py selftest.py selftest_ui.py PLAN.md CHANGELOG.md TESTING.md README.md \
+  .gitignore inputs.json calibrate.py gui.bat gui.sh setup_build_env.bat
+# ③ beta 的数据按**测试版模组**重抽 + 离线表全量重跑（见阶段 6）
+python extract_game_data.py        # 默认 --game-dir 就是测试版 1851181613
+python extract_loc_zh.py
+python precompute_routes.py --countries SOV,GER,USA,Commonwealth,JAP,ITA \
+  --years 1939-1948 --tech-years 1939-1948 --roles air_far,air_cv \
+  --allocs split,balanced --force --progress 600      # 约 40~45 分钟
+git commit && git push origin beta
+```
+
+**⚠ 这几类文件按分支各自维护，同步时不要覆盖**（踩过：beta 的说明书写着"正式版 v12.1.0"）：
+
+| 文件 | 为什么 |
+| --- | --- |
+| `data/`（含 `build_info.json`） | 各自抽自不同模组版本（正式版 1137372539 / 测试版 1851181613），**数据不通用** |
+| `build_exe.bat` / `build_exe_debug.bat` | exe 名里的版本号不同（`…_黑冰正式版v12.1.0.exe` / `…_黑冰测试版v12.3.0.exe`） |
+| `开始使用前先看.txt` | 开头「本工具对应的模组与版本」那段要写成本分支那一版 |
+
+发布用的 ASCII 附件（zip = exe + 说明书；再单独附一份 ASCII 名的 exe）：
+
+```
+Compress-Archive -Path <stage>\* -DestinationPath dist\BI_air_design_calculator_v12.1.0.2.zip
+gh release create v12.1.0.2 --title "…" --notes-file <notes.md> --target main --latest <zip> <exe>
+gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target beta --prerelease <zip> <exe>
+```
+
+> 改过 `开始使用前先看.txt` 之后**要重打 zip 并 `gh release upload --clobber` 覆盖 release 里的附件**，
+> 否则下载包里还是旧说明（exe 里没有打包这个 txt，只有 zip 里有）。
+
 ## 阶段 4：文档与交付
 
 - [ ] `PLAN.md` 加一节 `§N`：**为什么这么改 + 实测数字**（不要只写"已修复"）
