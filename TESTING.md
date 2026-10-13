@@ -93,7 +93,7 @@ cmd /c "build_exe_debug.bat < nul"      # 调试版：只在排查"窗口打不�
 - [ ] 双击一次：窗口标题带版本，首屏自动出结果，右上角状态栏可点开日志
 - [ ] 随手改一个国家/年份按一次「计算」，看结果表和明细都正常
 - [ ] 清掉 `build\` 与 `*.spec`（它们本来就在 .gitignore 里，但会留在磁盘上）
-- [ ] 要发布时：`build_exe.bat` 出发行版、`build_exe_debug.bat` 出调试版（**两个都要发**，见阶段 3b）；
+- [ ] 要发布时：`build_exe.bat` 出发行版即可（调试版**只留着自己排错**，不发布、说明书里也不提）；
       Release 附件名必须 ASCII；测试版 release 必须加 `--prerelease`
 
 ## 阶段 3b：两个分支（main / beta）同步与发布
@@ -136,19 +136,17 @@ git commit && git push origin beta
 - [ ] 确认离线表是**默认口径**（`selftest_ui.py` 抽样 216 组缺 0），不是按自己上次的 1200/自定义生成的；
 - [ ] 确认 exe 是从**当前已提交状态**打的（`git status` 干净；改过代码/数据就重打，别发旧 exe）。
 
-发布用的 ASCII 附件（zip = **发行版 exe + 调试版 exe + 说明书**；再单独附两份 ASCII 名 exe）：
+发布用的 ASCII 附件（zip = **发行版 exe + 说明书**；再单独附一份 ASCII 名的发行版 exe）：
 
 ```
 Compress-Archive -Path <stage>\* -DestinationPath dist\BI_air_design_calculator_v12.1.0.2.zip
-gh release create v12.1.0.2 --title "…" --notes-file <notes.md> --target main --latest \
-  <zip> <exe> <debug-exe>
-gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target beta --prerelease \
-  <zip> <exe> <debug-exe>
+gh release create v12.1.0.2 --title "…" --notes-file <notes.md> --target main --latest <zip> <exe>
+gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target beta --prerelease <zip> <exe>
 ```
 
-> **调试版必须一起发**：说明书里写了"双击后窗口出不来就用同目录的「…_调试版.exe」"，
-> 包里没有它这条指引就是空的（用户 2026-10-13 抓到过）。zip 里三个文件：
-> 发行版 exe（日常用）+ 调试版 exe（抓启动日志）+ `开始使用前先看.txt`。
+> **调试版不进发布包、说明书里也不提它**（用户 2026-10-13 口径）：用户双击后窗口出不来，
+> 就让他直接来 QQ 群找作者。`build_exe_debug.bat` 只作**内部排错**用（带控制台，能看启动 traceback），
+> 改完代码自己验一下启动就行，别放进 zip、也别写进 `开始使用前先看.txt`。
 
 > 改过 `开始使用前先看.txt` 之后**要重打 zip 并 `gh release upload --clobber` 覆盖 release 里的附件**，
 > 否则下载包里还是旧说明（exe 里没有打包这个 txt，只有 zip 里有）。
