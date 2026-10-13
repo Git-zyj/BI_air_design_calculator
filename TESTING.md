@@ -185,6 +185,19 @@ gh release create v12.3.0-test.2 --title "…" --notes-file <notes.md> --target 
 > 例：`离线表 12 片全量重跑、生成器修掉 --force 假动作`（内部）→ 不写；
 > `航程改成区域覆盖、够不到近边记 0 分、排名会变`（影响选型）→ 必须写。
 
+**发布前先把说明给用户预览**（用户 2026-10-13 口径）：
+
+1. release 说明**先写进仓库** `docs/release_notes_<tag>.md`（例：`docs/release_notes_v12.1.0.2.md`），
+   仓库里同时留档——已发布的老版本也要补进去，方便下次对照与复用；
+2. **把内容贴给用户看（或让他直接看这个文件），确认之后再发布**：
+   ```
+   gh release create <tag> --title "…" --notes-file docs/release_notes_<tag>.md --target <branch> [--latest|--prerelease] <assets…>
+   gh release edit   <tag> --notes-file docs/release_notes_<tag>.md      # 改说明
+   ```
+   不要再手打说明——省得发布后又反复上 GitHub 改（也避开 PowerShell 拼字符串把换行挤没的坑）；
+3. 发完自检：`gh api repos/…/releases/tags/<tag> --jq .body` 与仓库文件**逐行比对应为 0 差异**
+   （本次核过 v12.1.0.2 / v12.3.0-test.2 两份，各 46/47 行、0 差异）。
+
 - [ ] `PLAN.md` 加一节 `§N`：**为什么这么改 + 实测数字**（不要只写"已修复"）
 - [ ] `CHANGELOG.md` 顶部加一行（日期 + 一句话 + 指向 §N）
 - [ ] 用户可见行为变了 → 更新 `开始使用前先看.txt`
